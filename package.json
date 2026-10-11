@@ -1,0 +1,8 @@
+{
+  "name": "very-three",
+  "version": "1.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": { "dev": "node scripts/dev.mjs", "start": "node scripts/dev.mjs" },
+  "engines": { "node": ">=18" }
+}
