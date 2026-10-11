@@ -89,7 +89,7 @@ export function createHome(stage, onOpen) {
     for(const px of [-.08,.08]){ball(.018,'#44333d',px,.76,.253,g);ball(.036,'#dc9b8f',px*1.6,.695,.236,g)}
     const smile=mesh(new THREE.TorusGeometry(.045,.007,6,14,Math.PI), '#895853',0,.692,.266,g);smile.rotation.z=Math.PI;
     if(style===1){for(const px of [-.082,.082])mesh(new THREE.TorusGeometry(.06,.009,6,16),'#514951',px,.76,.27,g);box(.045,.014,.02,'#514951',0,.76,.28,g)}
-    if(style===2){ball(.1,hair,.09,1.015,0,g);ball(.07,hair,-.1,.98,.1,g)}
+    if(style===2){for(const x of [-.12,-.04,.04,.12])ball(.054,hair,x,.98,.03,g)}
     if(style===0){art(.23,.24,0,.38,.299,(ctx,W,H)=>{ctx.fillStyle='#383540';ctx.fillRect(0,0,W,H);ctx.fillStyle='#edc573';ctx.beginPath();ctx.moveTo(300,40);ctx.lineTo(120,290);ctx.lineTo(260,290);ctx.lineTo(195,460);ctx.lineTo(410,190);ctx.lineTo(270,190);ctx.closePath();ctx.fill()},g)}
     if(style===1){mesh(new THREE.TorusGeometry(.277,.025,8,24,Math.PI),'#565057',0,.78,.025,g);for(const x of [-.279,.279]){const pad=cylinder(.08,.08,.06,'#6e6560',x,.76,.02,g);pad.rotation.z=Math.PI/2}}
     if(style===2){round(.32,.045,.23,'#e5a3c5',0,.982,.12,.012,g);mesh(new THREE.TorusGeometry(.038,.007,6,14),'#d9dbe1',.264,.69,.044,g);art(.23,.22,0,.36,.164,(ctx,W,H)=>{ctx.fillStyle='#745277';ctx.fillRect(0,0,W,H);ctx.fillStyle='#ecb5d5';ctx.font='350px sans-serif';ctx.textAlign='center';ctx.fillText('✦',W/2,390)},g)}
@@ -133,7 +133,7 @@ export function createHome(stage, onOpen) {
   const hits=[];function hit(id,x,y,z,w,h,d){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshBasicMaterial({visible:false}));m.position.set(x,y,z);m.userData.id=id;m.userData.room=house;house.add(m);hits.push(m)}
   hit('people',0,1.7,-2.05,3.8,1.2,.9);hit('notes',1.85,2.85,-3.25,2,1.25,.2);hit('memories',-3.83,2.4,1.52,.3,1.4,1.7);hit('plans',0,.95,.65,2.5,.3,1.6);hit('lamp',-2.72,2.7,-2.08,1,.7,1);
   // 三间独立的个人空间，共用相机和灯光；一次只渲染当前房间。
-  const rooms=[],roomHotDefs=[];
+  const rooms=[],roomHotDefs=[],roomFrames=[[],[],[]];
   const themes=[{wall:'#c4bac7',side:'#d5c8c2',base:'#807081',quilt:'#77677f',wood:'#b39987'},
     {wall:'#ddc7ae',side:'#c8ccbd',base:'#9c8770',quilt:'#b5aa87',wood:'#c8a681'},
     {wall:'#d5b6d5',side:'#babddd',base:'#a078b4',quilt:'#b18bc4',wood:'#d1b0c9'}];
@@ -158,7 +158,17 @@ export function createHome(stage, onOpen) {
     round(.75,.66,.68,t.wood,3.48,.56,-2.72,.05);box(.61,.025,.50,'#f3dfc8',3.48,.91,-2.72);ball(.035,'#a58268',3.48,.64,-2.36);
     cylinder(.13,.13,.04,'#a78267',3.48,.95,-2.72);cylinder(.025,.025,.34,'#a78267',3.48,1.12,-2.72);cylinder(.15,.26,.28,lampMat,3.48,1.40,-2.72);
     round(3.5,.025,2.6,i===1?'#aba2c5':'#ead8bd',.3,.23,1.08,.008);
-    poster(1.10,1.35,1.65,2.65,-3.40,i);
+    // 每个房间三个真实相框，每格各自持有可更新的 CanvasTexture。
+    for(let slot=0;slot<3;slot++){
+      const x=.43+slot*1.34,y=2.78,z=-3.36;
+      round(1.12,1.18,.10,['#a88f7b','#ad906a','#a47bb5'][i],x,y,z,.025);
+      box(1.02,1.08,.025,'#fff4e4',x,y,z+.059);
+      const photo=art(.87,.87,x,y+.045,z+.08,()=>{});photo.name=`room-photo-${i}-${slot}`;
+      const canvas=photo.material.map.image,ctx=canvas.getContext('2d');
+      function placeholder(){ctx.fillStyle=['#d6c4c6','#dfcdb3','#d3badf'][i];ctx.fillRect(0,0,512,512);ctx.fillStyle=['#8c727c','#947a58','#9773a4'][i];ctx.textAlign='center';ctx.font='130px sans-serif';ctx.fillText('＋',256,250);ctx.font='36px sans-serif';ctx.fillText('放一张自己的照片',256,350);photo.material.map.needsUpdate=true}
+      placeholder();roomFrames[i].push({photo,ctx,placeholder,revision:0});
+      hit(`frame${i}-${slot}`,x,y,z+.10,1.1,1.18,.15);
+    }
     // 彩虹以生活装饰出现，三间房间都有一条彩虹挂饰。
     palette.forEach((c,n)=>box(.18,.19,.04,c,-.14+n*.19,3.54,-3.41));
     const resident=avatars[i].clone(true);resident.position.set(2.30,1.15,-1.96);resident.rotation.y=-.2;house.add(resident);
@@ -204,8 +214,8 @@ export function createHome(stage, onOpen) {
       round(.65,.12,.62,'#ae8ebd',1.32,.44,1.40,.05);for(let n=0;n<4;n++)box(.035,.30,.035,'#836b91',1.05+(n%2)*.54,.24,1.14+Math.floor(n/2)*.52);
       plant(3.12,.21,2.45,1.2);
     }
-    hit('room'+i,1.7,2.65,-3.35,1.3,1.5,.18);hit('room'+i,2.3,1.8,-1.96,.75,1.0,.7);
-    roomHotDefs.push([{id:'room'+i,text:['Piggy · 摇滚与电玩','4010 · 黑胶聆听室','Joey · 亚文化与 K-pop'][i],p:new THREE.Vector3(1.7,3.52,-2.8)},{id:'notes',text:'给家里留句话',p:new THREE.Vector3(.3,.95,1.75)}]);
+    hit('room'+i,2.3,1.8,-1.96,.75,1.0,.7);
+    roomHotDefs.push([{id:'room'+i,text:['Piggy · 摇滚与电玩','4010 · 黑胶聆听室','Joey · 亚文化与 K-pop'][i],p:new THREE.Vector3(2.3,2.2,-1.4)},{id:'frames'+i,text:'相框 · 上传照片',p:new THREE.Vector3(1.78,3.67,-3.10)},{id:'notes',text:'给家里留句话',p:new THREE.Vector3(.3,.95,1.75)}]);
   }
   house=livingRoom;
 
@@ -220,7 +230,17 @@ export function createHome(stage, onOpen) {
   function frame(time){requestAnimationFrame(frame);if(tween){const p=Math.min((time-tween.start)/tween.duration,1),s=1-Math.pow(1-p,3);camera.position.lerpVectors(tween.from,tween.to,s);if(p===1)tween=null}controls.update();renderer.render(scene,camera);hotDefs.forEach(h=>{const p=h.p.clone().project(camera);h.el.style.left=((p.x*.5+.5)*stage.clientWidth)+'px';h.el.style.top=((-p.y*.5+.5)*stage.clientHeight)+'px';h.el.style.opacity=Number(p.z<1&&Math.abs(p.x)<.96&&Math.abs(p.y)<.96);h.el.style.pointerEvents=p.z<1&&Math.abs(p.x)<.96&&Math.abs(p.y)<.96?'auto':'none'})}
   requestAnimationFrame(frame);
   function move(to){if(reduced){camera.position.copy(to);controls.update()}else tween={from:camera.position.clone(),to,start:performance.now(),duration:600}}
-  return {setRoom(index){
+  return {async setRoomPhoto(room,slot,src){
+    const frame=roomFrames[room]?.[slot];if(!frame)throw new Error('相框不存在');
+    const revision=++frame.revision;
+    if(!src){frame.placeholder();return}
+    // 版本号避免快速替换图片时旧图片覆盖新图片。
+    const img=new Image();await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(new Error('图片读取失败'));img.src=src});
+    if(frame.revision!==revision)return;
+    const side=Math.min(img.width,img.height);frame.ctx.clearRect(0,0,512,512);
+    frame.ctx.drawImage(img,(img.width-side)/2,(img.height-side)/2,side,side,0,0,512,512);
+    frame.photo.material.map.needsUpdate=true;
+  },setRoom(index){
     lampLight.position.set(...(index===-1?[-2.72,2.4,-1.9]:[3.48,1.4,-2.72]));
     livingRoom.visible=index===-1;rooms.forEach((room,i)=>room.visible=i===index);
     hotDefs=index===-1?livingHotDefs:roomHotDefs[index];mountHotspots();down=null;
