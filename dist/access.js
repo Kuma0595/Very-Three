@@ -39,7 +39,7 @@ async function enterHome(){
 form.addEventListener('submit',event=>{
   event.preventDefault();
   if(entering)return;
-  if(input.value.trim()!=='笑死'){
+  if(input.value.trim()!=='xiaosi'){
     input.setAttribute('aria-invalid','true');
     message.textContent='暗号不对哦，再试一下。';
     input.focus();
