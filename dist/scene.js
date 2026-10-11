@@ -79,20 +79,25 @@ export function createHome(stage, onOpen) {
   // 三个原创小人：衣服、发型、肤色分别不同。
   const avatars=[];
   function person(x,shirt,skin,hair,style){const g=new THREE.Group();g.position.set(x,1.04,-2.03);house.add(g);avatars.push(g);
-    round(style===0?.59:.44,.45,style===0?.40:.30,shirt,0,.35,0,.07,g);
+    round(style===0?.59:style===2?.56:.44,.45,style===0?.40:.30,shirt,0,.35,0,.07,g);
     if(style===0){const belly=ball(.25,shirt,0,.32,.04,g);belly.scale.set(1.20,.9,1);g.scale.set(1.08,1.02,1.05)}
     cylinder(.075,.08,.36,skin,style===0?-.37:-.29,.27,.03,g).rotation.z=-.18;cylinder(.075,.08,.36,skin,style===0?.37:.29,.27,.03,g).rotation.z=.18;
     ball(.08,skin,style===0?-.40:-.32,.1,.06,g);ball(.08,skin,style===0?.40:.32,.1,.06,g);
-    for(const px of [-.13,.13]){const leg=round(.14,.13,.48,'#657087',px,.04,.25,.03,g);round(.17,.14,.25,'#f4e6d9',px,-.02,.50,.035,g)}
-    ball(.245,skin,0,.76,.03,g);const cap=mesh(new THREE.SphereGeometry(.254,24,16,0,Math.PI*2,0,Math.PI*.53),hair,0,.79,.02,g);cap.rotation.x=-.2;
+    for(const px of [-.13,.13]){const leg=round(style===2?.20:.14,.13,.48,style===2?'#454351':'#657087',px,.04,.25,.03,g);round(.17,.14,.25,'#f4e6d9',px,-.02,.50,.035,g)}
+    ball(.245,skin,0,.76,.03,g);const cap=mesh(new THREE.SphereGeometry(.254,24,16,0,Math.PI*2,0,Math.PI*(style===2?.43:.53)),hair,0,.79,.02,g);cap.rotation.x=-.2;
     ball(.06,skin,-.244,.74,.02,g);ball(.06,skin,.244,.74,.02,g);
-    for(const px of [-.08,.08]){ball(.018,'#44333d',px,.76,.253,g);ball(.036,'#dc9b8f',px*1.6,.695,.236,g)}
+    for(const px of [-.08,.08]){ball(.018,'#44333d',px,.76,.253,g);if(style!==2)ball(.036,'#dc9b8f',px*1.6,.695,.236,g)}
     const smile=mesh(new THREE.TorusGeometry(.045,.007,6,14,Math.PI), '#895853',0,.692,.266,g);smile.rotation.z=Math.PI;
     if(style===1){for(const px of [-.082,.082])mesh(new THREE.TorusGeometry(.06,.009,6,16),'#514951',px,.76,.27,g);box(.045,.014,.02,'#514951',0,.76,.28,g)}
-    if(style===2){for(const x of [-.12,-.04,.04,.12])ball(.054,hair,x,.98,.03,g)}
+    if(style===2){
+      // Joey：低矮短寸轮廓与偏方的短刘海，不再保留丸子或蓬松圆发束。
+      round(.33,.075,.13,hair,0,.91,.17,.02,g);
+      for(const px of [-.12,-.04,.04,.12])box(.06,.06,.08,hair,px,.94,.045,g);
+      for(const px of [-.22,.22])round(.12,.36,.31,'#6c5884',px,.36,.01,.02,g);
+    }
     if(style===0){art(.23,.24,0,.38,.299,(ctx,W,H)=>{ctx.fillStyle='#383540';ctx.fillRect(0,0,W,H);ctx.fillStyle='#edc573';ctx.beginPath();ctx.moveTo(300,40);ctx.lineTo(120,290);ctx.lineTo(260,290);ctx.lineTo(195,460);ctx.lineTo(410,190);ctx.lineTo(270,190);ctx.closePath();ctx.fill()},g)}
     if(style===1){mesh(new THREE.TorusGeometry(.277,.025,8,24,Math.PI),'#565057',0,.78,.025,g);for(const x of [-.279,.279]){const pad=cylinder(.08,.08,.06,'#6e6560',x,.76,.02,g);pad.rotation.z=Math.PI/2}}
-    if(style===2){round(.32,.045,.23,'#e5a3c5',0,.982,.12,.012,g);mesh(new THREE.TorusGeometry(.038,.007,6,14),'#d9dbe1',.264,.69,.044,g);art(.23,.22,0,.36,.164,(ctx,W,H)=>{ctx.fillStyle='#745277';ctx.fillRect(0,0,W,H);ctx.fillStyle='#ecb5d5';ctx.font='350px sans-serif';ctx.textAlign='center';ctx.fillText('✦',W/2,390)},g)}
+    if(style===2){art(.23,.22,0,.36,.164,(ctx,W,H)=>{ctx.fillStyle='#745277';ctx.fillRect(0,0,W,H);ctx.fillStyle='#ecb5d5';ctx.font='350px sans-serif';ctx.textAlign='center';ctx.fillText('✦',W/2,390)},g)}
     return g;
   }
   person(-1.24,'#383540','#e5b196','#49374a',0);person(0,'#bda77e','#b98365','#433a35',1);person(1.24,'#745277','#efc5a8','#665046',2);
