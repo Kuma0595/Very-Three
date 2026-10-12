@@ -140,7 +140,7 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
   const lampMat=new THREE.MeshStandardMaterial({color:'#ffe4a7',emissive:'#ffcc80',emissiveIntensity:.35,roughness:.9});cylinder(.31,.54,.58,lampMat,-2.45,2.7,-2.08);
   const lampLight=new THREE.PointLight('#ffbf7b',0,8,1.6);lampLight.position.set(-2.45,2.4,-1.9);scene.add(lampLight);
   // 小猫与猫窝使用同一场景；四只脚、头和尾巴可独立活动。
-  const cat=new THREE.Group();cat.name='home-cat';cat.scale.setScalar(.85);cat.position.set(-2.5,.22,4.8);house.add(cat);
+  const cat=new THREE.Object3D();cat.name='home-cat';cat.scale.setScalar(.85);cat.position.set(-2.5,.22,4.8);scene.add(cat);
   const body=ball(.24,'#ead4b4',0,.23,0,cat);body.scale.set(1.55,.85,.9);
   const catHead=new THREE.Group();catHead.position.set(.26,.35,0);cat.add(catHead);
   ball(.18,'#ead4b4',0,0,0,catHead);
