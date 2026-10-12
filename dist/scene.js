@@ -37,13 +37,14 @@ export function createHome(stage, onOpen) {
   const palette=['#df7c80','#ecaa72','#edce7f','#88b8a0','#7eacd0','#af8fc2'];
   // 地台、木地板、两面墙：保留玩具屋的开放视角。
   
-  box(8.3,.12,7.3,'#d5b595',0,.12,0).name='floor-living';
-  for(let j=0;j<18;j++){const z=-3.35+j*.39;box(8,.015,.012,'#ba977a',0,.19,z);for(let i=0;i<4;i++)box(.012,.015,.38,'#ba977a',-3.5+i*2+(j%2)*.8,.19,z+.19)}
+  livingRoom.userData.floorPlan={minX:-4.15,maxX:4.15,minZ:-3.65,maxZ:6.45};
+  box(8.3,.12,10.1,'#d5b595',0,.12,1.4).name='floor-living';
+  for(let j=0;j<25;j++){const z=-3.35+j*.39;box(8,.015,.012,'#ba977a',0,.19,z);for(let i=0;i<4;i++)box(.012,.015,.38,'#ba977a',-3.5+i*2+(j%2)*.8,.19,z+.19)}
   const livingBackWall=box(8.25,3.9,.18,'#e8c7c8',0,2.08,-3.56);
-  const livingLeftWall=box(.18,3.9,7.3,'#c0c9c3',-4.05,2.08,0);
+  const livingLeftWall=box(.18,3.9,10.1,'#c0c9c3',-4.05,2.08,1.4);
   // 门洞位置不铺踢脚线，避免形成横跨入口的矮栏。
-  box(6.75,.15,.1,'#f5e8d9',.7,.28,-3.42);box(.1,.15,3.9,'#f5e8d9',-3.92,.28,-1.6);box(.1,.15,2.05,'#f5e8d9',-3.92,.28,2.625);
-  box(8.4,.15,.25,'#c699a3',0,4.07,-3.56);box(.25,.15,7.3,'#a0afa7',-4.05,4.07,0);
+  box(6.75,.15,.1,'#f5e8d9',.7,.28,-3.42);box(.1,.15,3.9,'#f5e8d9',-3.92,.28,-1.6);box(.1,.15,4.85,'#f5e8d9',-3.92,.28,3.975);
+  box(8.4,.15,.25,'#c699a3',0,4.07,-3.56);box(.25,.15,10.1,'#a0afa7',-4.05,4.07,1.4);
   // 窗户嵌在左墙，窗外是一小片天空。
   const window=new THREE.Group();window.position.set(-3.935,2.4,-1.45);window.rotation.y=Math.PI/2;house.add(window);
   box(2.2,1.8,.1,'#fcf1da',0,0,0,window);
@@ -148,6 +149,33 @@ export function createHome(stage, onOpen) {
   hit('people',0,1.7,-2.05,3.8,1.2,.9);hit('notes',1.85,2.85,-3.25,2,1.25,.2);hit('memories',-3.83,2.4,2.65,.3,1.5,2.0);hit('plans',0,.95,.65,2.5,.3,1.6);hit('lamp',-2.72,2.7,-2.08,1,.7,1);
   // 三个卧室始终处于同一户型，家具分组用于定位和维护。
   const rooms=[],roomHotDefs=[],roomFrames=[[],[],[]],decorLights=[],animatedProps=[],residentPoses=[];
+  // 扩建地面，家具保留原始比例；各房间向空闲方向扩展，保持连通和通道。
+  const floorPlans=[
+    {minX:-6.05,maxX:4.15,minZ:-3.65,maxZ:5.05},
+    {minX:-4.15,maxX:4.15,minZ:-3.65,maxZ:6.65},
+    {minX:-4.15,maxX:4.15,minZ:-3.65,maxZ:3.65,wing:{minX:-.45,maxX:4.15,minZ:3.65,maxZ:8.95}}
+  ];
+  function redistributeRoom(index){
+    // 只平移功能区，绝不缩放床、玩偶或相框。
+    house.children.forEach(child=>{
+      if(child.userData.architecture||child.name==='room-window')return;
+      const {x,z}=child.position;
+      if(index===0){
+        if(x<-3.5)child.position.x-=1.9;
+        else if(x<-.3&&z<-1)child.position.x-=1.1;
+        else if(x<-.8&&z>1)child.position.x-=.7;
+      }else if(index===1&&z>.4&&x<.8){child.position.z+=2.1}
+      else if(index===2){
+        if(child.name==='resident-2'||(x>3.2&&z>-.6&&z<1.95)||(x>1&&x<1.65&&z>1&&z<1.8))child.position.z+=5.8;
+        else if(x<1&&z>1){
+          const bounds=new THREE.Box3().setFromObject(child),size=bounds.getSize(new THREE.Vector3());
+          if(size.x>1.5&&size.z>1.5)return;
+          child.position.x+=2.9;child.position.z+=4.8;
+        }
+      }
+    });
+    const pose=residentPoses.find(p=>p.room===index);pose.position.copy(pose.resident.position);
+  }
   const themes=[{wall:'#77717f',side:'#b8adaf',base:'#514958',quilt:'#4d505f',wood:'#9b8475'},
     {wall:'#dec9ac',side:'#b6c3b2',base:'#836445',quilt:'#9aab90',wood:'#b28c66'},
     {wall:'#b5a6c8',side:'#929dbb',base:'#6c6088',quilt:'#8c73ac',wood:'#b7a1b9'}];
@@ -236,16 +264,26 @@ export function createHome(stage, onOpen) {
     residentPoses.push({resident,room:i,position:resident.position.clone(),rotation:resident.rotation.y});
   }
   for(let i=0;i<3;i++){
-    const t=themes[i];house=new THREE.Group();house.name='personal-room-'+i;house.visible=true;scene.add(house);rooms.push(house);
+    const t=themes[i],plan=floorPlans[i],width=plan.maxX-plan.minX,depth=plan.maxZ-plan.minZ,cx=(plan.minX+plan.maxX)/2,cz=(plan.minZ+plan.maxZ)/2;
+    house=new THREE.Group();house.name='personal-room-'+i;house.userData.floorPlan=plan;house.visible=true;scene.add(house);rooms.push(house);
     const grain=canvasTexture((ctx,W,H)=>{ctx.fillStyle='#f3e9dc';ctx.fillRect(0,0,W,H);for(let n=0;n<70;n++){ctx.strokeStyle=n%3?'#c7b5a0':'#dfd0bd';ctx.lineWidth=n%4===0?2:1;ctx.beginPath();ctx.moveTo(0,n*H/70);ctx.bezierCurveTo(W*.35,n*H/70+3,W*.65,n*H/70-3,W,n*H/70);ctx.stroke()}},256,256);
     grain.wrapS=grain.wrapT=THREE.RepeatWrapping;grain.repeat.set(2,5);
     const floorMaterial=new THREE.MeshStandardMaterial({color:t.wood,map:grain,roughness:.74});
-    box(8.3,.12,7.3,floorMaterial,0,.12,0).name='floor-room-'+i;
-    for(let j=0;j<18;j++){box(8,.012,.013,'#a99380',0,.19,-3.35+j*.39)}
-    box(8.25,3.9,.18,t.wall,0,2.08,-3.56);const leftWall=box(.18,3.9,7.3,t.side,-4.05,2.08,0);leftWall.name='room-left-wall';
-    box(8.2,.14,.1,'#f4e6d2',0,.28,-3.42);box(.1,.14,7.2,'#f4e6d2',-3.93,.28,0).name='room-left-trim';
-    box(8.4,.15,.25,t.base,0,4.07,-3.56);box(.25,.15,7.3,t.base,-4.05,4.07,0);
-    const roomWindow=window.clone(true);roomWindow.position.z=.1;house.add(roomWindow);
+    box(width,.12,depth,floorMaterial,cx,.12,cz).name='floor-room-'+i;
+    for(let z=plan.minZ+.3;z<plan.maxZ-.1;z+=.39)box(width-.3,.012,.013,'#a99380',cx,.19,z);
+    box(width-.05,3.9,.18,t.wall,cx,2.08,-3.56);const leftWall=box(.18,3.9,depth,t.side,plan.minX+.1,2.08,cz);leftWall.name='room-left-wall';
+    box(width-.1,.14,.1,'#f4e6d2',cx,.28,-3.42);box(.1,.14,depth-.1,'#f4e6d2',plan.minX+.22,.28,cz).name='room-left-trim';
+    box(width+.1,.15,.25,t.base,cx,4.07,-3.56);box(.25,.15,depth,t.base,plan.minX+.1,4.07,cz);
+    if(plan.wing){
+      const wing=plan.wing,wx=(wing.minX+wing.maxX)/2,wz=(wing.minZ+wing.maxZ)/2;
+      box(wing.maxX-wing.minX,.12,wing.maxZ-wing.minZ,floorMaterial,wx,.12,wz).name='floor-room-2-wing';
+      for(let z=wing.minZ+.2;z<wing.maxZ-.1;z+=.39)box(wing.maxX-wing.minX-.2,.012,.013,'#a99380',wx,.19,z);
+      // 换装翼采用低隔断，保留可见性和左侧通道。
+      box(.10,.65,wing.maxZ-wing.minZ,t.base,wing.maxX-.07,.50,wz);
+      box(.045,.04,wing.maxZ-wing.minZ,'#cfbfdc',wing.maxX-.14,.84,wz);
+    }
+    house.children.forEach(child=>child.userData.architecture=true);
+    const roomWindow=window.clone(true);roomWindow.name='room-window';roomWindow.position.set(plan.minX+.215,2.4,.1);house.add(roomWindow);
     // 每间卧室都有床、两只枕头、床头柜和自己的灯。
     for(const x of [.5,2.9])for(const z of [-2.8,-.6])cylinder(.07,.07,.31,'#8c6a55',x,.34,z);
     round(3.0,.45,2.95,t.wood,1.7,.59,-1.72,.08);round(3.05,1.1,.18,t.base,1.7,1.14,-3.13,.08);
@@ -313,40 +351,44 @@ export function createHome(stage, onOpen) {
       plant(3.12,.21,2.45,1.2);
     }
     dressRoom(i,resident);
+    redistributeRoom(i);
     hit('room'+i,resident.position.x,resident.position.y+.45,resident.position.z,.85,1.15,.85);
     roomHotDefs.push([{id:'room'+i,text:['Piggy · 摇滚与电玩','4010 · 黑胶聆听室','Joey · 亚文化与 K-pop'][i],p:resident.position.clone().add(new THREE.Vector3(0,1.30,.2))},{id:'frames'+i,text:'相框 · 上传照片',p:new THREE.Vector3(1.78,3.67,-3.10)},{id:'notes',text:'给家里留句话',p:new THREE.Vector3(.3,.95,1.75)}]);
   }
   // 三个人共同生活的痕迹：外套、杂志和一盘零食。
   house=livingRoom;
+  // 客厅前侧只铺一块活动毯，保留放游戏桌、礼物柜与行走的空间。
+  round(5.0,.025,1.7,'#c2ccbb',0,.23,4.7,.008);
   round(.72,.035,.68,'#847291',1.20,1.47,-2.72,.015);
   for(let n=0;n<3;n++)box(.045,.02,.50,'#c1aacf',.95+n*.12,1.50,-2.70);
   magazine(-.22,.99,.76,'#927482','OUR DAYS',table);
   cylinder(.23,.23,.035,'#ead7b5',-.67,.98,.35,table);for(let n=0;n<5;n++)ball(.045,'#c69262',-.82+(n%3)*.12,1.02,.27+Math.floor(n/3)*.13,table);
   // 客厅居中：北侧 Piggy、西侧 4010、东侧 Joey，南侧玄关。
-  const layout=[new THREE.Vector3(0,0,-7.3),new THREE.Vector3(-8.3,0,0),new THREE.Vector3(8.3,0,0)];
+  const layout=[new THREE.Vector3(0,0,-8.7),new THREE.Vector3(-8.3,0,0),new THREE.Vector3(8.3,0,0)];
   livingRoom.name='living-room';livingRoom.position.set(0,0,0);
   rooms.forEach((room,i)=>{room.position.copy(layout[i]);room.visible=true});
   const building=new THREE.Group();building.name='shared-foundation';scene.add(building);
   // 单一十字形地台；每个房间只有一层地板，避免共面引起深度闪烁。
-  const outline=[[-4.15,-10.95],[4.15,-10.95],[4.15,-3.65],[12.45,-3.65],[12.45,3.65],[4.15,3.65],[2,3.65],[2,5.5],[-2,5.5],[-2,3.65],[-4.15,3.65],[-12.45,3.65],[-12.45,-3.65],[-4.15,-3.65]];
+  const outline=[[-6.05,-12.35],[4.15,-12.35],[4.15,-3.65],[12.45,-3.65],[12.45,8.95],[7.85,8.95],[7.85,3.65],[4.15,3.65],[4.15,6.45],[2,6.45],[2,8.3],[-2,8.3],[-2,6.45],[-4.15,6.45],[-4.15,6.65],[-12.45,6.65],[-12.45,-3.65],[-6.05,-3.65]];
   const footprint=new THREE.Shape();outline.forEach(([x,z],i)=>i?footprint.lineTo(x,z):footprint.moveTo(x,z));footprint.closePath();
   const baseGeometry=new THREE.ExtrudeGeometry(footprint,{depth:.48,bevelEnabled:false,steps:1});baseGeometry.rotateX(Math.PI/2);
   mesh(baseGeometry,'#b89cbd',0,.08,0,building).name='foundation-slab';
-  box(4,.12,1.85,'#d0b397',0,.12,4.575,building).name='floor-entry';
-  round(1.4,.025,.75,'#88b8a0',0,.20,4.55,.02,building);
-  art(1.2,.25,0,.215,4.5,(ctx,W,H)=>{ctx.fillStyle='#88b8a0';ctx.fillRect(0,0,W,H);ctx.fillStyle='#fff3df';ctx.font='bold 95px sans-serif';ctx.textAlign='center';ctx.fillText('WELCOME',W/2,300)},building).rotation.x=-Math.PI/2;
+  box(4,.12,1.85,'#d0b397',0,.12,7.375,building).name='floor-entry';
+  round(1.4,.025,.75,'#88b8a0',0,.20,7.35,.02,building);
+  art(1.2,.25,0,.215,7.3,(ctx,W,H)=>{ctx.fillStyle='#88b8a0';ctx.fillRect(0,0,W,H);ctx.fillStyle='#fff3df';ctx.font='bold 95px sans-serif';ctx.textAlign='center';ctx.fillText('WELCOME',W/2,300)},building).rotation.x=-Math.PI/2;
   // 内墙保留门洞，让房间通过同一片地板连起来。
   function doorway(group,wall,axis,center,color,label,id){
     group.remove(wall);const half=axis==='x'?4.125:3.65,width=1.2,opening=2.45;
     const leftEnd=center-width/2,rightStart=center+width/2;
+    const range=group.userData.floorPlan,min=axis==='z'?range.minZ:-half,max=axis==='z'?range.maxZ:half;
     const trim=group.getObjectByName('room-left-trim');if(axis==='z'&&trim){group.remove(trim);box(.1,.14,leftEnd+half,'#f4e6d2',-3.93,.28,(-half+leftEnd)/2,group);box(.1,.14,half-rightStart,'#f4e6d2',-3.93,.28,(rightStart+half)/2,group);}
     if(axis==='x'){
       box(leftEnd+half,3.9,.18,color,(-half+leftEnd)/2,2.08,-3.56,group);
       box(half-rightStart,3.9,.18,color,(rightStart+half)/2,2.08,-3.56,group);
       box(width,4.03-opening,.18,color,center,(4.03+opening)/2,-3.56,group);
     }else{
-      box(.18,3.9,leftEnd+half,color,-4.05,2.08,(-half+leftEnd)/2,group);
-      box(.18,3.9,half-rightStart,color,-4.05,2.08,(rightStart+half)/2,group);
+      box(.18,3.9,leftEnd-min,color,-4.05,2.08,(min+leftEnd)/2,group);
+      box(.18,3.9,max-rightStart,color,-4.05,2.08,(rightStart+max)/2,group);
       box(.18,4.03-opening,width,color,-4.05,(4.03+opening)/2,center,group);
     }
     const door=new THREE.Group();door.name='door-'+label;group.add(door);
@@ -380,12 +422,12 @@ export function createHome(stage, onOpen) {
     if(index===-2){[livingRoom,...rooms,building].forEach(root=>bounds.union(new THREE.Box3().setFromObject(root)))}
     else bounds.setFromObject(index===-1?livingRoom:rooms[index]);
     const target=bounds.getCenter(new THREE.Vector3());
-    const direction=(index===-2?new THREE.Vector3(1,1.8,1.75):new THREE.Vector3(9,12,14)).normalize();
+    const direction=(index===-2?new THREE.Vector3(1,1.8,1.75):new THREE.Vector3(7,9,12)).normalize();
     const right=new THREE.Vector3(direction.z,0,-direction.x).normalize(),up=new THREE.Vector3().crossVectors(direction,right).normalize();
-    const tangent=Math.tan(THREE.MathUtils.degToRad(camera.fov/2));let distance=12;
+    const tangent=Math.tan(THREE.MathUtils.degToRad(camera.fov/2)),padding=index===-2?.83:.88;let distance=12;
     for(const x of [bounds.min.x,bounds.max.x])for(const y of [bounds.min.y,bounds.max.y])for(const z of [bounds.min.z,bounds.max.z]){
       const v=new THREE.Vector3(x,y,z).sub(target),depth=v.dot(direction);
-      distance=Math.max(distance,depth+Math.abs(v.dot(right))/(tangent*camera.aspect*.83),depth+Math.abs(v.dot(up))/(tangent*.83));
+      distance=Math.max(distance,depth+Math.abs(v.dot(right))/(tangent*camera.aspect*padding),depth+Math.abs(v.dot(up))/(tangent*padding));
     }
     return {target,position:target.clone().addScaledVector(direction,distance)};
   }

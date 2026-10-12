@@ -13,7 +13,7 @@ async function enterHome(){
  try{
   await getMember();
   shell.hidden=false;gate.hidden=true;
-  await import('./app.js?v=8-photo-cors');
+  await import('./app.js?v=9-expanded');
   opened=true;input.value='';
   document.querySelector('#lock-home').textContent='退出登录';
   document.querySelector('#lock-home').onclick=async()=>{

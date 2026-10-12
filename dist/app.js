@@ -1,5 +1,5 @@
 import {loadCloud,saveCloud,currentMember,cloudError,startCloudSync} from './cloud.js?v=1';
-import { createHome } from './scene.js?v=3-photo-cors';
+import { createHome } from './scene.js?v=4-expanded';
 import { createRoomMusic } from './room-music.js?v=1';
 import { watchSystemTheme } from './time-theme.js?v=2-system';
 const $=s=>document.querySelector(s);
@@ -67,6 +67,9 @@ async function update(change){
 const ownRoom=index=>currentMember()?.id===index;
 const ownRecord=record=>record.creator===currentMember()?.user_id;
 function refreshRoomUI(){
+ document.body.classList.toggle('room-focus',activeRoom!==-2);
+ $('#focus-heading').textContent=activeRoom===-1?'我们的客厅':activeRoom>=0?`${data.people[activeRoom].name}的房间`:'';
+ $('#focus-info').textContent=activeRoom>=0?'房间手记':'小家手记';
  const nav=$('#room-nav');nav.innerHTML=`<button data-room="-2" aria-pressed="${activeRoom===-2}">⌂ 全景</button><button data-room="-1" aria-pressed="${activeRoom===-1}">客厅</button>${data.people.map((p,i)=>`<button data-room="${i}" aria-pressed="${activeRoom===i}"><span class="room-color color-${i}"></span>${esc(p.name)}</button>`).join('')}`;
  nav.querySelectorAll('button').forEach(b=>b.onclick=()=>switchRoom(Number(b.dataset.room)));
  $('#home-heading').innerHTML=activeRoom<0?'世界很大，<br>我们有个小家。':`${esc(data.people[activeRoom].name)}的房间<br><span class="room-subtitle">${esc(data.rooms[activeRoom].title)}</span>`;
@@ -75,6 +78,7 @@ function refreshRoomUI(){
  $('#scene-caption').textContent=activeRoom<0?(data.night?'夜晚的小家 · 不管多晚，都有你的位置':'晴天的小家 · 灯一直为你留着'):`${data.people[activeRoom].name}的${['摇滚电玩房','黑胶聆听室','亚文化小天地'][activeRoom]} · ${data.night?'晚安，也爱自己':'今天也自在做自己'}`;
 }
 function switchRoom(index){if(!Number.isInteger(index)||index<-2||index>2)return;activeRoom=index;home?.setRoom(index);refreshRoomUI();void roomMusic.play(index)}
+$('#focus-info').onclick=()=>openPanel(activeRoom>=0?'room'+activeRoom:'about');
 function members(){ $('#members').innerHTML=data.people.map((p,i)=>`<button data-person="${i}" title="${esc(p.status)}"><span class="avatar">${esc(p.emoji)}</span><span class="member-name">${esc(p.name)}</span></button>`).join('');$('#members').querySelectorAll('button').forEach(b=>b.onclick=()=>switchRoom(Number(b.dataset.person)));}
 const panel=$('#panel');let lastFocus,currentPanelId;
 function openPanel(id){const focus=/^focus(-1|[0-2])$/.exec(id);if(focus){switchRoom(Number(focus[1]));return}const frameMatch=/^frame([0-2])-([0-2])$/.exec(id);if(frameMatch)id='frames'+frameMatch[1];if(id==='lamp'){toggleLamp();return}lastFocus=document.activeElement;renderPanel(id);if(!panel.open)panel.showModal();}
