@@ -15,16 +15,15 @@ data.rooms=data.rooms.map((r,i)=>r.title===oldTitles[i]?structuredClone(initial.
 data.rooms=data.rooms.map(r=>({...r,framePhotos:Array.from({length:3},(_,i)=>r.framePhotos?.[i]??null)}));
 if(!['auto','manual'].includes(data.themeMode))data.themeMode='auto';
 let activeRoom=-2;
-const roomMusic=createRoomMusic(({state,room,muted,track})=>{
- $('#room-music').hidden=room<0;
- $('#music-toggle').textContent=muted?'开启音乐':'静音';
- $('#music-toggle').setAttribute('aria-pressed',String(muted));
- $('#music-status').textContent=track?`${track.title} · ${track.style} · ${state==='playing'?'播放中 / 15 秒':state==='muted'?'已静音':state==='blocked'?'点播放听听':state==='unavailable'?'浏览器暂不支持音频':'15 秒试听'}`:'';
- $('#music-replay').disabled=muted||state==='unavailable';
- $('#music-replay').textContent=state==='playing'?'重播':'播放';
-});
+function updateMuteButton(muted){
+ const button=$('#music-toggle');
+ button.setAttribute('aria-pressed',String(muted));
+ button.setAttribute('aria-label',muted?'取消静音':'静音');
+ button.title=muted?'取消静音':'静音';
+}
+const roomMusic=createRoomMusic(({muted})=>updateMuteButton(muted));
+updateMuteButton(roomMusic.muted);
 $('#music-toggle').onclick=()=>roomMusic.setMuted(!roomMusic.muted);
-$('#music-replay').onclick=()=>void roomMusic.play(activeRoom);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)roomMusic.stop()});
 window.addEventListener('pagehide',()=>roomMusic.stop());
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
