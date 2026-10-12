@@ -1,8 +1,9 @@
 import * as THREE from 'three';
 import { OrbitControls } from './vendor/OrbitControls.js';
+import { createNavigator } from './navigation.js?v=1';
 
 // 所有模型由几何体原创搭建，不依赖外部模型或网络资源。
-export function createHome(stage, onOpen) {
+export function createHome(stage, onOpen, onWalkState=()=>{}) {
   const scene = new THREE.Scene();
   const renderer = new THREE.WebGLRenderer({antialias:true,alpha:true});
   renderer.setPixelRatio(Math.min(devicePixelRatio,2));
@@ -85,7 +86,7 @@ export function createHome(stage, onOpen) {
     if(style===0){const belly=ball(.25,shirt,0,.32,.04,g);belly.scale.set(1.20,.9,1);g.scale.set(1.08,1.02,1.05)}
     const leftArm=cylinder(.075,.08,.36,skin,style===0?-.37:-.29,.27,.03,g);leftArm.name='left-arm';leftArm.rotation.z=-.18;const rightArm=cylinder(.075,.08,.36,skin,style===0?.37:.29,.27,.03,g);rightArm.name='right-arm';rightArm.rotation.z=.18;
     ball(.08,skin,style===0?-.40:-.32,.1,.06,g).name='left-hand';ball(.08,skin,style===0?.40:.32,.1,.06,g).name='right-hand';
-    for(const px of [-.13,.13]){const leg=round(style===2?.20:.14,style===2?.48:.13,style===2?.20:.48,style===2?'#454351':'#657087',px,style===2?-.08:.04,style===2?.02:.25,.03,g);round(.17,.14,.25,'#f4e6d9',px,style===2?-.36:-.02,style===2?.10:.50,.035,g)}
+    for(const px of [-.13,.13]){const leg=round(style===2?.20:.14,style===2?.48:.13,style===2?.20:.48,style===2?'#454351':'#657087',px,style===2?-.08:.04,style===2?.02:.25,.03,g);leg.name=px<0?'left-leg':'right-leg';round(.17,.14,.25,'#f4e6d9',px,style===2?-.36:-.02,style===2?.10:.50,.035,g).name=px<0?'left-shoe':'right-shoe'}
     ball(.245,skin,0,.76,.03,g);const cap=mesh(new THREE.SphereGeometry(.254,24,16,0,Math.PI*2,0,Math.PI*(style===2?.43:.53)),hair,0,.79,.02,g);cap.rotation.x=-.2;
     ball(.06,skin,-.244,.74,.02,g);ball(.06,skin,.244,.74,.02,g);
     for(const px of [-.08,.08]){ball(.018,'#44333d',px,.76,.253,g);if(style!==2)ball(.036,'#dc9b8f',px*1.6,.695,.236,g)}
@@ -115,13 +116,13 @@ export function createHome(stage, onOpen) {
   box(1.9,1.18,.12,'#aa805c',1.83,2.87,-3.38);
   box(1.74,1.02,.02,'#d9b58f',1.83,2.87,-3.30);
   for(let i=0;i<3;i++){const n=box(.43,.45,.025,['#ffe6a0','#cddfca','#d7bce8'][i],1.25+i*.57,2.89,-3.27);n.rotation.z=[.12,-.08,.15][i];ball(.025,'#d47e7b',1.25+i*.57,3.065,-3.244)}
-  const album=new THREE.Group();album.position.set(-3.91,2.4,2.65);album.rotation.y=Math.PI/2;house.add(album);
-  box(2.0,1.5,.08,'#b08769',0,0,0,album);
+  const album=new THREE.Group();album.position.set(-3.91,2.45,3.9);album.rotation.y=Math.PI/2;house.add(album);
+  box(2.65,2.3,.08,'#b08769',0,0,0,album);
   const livingFrames=[];
-  for(let i=0;i<8;i++){
-    const frame=new THREE.Group();frame.position.set((i%4-1.5)*.46,i<4?.34:-.34,.075);frame.rotation.z=[.035,-.025,.02,-.03][i%4];album.add(frame);
-    box(.44,.58,.028,'#fff7e6',0,0,0,frame);
-    const photo=art(.36,.38,0,.045,.018,()=>{},frame);photo.name='living-photo-'+i;
+  for(let i=0;i<4;i++){
+    const frame=new THREE.Group();frame.position.set((i%2-.5)*1.23,i<2?.55:-.55,.075);frame.rotation.z=[.02,-.02][i%2];album.add(frame);
+    box(1.08,1.08,.028,'#fff7e6',0,0,0,frame);
+    const photo=art(.90,.90,0,.035,.018,()=>{},frame);photo.name='living-photo-'+i;
     const ctx=photo.material.map.image.getContext('2d');
     function placeholder(){ctx.fillStyle=['#b2c8c5','#d0b8d2','#edc6a8'][i%3];ctx.fillRect(0,0,512,512);ctx.fillStyle='#fff3df';ctx.font='140px sans-serif';ctx.textAlign='center';ctx.fillText('♡',256,310);photo.material.map.needsUpdate=true}
     placeholder();livingFrames.push({photo,ctx,placeholder,revision:0});
@@ -133,20 +134,20 @@ export function createHome(stage, onOpen) {
   cylinder(.3,.3,.05,'#504653',-3.23,1.30,2.32);cylinder(.09,.09,.057,'#dca1b1',-3.23,1.308,2.32);
   for(let i=0;i<3;i++)box(.45,.055,.6,palette[i+2],-2.99,1.3+i*.06,2.7);
   function plant(x,y,z,size=1){const g=new THREE.Group();g.position.set(x,y,z);g.scale.setScalar(size);house.add(g);cylinder(.22,.16,.35,'#ddab8b',0,.175,0,g);cylinder(.19,.19,.015,'#685345',0,.36,0,g);cylinder(.025,.025,.75,'#6a977b',0,.69,0,g);for(let i=0;i<7;i++){const a=i*2.4;const leaf=ball(.16,i%2?'#91b29a':'#6f9a81',Math.cos(a)*.19,.49+i*.08,Math.sin(a)*.19,g);leaf.scale.set(.7,1.65,.65);leaf.rotation.z=Math.cos(a)*.8}return g}
-  plant(-2.4,.21,.32,1.4);plant(2.3,.21,2.8,1.7);plant(3.57,1.55,-2.71,.52);
+  plant(-1.7,.21,.32,1.4);plant(2.3,.21,2.8,1.7);plant(3.57,1.55,-2.71,.52);
   // 落地灯与窗边的小猫。
-  cylinder(.32,.32,.07,'#937b69',-2.72,.25,-2.08);cylinder(.035,.035,2.30,'#a58a70',-2.72,1.38,-2.08);
-  const lampMat=new THREE.MeshStandardMaterial({color:'#ffe4a7',emissive:'#ffcc80',emissiveIntensity:.35,roughness:.9});cylinder(.31,.54,.58,lampMat,-2.72,2.7,-2.08);
-  const lampLight=new THREE.PointLight('#ffbf7b',0,8,1.6);lampLight.position.set(-2.72,2.4,-1.9);scene.add(lampLight);
+  cylinder(.32,.32,.07,'#937b69',-2.45,.25,-2.08);cylinder(.035,.035,2.30,'#a58a70',-2.45,1.38,-2.08);
+  const lampMat=new THREE.MeshStandardMaterial({color:'#ffe4a7',emissive:'#ffcc80',emissiveIntensity:.35,roughness:.9});cylinder(.31,.54,.58,lampMat,-2.45,2.7,-2.08);
+  const lampLight=new THREE.PointLight('#ffbf7b',0,8,1.6);lampLight.position.set(-2.45,2.4,-1.9);scene.add(lampLight);
   const cat=new THREE.Group();cat.position.set(-2.6,.22,1.75);cat.rotation.y=.6;house.add(cat);
   const body=ball(.24,'#ead4b4',0,.2,0,cat);body.scale.set(1.55,.85,.9);ball(.18,'#ead4b4',.26,.32,0,cat);for(const z of [-.10,.1]){const ear=mesh(new THREE.ConeGeometry(.065,.13,3),'#ead4b4',.27,.50,z,cat);ear.rotation.x=z>0?.2:-.2;ball(.018,'#6b5b58',.415,.34,z*.75,cat)}const tail=mesh(new THREE.TorusGeometry(.20,.055,8,16,Math.PI*1.2),'#e3c8a5',-.3,.22,-.10,cat);tail.rotation.x=Math.PI/2;
   // 不遮挡模型的底部软阴影。
   const ground=new THREE.Mesh(new THREE.PlaneGeometry(200,200),new THREE.ShadowMaterial({opacity:.10}));ground.rotation.x=-Math.PI/2;ground.name='shadow-ground';ground.position.y=-.52;ground.receiveShadow=true;scene.add(ground);
-  const livingHotDefs=[{id:'memories',text:'我们的回忆',p:new THREE.Vector3(-3.5,3.35,2.65)},{id:'notes',text:'留一句话',p:new THREE.Vector3(2.0,3.75,-3.0)},{id:'people',text:'我们仨',p:new THREE.Vector3(.0,2.40,-1.8)},{id:'plans',text:'下一次见面',p:new THREE.Vector3(.35,1.3,1.3)}];
+  const livingHotDefs=[{id:'memories',text:'我们的回忆',p:new THREE.Vector3(-3.5,3.85,3.9)},{id:'notes',text:'留一句话',p:new THREE.Vector3(2.0,3.75,-3.0)},{id:'people',text:'我们仨',p:new THREE.Vector3(.0,2.40,-1.8)},{id:'plans',text:'下一次见面',p:new THREE.Vector3(.35,1.3,1.3)}];
   let hotDefs=livingHotDefs;const hotEl=stage.querySelector('#hotspots');function mountHotspots(){hotEl.replaceChildren();hotDefs.forEach(h=>{const b=document.createElement('button');b.className='hotspot';b.textContent=h.text;b.onclick=()=>onOpen(h.id);hotEl.append(b);h.el=b})}mountHotspots();
   // 点击真实物件也能打开面板；拖动时不误触。
   const hits=[];function hit(id,x,y,z,w,h,d){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshBasicMaterial({visible:false}));m.position.set(x,y,z);m.userData.id=id;m.userData.room=house;house.add(m);hits.push(m)}
-  hit('people',0,1.7,-2.05,3.8,1.2,.9);hit('notes',1.85,2.85,-3.25,2,1.25,.2);hit('memories',-3.83,2.4,2.65,.3,1.5,2.0);hit('plans',0,.95,.65,2.5,.3,1.6);hit('lamp',-2.72,2.7,-2.08,1,.7,1);
+  hit('people',0,1.7,-2.05,3.8,1.2,.9);hit('notes',1.85,2.85,-3.25,2,1.25,.2);hit('memories',-3.83,2.45,3.9,.3,2.3,2.65);hit('plans',0,.95,.65,2.5,.3,1.6);hit('lamp',-2.45,2.7,-2.08,1,.7,1);
   // 三个卧室始终处于同一户型，家具分组用于定位和维护。
   const rooms=[],roomHotDefs=[],roomFrames=[[],[],[]],decorLights=[],animatedProps=[],residentPoses=[];
   // 扩建地面，家具保留原始比例；各房间向空闲方向扩展，保持连通和通道。
@@ -411,16 +412,89 @@ export function createHome(stage, onOpen) {
 
   house=livingRoom;
 
-  const ray=new THREE.Raycaster(),pointer=new THREE.Vector2();let down=null;
-  renderer.domElement.addEventListener('pointerdown',e=>{down={x:e.clientX,y:e.clientY,t:performance.now()}});
-  renderer.domElement.addEventListener('pointerup',e=>{if(!down||Math.hypot(e.clientX-down.x,e.clientY-down.y)>8||performance.now()-down.t>650)return;const r=renderer.domElement.getBoundingClientRect();pointer.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(pointer,camera);const h=ray.intersectObjects(hits.filter(m=>m.userData.room.visible))[0];if(h)onOpen(h.object.userData.id);down=null});
-  renderer.domElement.addEventListener('pointercancel',()=>{down=null});
+  let walker=null,navigator=null,walkPath=[],lastFrameTime=null,lastWalking=false;
+  const walkInput=new THREE.Vector2();
+  const walkRing=new THREE.Mesh(new THREE.RingGeometry(.33,.40,28),new THREE.MeshBasicMaterial({color:'#b28acc',transparent:true,opacity:.8,depthWrite:false}));
+  const destination=new THREE.Mesh(new THREE.RingGeometry(.13,.20,24),new THREE.MeshBasicMaterial({color:'#796195',transparent:true,opacity:.7,depthWrite:false}));
+  for(const marker of [walkRing,destination]){marker.rotation.x=-Math.PI/2;marker.position.y=.285;marker.visible=false;scene.add(marker)}
+  let floorMeshes=[];
+  function prepareNavigation(){
+    if(navigator)return;
+    scene.updateMatrixWorld(true);const floors=[],obstacles=[];
+    scene.traverse(object=>{
+      if(!object.isMesh)return;
+      if(object.name.startsWith('floor-')){
+        const b=new THREE.Box3().setFromObject(object);floorMeshes.push(object);
+        floors.push({minX:b.min.x,maxX:b.max.x,minZ:b.min.z,maxZ:b.max.z,room:object.name.startsWith('floor-room-')?Number(object.name[11]):-1});return;
+      }
+      if(object.material.visible===false)return;
+      for(let parent=object;parent;parent=parent.parent)if(!parent.visible||parent.name.startsWith('resident-'))return;
+      const b=new THREE.Box3().setFromObject(object);if(b.isEmpty()||b.max.y<.35||b.min.y>1.55)return;
+      obstacles.push({minX:b.min.x,maxX:b.max.x,minZ:b.min.z,maxZ:b.max.z});
+    });
+    navigator=createNavigator(floors,obstacles);
+  }
+  function walkState(){return {active:Boolean(walker),room:walker?navigator.roomAt(walker.actor.position):-1,moving:lastWalking}}
+  function cancelWalk(){walkPath=[];walkInput.set(0,0);destination.visible=false;lastWalking=false;if(walker)onWalkState(walkState())}
+  function stopWalking(){
+    if(walker){walker.source.visible=true;scene.remove(walker.actor);walker.ownedGeometry.forEach(geometry=>geometry.dispose());walker=null}
+    cancelWalk();walkRing.visible=false;onWalkState(walkState());
+  }
+  function startWalking(index){
+    if(![0,1,2].includes(index))return false;
+    stopWalking();prepareNavigation();
+    const spawn=[[-.9,3.7],[1.1,2.8],[-1.2,2.3]][index];
+    const point=navigator.nearest({x:spawn[0]+rooms[index].position.x,z:spawn[1]+rooms[index].position.z});if(!point)return false;
+    const source=avatars[index],actor=source.clone(true),ownedGeometry=[];actor.name='walking-resident';
+    for(const name of ['piggy-controller','resident-record-sleeve']){const prop=actor.getObjectByName(name);if(prop)prop.parent.remove(prop)}
+    for(const side of ['left','right']){
+      const x=side==='left'?-.13:.13,leg=actor.getObjectByName(side+'-leg'),shoe=actor.getObjectByName(side+'-shoe');
+      leg.geometry=new THREE.BoxGeometry(index===2?.20:.14,.48,.20);ownedGeometry.push(leg.geometry);leg.position.set(x,-.08,.02);leg.rotation.set(0,0,0);shoe.position.set(x,-.36,.10);shoe.rotation.set(0,0,0);
+      const arm=actor.getObjectByName(side+'-arm'),hand=actor.getObjectByName(side+'-hand'),sign=side==='left'?-1:1;
+      arm.position.set(sign*(index===0?.28:.25),.27,.03);arm.rotation.set(0,0,sign*.18);hand.position.set(sign*.29,.1,.06);
+    }
+    actor.position.set(point.x,.63,point.z);actor.rotation.set(0,Math.PI,0);source.visible=false;scene.add(actor);
+    walker={source,actor,ownedGeometry,index,room:navigator.roomAt(point)};walkRing.visible=true;walkRing.position.set(point.x,.285,point.z);onWalkState(walkState());return true;
+  }
+  function walkTo(point){
+    if(!walker)return false;const path=navigator.findPath(walker.actor.position,point);if(!path?.length)return false;
+    walkPath=path;walkInput.set(0,0);const last=path.at(-1);destination.position.set(last.x,.285,last.z);destination.visible=true;return true;
+  }
+  function updateWalking(time,dt){
+    if(!walker)return;const actor=walker.actor,start=actor.position.clone();let dx=0,dz=0;
+    if(walkInput.lengthSq()>0){
+      const forward=camera.position.clone().sub(controls.target);forward.y=0;forward.normalize();const right=new THREE.Vector3(forward.z,0,-forward.x);
+      const direction=right.multiplyScalar(walkInput.x).addScaledVector(forward,walkInput.y).normalize();dx=direction.x*dt*2.6;dz=direction.z*dt*2.6;
+    }else if(walkPath.length){
+      const target=walkPath[0],x=target.x-actor.position.x,z=target.z-actor.position.z,d=Math.hypot(x,z);
+      if(d<.01){actor.position.x=target.x;actor.position.z=target.z;walkPath.shift()}else{const distance=Math.min(d,dt*2.6);dx=x/d*distance;dz=z/d*distance}
+    }
+    const next=navigator.move(actor.position,dx,dz);actor.position.x=next.x;actor.position.z=next.z;
+    const moving=Math.hypot(next.x-start.x,next.z-start.z)>.001;
+    if(moving)actor.rotation.y=Math.atan2(next.x-start.x,next.z-start.z);
+    else if((dx||dz)&&walkPath.length)walkPath=[];
+    if(!walkPath.length)destination.visible=false;
+    const swing=moving&&!reduced?Math.sin(time*.012)*.28:0;actor.position.y=.63+(moving&&!reduced?Math.abs(Math.sin(time*.012))*.015:0);
+    for(const side of ['left','right']){const sign=side==='left'?1:-1;actor.getObjectByName(side+'-leg').rotation.x=swing*sign;actor.getObjectByName(side+'-shoe').position.z=.10+swing*sign*.15;actor.getObjectByName(side+'-arm').rotation.x=-swing*sign}
+    walkRing.position.set(next.x,.285,next.z);
+    const room=navigator.roomAt(next);if(room!==walker.room||moving!==lastWalking){walker.room=room;lastWalking=moving;onWalkState(walkState())}
+  }
+  const ray=new THREE.Raycaster(),pointer=new THREE.Vector2();let down=null,multiGesture=false;const activePointers=new Set();
+  renderer.domElement.addEventListener('pointerdown',e=>{activePointers.add(e.pointerId);if(activePointers.size>1){multiGesture=true;down=null}else if(!multiGesture)down={id:e.pointerId,x:e.clientX,y:e.clientY,t:performance.now()}});
+  renderer.domElement.addEventListener('pointerup',e=>{
+    activePointers.delete(e.pointerId);const tap=down;down=null;const valid=!multiGesture&&tap?.id===e.pointerId;if(!activePointers.size)multiGesture=false;
+    if(!valid||Math.hypot(e.clientX-tap.x,e.clientY-tap.y)>8||performance.now()-tap.t>650)return;
+    const r=renderer.domElement.getBoundingClientRect();pointer.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(pointer,camera);
+    const h=ray.intersectObjects(hits.filter(m=>m.userData.room.visible&&(!walker||m.userData.id!=='room'+walker.index)))[0];
+    if(h)onOpen(h.object.userData.id);else if(walker){const floor=ray.intersectObjects(floorMeshes)[0];if(floor&&!walkTo(floor.point))onWalkState({...walkState(),blocked:true})}
+  });
+  renderer.domElement.addEventListener('pointercancel',e=>{activePointers.delete(e.pointerId);down=null;if(!activePointers.size)multiGesture=false});
   let night=false,lit=false,tween=null,currentView=-2;
   const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
   function viewFor(index){
     const bounds=new THREE.Box3();
     if(index===-2){[livingRoom,...rooms,building].forEach(root=>bounds.union(new THREE.Box3().setFromObject(root)))}
-    else bounds.setFromObject(index===-1?livingRoom:rooms[index]);
+    else{bounds.setFromObject(index===-1?livingRoom:rooms[index]);if(index===-1)bounds.union(new THREE.Box3().setFromObject(building.getObjectByName('floor-entry')))}
     const target=bounds.getCenter(new THREE.Vector3());
     const direction=(index===-2?new THREE.Vector3(1,1.8,1.75):new THREE.Vector3(7,9,12)).normalize();
     const right=new THREE.Vector3(direction.z,0,-direction.x).normalize(),up=new THREE.Vector3().crossVectors(direction,right).normalize();
@@ -436,10 +510,12 @@ export function createHome(stage, onOpen) {
   controls.addEventListener('start',()=>{tween=null});
   function frame(time){
     requestAnimationFrame(frame);
+    const dt=lastFrameTime===null?0:Math.min(.05,Math.max(0,(time-lastFrameTime)/1000));lastFrameTime=time;updateWalking(time,dt);
     if(tween){const p=Math.min((time-tween.start)/tween.duration,1),s=1-Math.pow(1-p,3);camera.position.lerpVectors(tween.from,tween.to,s);controls.target.lerpVectors(tween.targetFrom,tween.targetTo,s);if(p===1)tween=null}
     if(!reduced){
       const seconds=time*.001;
       residentPoses.forEach(({resident,room,position,rotation})=>{
+        if(walker?.source===resident)return;
         // 只在当前房间或全景播放轻微日常动作，保留稳定的点击位置。
         const moving=currentView===-2||currentView===room;
         resident.position.y=position.y+(moving?Math.sin(seconds*(room===0?2.8:1.4)+room)*.012:0);
@@ -479,7 +555,7 @@ export function createHome(stage, onOpen) {
     }
     frame.photo.material.map.needsUpdate=true;
   }
-  return {setRoomPhoto(room,slot,src){return updatePhotoFrame(roomFrames[room]?.[slot],src)},setLivingPhoto(slot,src){return updatePhotoFrame(livingFrames[slot],src)},setRoom(index){
+  return {startWalking,stopWalking,walkTo,cancelWalk,getWalkState:walkState,setWalkInput(x,y){if(!walker)return;walkInput.set(x,y);walkPath=[];destination.visible=false},setRoomPhoto(room,slot,src){return updatePhotoFrame(roomFrames[room]?.[slot],src)},setLivingPhoto(slot,src){return updatePhotoFrame(livingFrames[slot],src)},setRoom(index){
     if(![-2,-1,0,1,2].includes(index))return;
     currentView=index;hotDefs=index===-2?overviewHotDefs:index===-1?livingHotDefs:roomHotDefs[index];mountHotspots();down=null;
     const view=viewFor(index);move(view.position,view.target);

@@ -1,5 +1,5 @@
 import {loadCloud,saveCloud,currentMember,cloudError,startCloudSync} from './cloud.js?v=1';
-import { createHome } from './scene.js?v=4-expanded';
+import { createHome } from './scene.js?v=5-walking';
 import { createRoomMusic } from './room-music.js?v=1';
 import { watchSystemTheme } from './time-theme.js?v=2-system';
 const $=s=>document.querySelector(s);
@@ -16,6 +16,7 @@ data.rooms=data.rooms.map((r,i)=>r.title===oldTitles[i]?structuredClone(initial.
 data.rooms=data.rooms.map(r=>({...r,framePhotos:Array.from({length:3},(_,i)=>r.framePhotos?.[i]??null)}));
 if(!['auto','manual'].includes(data.themeMode))data.themeMode='auto';
 let activeRoom=-2;
+let walking=false,lastWalkerRoom=null;
 function updateMuteButton(muted){
  const button=$('#music-toggle');
  button.setAttribute('aria-pressed',String(muted));
@@ -36,8 +37,9 @@ function commitPreferences(change){
  try{const saved=JSON.parse(localStorage.getItem(KEY)||'{}');localStorage.setItem(KEY,JSON.stringify({...saved,themeMode:data.themeMode,night:data.night,lit:data.lit}))}catch{}
  return true;
 }
-const displayedPhotos=Array.from({length:4},(_,i)=>Array(i===3?8:3).fill(undefined));
-const pendingPhotos=Array.from({length:4},(_,i)=>Array(i===3?8:3).fill(null));
+const displayedPhotos=Array.from({length:4},(_,i)=>Array(i===3?4:3).fill(undefined));
+const pendingPhotos=Array.from({length:4},(_,i)=>Array(i===3?4:3).fill(null));
+const livingPhotos=()=>data.photos.slice(-4);
 let lastPhotoError=0;
 function syncRoomPhotos(){
  if(!home)return;
@@ -51,7 +53,7 @@ function syncRoomPhotos(){
   }).finally(()=>{if(pendingPhotos[i][slot]===request)pendingPhotos[i][slot]=null});
  };
  data.rooms.forEach((room,i)=>room.framePhotos.forEach((photo,slot)=>sync(i,slot,photo?.src??null,src=>home.setRoomPhoto(i,slot,src),()=>data.rooms[i].framePhotos[slot]?.src??null)));
- for(let slot=0;slot<8;slot++)sync(3,slot,data.photos[slot]?.src??null,src=>home.setLivingPhoto(slot,src),()=>data.photos[slot]?.src??null);
+ for(let slot=0;slot<4;slot++)sync(3,slot,livingPhotos()[slot]?.src??null,src=>home.setLivingPhoto(slot,src),()=>livingPhotos()[slot]?.src??null);
 }
 function applyCloud(next){
  data={...data,...next};members();refreshRoomUI();syncRoomPhotos();
@@ -67,8 +69,9 @@ async function update(change){
 const ownRoom=index=>currentMember()?.id===index;
 const ownRecord=record=>record.creator===currentMember()?.user_id;
 function refreshRoomUI(){
- document.body.classList.toggle('room-focus',activeRoom!==-2);
- $('#focus-heading').textContent=activeRoom===-1?'我们的客厅':activeRoom>=0?`${data.people[activeRoom].name}的房间`:'';
+ document.body.classList.toggle('room-focus',activeRoom!==-2||walking);
+ document.body.classList.toggle('walking',walking);
+ $('#focus-heading').textContent=activeRoom===-1?'我们的客厅':activeRoom>=0?`${data.people[activeRoom].name}的房间`:walking?'在家里走走':'';
  $('#focus-info').textContent=activeRoom>=0?'房间手记':'小家手记';
  const nav=$('#room-nav');nav.innerHTML=`<button data-room="-2" aria-pressed="${activeRoom===-2}">⌂ 全景</button><button data-room="-1" aria-pressed="${activeRoom===-1}">客厅</button>${data.people.map((p,i)=>`<button data-room="${i}" aria-pressed="${activeRoom===i}"><span class="room-color color-${i}"></span>${esc(p.name)}</button>`).join('')}`;
  nav.querySelectorAll('button').forEach(b=>b.onclick=()=>switchRoom(Number(b.dataset.room)));
@@ -79,9 +82,45 @@ function refreshRoomUI(){
 }
 function switchRoom(index){if(!Number.isInteger(index)||index<-2||index>2)return;activeRoom=index;home?.setRoom(index);refreshRoomUI();void roomMusic.play(index)}
 $('#focus-info').onclick=()=>openPanel(activeRoom>=0?'room'+activeRoom:'about');
+const walkKeys=new Set();
+function setWalkKeys(){
+ const down=key=>walkKeys.has(key);
+ const x=Number(down('right')||down('KeyD')||down('ArrowRight'))-Number(down('left')||down('KeyA')||down('ArrowLeft'));
+ const y=Number(down('down')||down('KeyS')||down('ArrowDown'))-Number(down('up')||down('KeyW')||down('ArrowUp'));
+ home?.setWalkInput(x,y);
+}
+function cancelMovement(){walkKeys.clear();home?.cancelWalk()}
+function onWalkState(state){
+ if(state.blocked)toast('这个位置暂时走不过去，试着点旁边的空地');
+ walking=state.active;
+ $('#walk-toggle').textContent=walking?'结束串门':'去串门';
+ $('#walk-toggle').setAttribute('aria-pressed',String(walking));
+ $('#walk-pad').hidden=!walking;$('#walk-find').hidden=!walking;$('#walk-hint').hidden=!walking;
+ if(!walking){lastWalkerRoom=null;walkKeys.clear()}
+ else if(state.room!==lastWalkerRoom){lastWalkerRoom=state.room;switchRoom(state.room)}
+ refreshRoomUI();
+}
+$('#walk-toggle').onclick=()=>{
+ if(!home){toast('当前浏览器未能显示模型，请换 Safari 或 Chrome');return}
+ if(walking)home.stopWalking();else if(!home.startWalking(currentMember().id))toast('暂时没有找到可通行的位置，请刷新重试');
+};
+$('#walk-find').onclick=()=>{const state=home?.getWalkState();if(state?.active)switchRoom(state.room)};
+const movementKeys=['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowLeft','ArrowDown','ArrowRight'];
+window.addEventListener('keydown',event=>{
+ if(!walking||event.metaKey||event.ctrlKey||event.altKey||!movementKeys.includes(event.code)||panel.open||event.target?.closest?.('input,textarea,select,[contenteditable=true]'))return;
+ event.preventDefault();walkKeys.add(event.code);setWalkKeys();
+});
+window.addEventListener('keyup',event=>{if(!walkKeys.has(event.code))return;walkKeys.delete(event.code);setWalkKeys()});
+window.addEventListener('blur',cancelMovement);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)cancelMovement()});
+document.querySelectorAll('[data-walk]').forEach(button=>{
+ const release=()=>{walkKeys.delete(button.dataset.walk);setWalkKeys()};
+ button.addEventListener('pointerdown',event=>{event.preventDefault();walkKeys.add(button.dataset.walk);button.setPointerCapture(event.pointerId);setWalkKeys()});
+ button.addEventListener('pointerup',release);button.addEventListener('pointercancel',release);button.addEventListener('lostpointercapture',release);
+});
 function members(){ $('#members').innerHTML=data.people.map((p,i)=>`<button data-person="${i}" title="${esc(p.status)}"><span class="avatar">${esc(p.emoji)}</span><span class="member-name">${esc(p.name)}</span></button>`).join('');$('#members').querySelectorAll('button').forEach(b=>b.onclick=()=>switchRoom(Number(b.dataset.person)));}
 const panel=$('#panel');let lastFocus,currentPanelId;
-function openPanel(id){const focus=/^focus(-1|[0-2])$/.exec(id);if(focus){switchRoom(Number(focus[1]));return}const frameMatch=/^frame([0-2])-([0-2])$/.exec(id);if(frameMatch)id='frames'+frameMatch[1];if(id==='lamp'){toggleLamp();return}lastFocus=document.activeElement;renderPanel(id);if(!panel.open)panel.showModal();}
+function openPanel(id){const focus=/^focus(-1|[0-2])$/.exec(id);if(focus){switchRoom(Number(focus[1]));return}const frameMatch=/^frame([0-2])-([0-2])$/.exec(id);if(frameMatch)id='frames'+frameMatch[1];if(id==='lamp'){toggleLamp();return}cancelMovement();lastFocus=document.activeElement;renderPanel(id);if(!panel.open)panel.showModal();}
 function renderPanel(id){currentPanelId=id;const content=$('#panel-content');
  if(/^room[0-2]$/.test(id)){
  const i=Number(id.slice(-1)),r=data.rooms[i];
@@ -130,11 +169,11 @@ function renderPanel(id){currentPanelId=id;const content=$('#panel-content');
  $('#plan-form').onsubmit=async e=>{e.preventDefault();const text=new FormData(e.target).get('text').trim();if(text&&await update({plans:[...data.plans,{text,done:false}]})){renderPanel(id);toast('约好了，下一次一起')}};
  }
  if(id==='memories'){
- content.innerHTML=`<h2>把一起的日子挂起来。</h2><p class="panel-desc">这里是共享回忆相册；个人房间的三个相框可以单独上传。<br>在这里也可以放你们自己的照片，<br>再给回忆起个名字。</p><div class="photo-grid">${data.photos.length?data.photos.map((p,i)=>`<div class="polaroid"><img src="${esc(p.src)}" alt="${esc(p.caption)}"><span>${esc(p.caption)}</span>${ownRecord(p)?`<button class="remove" data-photo="${i}" aria-label="删除照片">×</button>`:''}</div>`).join(''):'<div class="polaroid"><div class="empty-photo">♡<small>第一张合照</small></div><span>这个位置留给我们</span></div><div class="polaroid"><div class="empty-photo" style="background:#deeadf">☀<small>某个好天气</small></div><span>等下一次出门</span></div>'}</div><form id="photo-form" style="margin-top:25px"><input id="caption" maxlength="40" placeholder="给这张回忆起个名字" aria-label="照片标题" style="width:100%;margin-bottom:12px"><label class="primary upload-label">放一张照片<input id="photo-upload" type="file" accept="image/*"></label><p class="panel-desc" style="margin-top:12px;margin-bottom:0">最多 8 张照片。三位家人共享；只能删除自己上传的照片。</p></form>`;
+ content.innerHTML=`<h2>把一起的日子挂起来。</h2><p class="panel-desc">这里是共享回忆相册，客厅墙上会显示最近四张；个人房间的三个相框可以单独上传。<br>在这里也可以放你们自己的照片，<br>再给回忆起个名字。</p><div class="photo-grid">${data.photos.length?data.photos.map((p,i)=>`<div class="polaroid"><img src="${esc(p.src)}" alt="${esc(p.caption)}"><span>${esc(p.caption)}</span>${ownRecord(p)?`<button class="remove" data-photo="${i}" aria-label="删除照片">×</button>`:''}</div>`).join(''):'<div class="polaroid"><div class="empty-photo">♡<small>第一张合照</small></div><span>这个位置留给我们</span></div><div class="polaroid"><div class="empty-photo" style="background:#deeadf">☀<small>某个好天气</small></div><span>等下一次出门</span></div>'}</div><form id="photo-form" style="margin-top:25px"><input id="caption" maxlength="40" placeholder="给这张回忆起个名字" aria-label="照片标题" style="width:100%;margin-bottom:12px"><label class="primary upload-label">放一张照片<input id="photo-upload" type="file" accept="image/*"></label><p class="panel-desc" style="margin-top:12px;margin-bottom:0">墙上展示最近 4 张，旧照片保留在相册。<br>相册最多 8 张；只能删除自己上传的照片。</p></form>`;
  content.querySelectorAll('[data-photo]').forEach(b=>b.onclick=async()=>{if(await update({photos:data.photos.filter((_,i)=>i!==Number(b.dataset.photo))}))renderPanel(id)});
  $('#photo-upload').onchange=async e=>{const file=e.target.files[0];if(!file)return;if(data.photos.length>=8){toast('先移除一张，再留下新的回忆吧');return}if(!file.type.startsWith('image/')){toast('请选择一张图片');return}const caption=$('#caption').value.trim()||'一起的日子';const url=URL.createObjectURL(file);try{const img=new Image();await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;img.src=url});const c=document.createElement('canvas');const scale=Math.min(1,900/Math.max(img.width,img.height));c.width=Math.round(img.width*scale);c.height=Math.round(img.height*scale);c.getContext('2d').drawImage(img,0,0,c.width,c.height);const src=c.toDataURL('image/jpeg',.78);if(await update({photos:[...data.photos,{src,caption}]})){renderPanel(id);toast('回忆已经留下来了')}}catch{toast('这张照片暂时无法读取，试试 JPG 或 PNG')}finally{URL.revokeObjectURL(url)}};
  }
- if(id==='help')content.innerHTML=`<h2>在小家里转一转。</h2><p class="panel-desc">电脑：按住鼠标拖动旋转，滚轮缩放。<br>手机：一根手指旋转，两根手指缩放。<br><br>点击门牌、上方的房间入口或头像，镜头会靠近个人房间。<br>点击房间上的小标签或底部按钮，打开对应内容。<br>自动模式跟随系统外观：深色为黑夜，浅色为白天。<br>右上角可手动切换；点击“自动”恢复跟随系统外观。<br>点击“留盏灯”，为今天的小家留一点温暖。<br><br>转迷路了？点“全景”或右侧的 ⌂ 看整个家。</p>`;
+ if(id==='help')content.innerHTML=`<h2>在小家里转一转。</h2><p class="panel-desc">电脑：按住鼠标拖动旋转，滚轮缩放。<br>手机：一根手指旋转，两根手指缩放。<br><br>点击门牌、上方的房间入口或头像，镜头会靠近个人房间。<br>点击房间上的小标签或底部按钮，打开对应内容。<br>自动模式跟随系统外观：深色为黑夜，浅色为白天。<br>右上角可手动切换；点击“自动”恢复跟随系统外观。<br>点击“留盏灯”，为今天的小家留一点温暖。<br><br>点击“去串门”，控制当前账号的玩偶：电脑用 WASD / 方向键，手机按方向按钮，也能点击地面自动走过去。走进另一间房时镜头和音乐随房间切换；“找到我”回到人物所在房间，“结束串门”让玩偶回到日常位置。<br><br>转迷路了？点“全景”或右侧的 ⌂ 看整个家。</p>`;
  if(id==='about')content.innerHTML=`<h2>Very Three，刚好我们仨。</h2><p class="panel-desc">我们想把群聊里的陪伴，变成一间能走进来的小家。<br><br>彩虹是墙上的旗，是沙发上的抱枕，也是这里的一点骄傲。在这里，可以自在做自己。<br><br>现在是一套完整的小家：共享客厅连着三个卧室。点击门牌、上方入口或头像，镜头会靠近房间；点击“全景”看整个家。Piggy 喜欢摇滚与电玩，4010 喜欢黑胶与欧美音乐，Joey 喜欢亚文化与 K-pop。人物穿搭是原创的第一版想象，可以继续调整。</p><p class="panel-desc">照片、留言、计划和房间心情保存在小家云端，只有绑定的三个账号可访问。房间由主人编辑，共享计划由大家维护；内容每十秒同步一次，音乐和外观偏好保留在当前设备。</p>`;
 }
 function closePanel(){panel.close()}
@@ -154,7 +193,7 @@ window.addEventListener('pageshow',()=>syncSystemTheme());
 async function toggleLamp(){if(await update({lit:!data.lit})){applyTheme();toast(data.lit?'灯留着了，等你们回来 ♡':'灯关好了，下次回来再亮起来')}}
 $('#lamp').onclick=toggleLamp;$('#zoom-in').onclick=()=>home?.zoom(.85);$('#zoom-out').onclick=()=>home?.zoom(1.15);$('#reset').onclick=()=>switchRoom(-2);
 applyCloud(await loadCloud());
-try{home=createHome($('#stage'),openPanel);$('#loading').remove();syncRoomPhotos()}catch(error){console.error(error);$('#loading').innerHTML='这个浏览器暂时无法显示 3D 小屋<small>试试 Safari / Chrome；下方留言与相册仍可使用。</small>'}
+try{home=createHome($('#stage'),openPanel,onWalkState);$('#loading').remove();syncRoomPhotos()}catch(error){console.error(error);$('#loading').innerHTML='这个浏览器暂时无法显示 3D 小屋<small>试试 Safari / Chrome；下方留言与相册仍可使用。</small>'}
 syncSystemTheme(true);
 
 
