@@ -82,9 +82,9 @@ export function createHome(stage, onOpen) {
   function person(x,shirt,skin,hair,style){const g=new THREE.Group();g.position.set(x,1.04,-2.03);house.add(g);avatars.push(g);
     round(style===0?.59:style===2?.56:.44,.45,style===0?.40:.30,shirt,0,.35,0,.07,g);
     if(style===0){const belly=ball(.25,shirt,0,.32,.04,g);belly.scale.set(1.20,.9,1);g.scale.set(1.08,1.02,1.05)}
-    cylinder(.075,.08,.36,skin,style===0?-.37:-.29,.27,.03,g).rotation.z=-.18;cylinder(.075,.08,.36,skin,style===0?.37:.29,.27,.03,g).rotation.z=.18;
-    ball(.08,skin,style===0?-.40:-.32,.1,.06,g);ball(.08,skin,style===0?.40:.32,.1,.06,g);
-    for(const px of [-.13,.13]){const leg=round(style===2?.20:.14,.13,.48,style===2?'#454351':'#657087',px,.04,.25,.03,g);round(.17,.14,.25,'#f4e6d9',px,-.02,.50,.035,g)}
+    const leftArm=cylinder(.075,.08,.36,skin,style===0?-.37:-.29,.27,.03,g);leftArm.name='left-arm';leftArm.rotation.z=-.18;const rightArm=cylinder(.075,.08,.36,skin,style===0?.37:.29,.27,.03,g);rightArm.name='right-arm';rightArm.rotation.z=.18;
+    ball(.08,skin,style===0?-.40:-.32,.1,.06,g).name='left-hand';ball(.08,skin,style===0?.40:.32,.1,.06,g).name='right-hand';
+    for(const px of [-.13,.13]){const leg=round(style===2?.20:.14,style===2?.48:.13,style===2?.20:.48,style===2?'#454351':'#657087',px,style===2?-.08:.04,style===2?.02:.25,.03,g);round(.17,.14,.25,'#f4e6d9',px,style===2?-.36:-.02,style===2?.10:.50,.035,g)}
     ball(.245,skin,0,.76,.03,g);const cap=mesh(new THREE.SphereGeometry(.254,24,16,0,Math.PI*2,0,Math.PI*(style===2?.43:.53)),hair,0,.79,.02,g);cap.rotation.x=-.2;
     ball(.06,skin,-.244,.74,.02,g);ball(.06,skin,.244,.74,.02,g);
     for(const px of [-.08,.08]){ball(.018,'#44333d',px,.76,.253,g);if(style!==2)ball(.036,'#dc9b8f',px*1.6,.695,.236,g)}
@@ -138,21 +138,104 @@ export function createHome(stage, onOpen) {
   // 点击真实物件也能打开面板；拖动时不误触。
   const hits=[];function hit(id,x,y,z,w,h,d){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshBasicMaterial({visible:false}));m.position.set(x,y,z);m.userData.id=id;m.userData.room=house;house.add(m);hits.push(m)}
   hit('people',0,1.7,-2.05,3.8,1.2,.9);hit('notes',1.85,2.85,-3.25,2,1.25,.2);hit('memories',-3.83,2.4,2.65,.3,1.4,1.7);hit('plans',0,.95,.65,2.5,.3,1.6);hit('lamp',-2.72,2.7,-2.08,1,.7,1);
-  // 三间独立的个人空间，共用相机和灯光；一次只渲染当前房间。
-  const rooms=[],roomHotDefs=[],roomFrames=[[],[],[]];
-  const themes=[{wall:'#c4bac7',side:'#d5c8c2',base:'#807081',quilt:'#77677f',wood:'#b39987'},
-    {wall:'#ddc7ae',side:'#c8ccbd',base:'#9c8770',quilt:'#b5aa87',wood:'#c8a681'},
-    {wall:'#d5b6d5',side:'#babddd',base:'#a078b4',quilt:'#b18bc4',wood:'#d1b0c9'}];
+  // 三个卧室始终处于同一户型，家具分组用于定位和维护。
+  const rooms=[],roomHotDefs=[],roomFrames=[[],[],[]],decorLights=[],animatedProps=[],residentPoses=[];
+  const themes=[{wall:'#77717f',side:'#b8adaf',base:'#514958',quilt:'#4d505f',wood:'#9b8475'},
+    {wall:'#dec9ac',side:'#b6c3b2',base:'#836445',quilt:'#9aab90',wood:'#b28c66'},
+    {wall:'#b5a6c8',side:'#929dbb',base:'#6c6088',quilt:'#8c73ac',wood:'#b7a1b9'}];
   function poster(w,h,x,y,z,index){box(w+.10,h+.10,.06,'#f2e6d5',x,y,z);art(w,h,x,y,z+.04,(ctx,W,H)=>{ctx.fillStyle=['#514352','#e4ccaa','#785590'][index];ctx.fillRect(0,0,W,H);ctx.textAlign='center';ctx.fillStyle=['#f4d19a','#806147','#f6c0df'][index];ctx.font='bold 72px sans-serif';ctx.fillText(['ROCK / PLAY','VINYL DAYS','K-POP / MOOD'][index],W/2,130);ctx.font='170px sans-serif';ctx.fillText(['ϟ','◎','✦'][index],W/2,350)})}
   function smallDesk(x,z,color){for(const dx of [-.83,.83])for(const dz of [-.35,.35])box(.075,1.15,.075,'#927b67',x+dx,.79,z+dz);round(2.1,.14,1.05,color,x,1.41,z,.04)}
   function chair(x,z,color){cylinder(.30,.3,.10,'#8c8092',x,.33,z);cylinder(.05,.05,.53,'#8c8092',x,.6,z);round(.72,.15,.66,color,x,.91,z,.05);round(.72,.7,.15,color,x,1.31,z+.29,.05)}
   function screen(x,y,z,color,width=1.0){round(width,.68,.09,'#554c68',x,y,z,.04);art(width-.10,.56,x,y,z+.052,(ctx,W,H)=>{ctx.fillStyle=color;ctx.fillRect(0,0,W,H);ctx.fillStyle='#f8e7ff';for(let r=0;r<5;r++){ctx.fillRect(50,70+r*65,180+(r%2)*100,13)}ctx.fillStyle='#bfddcd';ctx.fillRect(360,60,90,330)});box(.07,.22,.08,'#75697f',x,y-.44,z);box(.44,.04,.25,'#75697f',x,y-.53,z)}
+  function glow(color,x,y,z,parent=house){
+    const material=new THREE.MeshStandardMaterial({color,emissive:color,emissiveIntensity:.65,roughness:.45});
+    const strip=box(.035,.035,2.45,material,x,y,z,parent);strip.castShadow=false;
+    const light=new THREE.PointLight(color,.35,4,2);light.position.set(x,y,z);parent.add(light);decorLights.push(light);
+    return strip;
+  }
+  function magazine(x,y,z,color,title,parent=house){
+    box(.40,.045,.53,color,x,y,z,parent);
+    const cover=art(.36,.48,x,y+.026,z,(ctx,W,H)=>{ctx.fillStyle=color;ctx.fillRect(0,0,W,H);ctx.fillStyle='#fff3df';ctx.font='bold 72px sans-serif';ctx.textAlign='center';ctx.fillText(title,W/2,120);ctx.lineWidth=8;ctx.strokeStyle='#fff3df';ctx.strokeRect(65,180,380,230)},parent);cover.rotation.x=-Math.PI/2;
+  }
+  function dressRoom(i,resident){
+    const t=themes[i];
+    // 窗边织物与床尾毯，增加柔软材质和高低层次。
+    for(const z of [-1.17,1.37]){
+      for(let n=0;n<5;n++)round(.12,2.05,.12,['#76717f','#b8a17e','#847a9c'][i],-3.79,2.38,z+(n-2)*.065,.025);
+      box(.06,.075,.55,t.base,-3.80,3.48,z);
+    }
+    round(1.2,.09,.95,['#ca9b83','#d7c4a4','#ada4c9'][i],2.45,1.145,-.50,.025);
+    for(let n=0;n<7;n++)box(.012,.011,.85,t.base,1.94+n*.16,1.195,-.50);
+    // 床头竖向饰板保留上方相框，不遮挡照片上传入口。
+    for(let n=0;n<14;n++)box(.075,1.55,.04,t.base,.24+n*.235,1.12,-3.43);
+    // 床边软垫小凳与置物层，右侧留出通过房门的空间。
+    for(const x of [1.15,2.35])for(const z of [.05,.48])box(.055,.35,.055,t.base,x,.39,z);
+    round(1.45,.18,.65,t.quilt,1.75,.66,.28,.06);
+    magazine(1.98,.79,.25,['#665969','#9a805e','#74729a'][i],['PLAY','SIDE A','MOOD'][i]);
+    if(i===0){
+      resident.position.set(-1.6,1.0,-1.27);resident.rotation.y=Math.PI;
+      const controller=new THREE.Group();controller.name='piggy-controller';controller.position.set(0,.20,.25);resident.add(controller);
+      round(.43,.13,.22,'#e5ddd5',0,0,0,.03,controller);for(const x of [-.12,.12])ball(.032,'#6c597f',x,.075,0,controller);
+      for(const side of [-1,1]){const hand=resident.getObjectByName(side<0?'left-hand':'right-hand');hand.position.set(side*.22,.24,.25);const arm=resident.getObjectByName(side<0?'left-arm':'right-arm');arm.position.set(side*.29,.31,.13);arm.rotation.x=-.9;arm.rotation.z=side*.3}
+      // 演出海报、游戏收藏与主机展示形成摇滚电玩角。
+      poster(1.30,.90,-2.26,2.95,-3.40,0);
+      box(1.80,.11,.55,'#635365',-2.35,3.67,-3.04);
+      for(let n=0;n<6;n++){box(.18,.34,.27,palette[(n+3)%6],-3.05+n*.23,3.90,-3.07);box(.09,.21,.01,'#efe6d3',-3.05+n*.23,3.90,-2.927)}
+      const pcGlow=new THREE.MeshStandardMaterial({color:'#c79bdc',emissive:'#ae70d1',emissiveIntensity:.8});
+      const indicator=box(.8,.025,.035,pcGlow,-1.64,1.75,-2.74);indicator.name='game-screen-pulse';animatedProps.push({kind:'screen',mesh:indicator});
+      glow('#ba82e2',-2.99,1.1,-2.55);
+      // 前侧懒人沙发与零食篮，不堵北侧通向客厅的门。
+      const bean=ball(.66,'#59606c',.12,.64,2.25);bean.scale.set(1.25,.70,1.05);
+      round(.55,.10,.55,'#d4a18c',.06,.99,2.35,.04);
+      box(.60,.34,.45,'#bc9870',1.43,.39,2.70);for(let n=0;n<3;n++)round(.14,.31,.12,palette[n],1.24+n*.17,.62,2.70,.015);
+      magazine(-.54,.25,1.20,'#7b5968','LIVE');
+      // 线材用曲线收束在音箱边，作为生活细节。
+      const cable=new THREE.CatmullRomCurve3([new THREE.Vector3(-2.6,.24,1.4),new THREE.Vector3(-2.5,.24,2.2),new THREE.Vector3(-1.7,.24,2.2),new THREE.Vector3(-1.5,.24,1.8)]);
+      mesh(new THREE.TubeGeometry(cable,24,.012,5,false),'#473e4b');
+    }else if(i===1){
+      resident.position.set(-1.78,.83,1.11);resident.rotation.y=Math.PI+.20;for(const side of [-1,1]){resident.getObjectByName(side<0?'left-hand':'right-hand').position.set(side*.23,.24,.29);const arm=resident.getObjectByName(side<0?'left-arm':'right-arm');arm.position.set(side*.27,.31,.16);arm.rotation.x=-1.05;}
+      const sleeve=new THREE.Group();sleeve.name='resident-record-sleeve';sleeve.position.set(0,.22,.29);resident.add(sleeve);
+      box(.48,.48,.035,'#937657',0,.10,0,sleeve);art(.41,.41,0,.10,.022,(ctx,W,H)=>{ctx.fillStyle='#d5bc95';ctx.fillRect(0,0,W,H);ctx.fillStyle='#766650';ctx.font='bold 64px sans-serif';ctx.textAlign='center';ctx.fillText('SIDE A',W/2,150);ctx.beginPath();ctx.arc(256,320,105,0,Math.PI*2);ctx.fill()},sleeve);
+      // 温暖胡桃木墙架、唱片分类与窗边落地灯。
+      box(2.42,.12,.42,'#836445',-1.73,3.65,-3.15);
+      for(let n=0;n<9;n++)box(.14,.26,.22,['#7d6d58','#bda782','#7b9080'][n%3],-2.73+n*.24,3.83,-3.15);
+      for(let n=0;n<9;n++)box(.09,1.34,.04,'#a17d59',-3.24+n*.36,1.05,-3.43);
+      cylinder(.30,.30,.05,'#836445',-2.97,.25,.96);cylinder(.027,.027,2.43,'#836445',-2.97,1.46,.96);cylinder(.28,.49,.55,lampMat,-2.97,2.67,.96);
+      // 曲线阅读地毯与书堆，留住慢节奏的听音氛围。
+      const rug=cylinder(1.15,1.15,.022,'#d4c5a5',-1.47,.26,1.18);rug.scale.z=1.22;
+      for(let n=0;n<4;n++)box(.44,.055,.58,['#b9a181','#738b7e','#cfb591','#8c7867'][n],.52,.27+n*.055,2.36);
+      magazine(-.27,.86,1.30,'#8c785f','ANALOG');
+      cylinder(.12,.10,.17,'#efe0c7',.03,.91,1.35);cylinder(.09,.09,.01,'#78593d',.03,1.0,1.35);
+      glow('#efc17d',-.44,1.45,-2.68);
+    }else{
+      resident.position.set(2.64,.62,1.03);resident.rotation.y=Math.PI/2;
+      // 金属网格拼贴板，用原创几何海报避免依赖外部艺人照片。
+      box(1.70,1.0,.055,'#5c5876',-2.02,3.07,-3.38);
+      for(let n=0;n<7;n++)box(.012,.88,.025,'#b4a2c9',-2.76+n*.245,3.07,-3.34);
+      for(let n=0;n<4;n++)box(1.55,.012,.025,'#b4a2c9',-2.02,2.65+n*.27,-3.34);
+      for(let n=0;n<3;n++){const card=box(.35,.43,.04,['#e0a4bf','#9daed1','#d0ba9c'][n],-2.57+n*.55,3.08,-3.30);card.rotation.z=[.12,-.1,.07][n]}
+      box(2.12,.10,.43,'#6d6686',-1.97,3.77,-3.04);
+      for(let n=0;n<3;n++){cylinder(.085,.08,.22,palette[n+3],-2.56+n*.48,3.93,-3.05);ball(.10,'#eee2dc',-2.56+n*.48,4.12,-3.05)}
+      glow('#c38edc',-2.96,1.96,-3.06);glow('#83bcd9',3.45,2.15,.68);
+      // 镜边圆灯、首饰托盘、杂志与鞋盒组成换装空间。
+      for(const y of [.72,1.25,1.78,2.31,2.84])ball(.043,lampMat,3.35,y,.15);
+      round(.62,.05,.38,'#a490ba',1.32,.53,1.40,.015);mesh(new THREE.TorusGeometry(.08,.014,8,16),'#d6be82',1.24,.58,1.4).rotation.x=Math.PI/2;
+      for(let n=0;n<2;n++){box(.67,.28,.42,['#817494','#c3a8bd'][n],-.70,.38+n*.29,2.68);box(.70,.045,.44,'#ece0de',-.70,.54+n*.29,2.68)}
+      magazine(.34,.27,2.0,'#907b9f','ZINE');magazine(.68,.32,2.12,'#7286aa','SEOUL');
+      // 宽松外套放在镜前玩偶身上，手抬起整理衣袖。
+      resident.getObjectByName('right-hand').position.set(.22,.40,.23);resident.getObjectByName('right-arm').rotation.x=-1.5;resident.getObjectByName('right-arm').position.set(.28,.38,.09);
+    }
+    residentPoses.push({resident,room:i,position:resident.position.clone(),rotation:resident.rotation.y});
+  }
   for(let i=0;i<3;i++){
     const t=themes[i];house=new THREE.Group();house.name='personal-room-'+i;house.visible=true;scene.add(house);rooms.push(house);
-    box(8.3,.12,7.3,t.wood,0,.12,0).name='floor-room-'+i;
+    const grain=canvasTexture((ctx,W,H)=>{ctx.fillStyle='#f3e9dc';ctx.fillRect(0,0,W,H);for(let n=0;n<70;n++){ctx.strokeStyle=n%3?'#c7b5a0':'#dfd0bd';ctx.lineWidth=n%4===0?2:1;ctx.beginPath();ctx.moveTo(0,n*H/70);ctx.bezierCurveTo(W*.35,n*H/70+3,W*.65,n*H/70-3,W,n*H/70);ctx.stroke()}},256,256);
+    grain.wrapS=grain.wrapT=THREE.RepeatWrapping;grain.repeat.set(2,5);
+    const floorMaterial=new THREE.MeshStandardMaterial({color:t.wood,map:grain,roughness:.74});
+    box(8.3,.12,7.3,floorMaterial,0,.12,0).name='floor-room-'+i;
     for(let j=0;j<18;j++){box(8,.012,.013,'#a99380',0,.19,-3.35+j*.39)}
     box(8.25,3.9,.18,t.wall,0,2.08,-3.56);const leftWall=box(.18,3.9,7.3,t.side,-4.05,2.08,0);leftWall.name='room-left-wall';
-    box(8.2,.14,.1,'#f4e6d2',0,.28,-3.42);box(.1,.14,7.2,'#f4e6d2',-3.93,.28,0);
+    box(8.2,.14,.1,'#f4e6d2',0,.28,-3.42);box(.1,.14,7.2,'#f4e6d2',-3.93,.28,0).name='room-left-trim';
     box(8.4,.15,.25,t.base,0,4.07,-3.56);box(.25,.15,7.3,t.base,-4.05,4.07,0);
     const roomWindow=window.clone(true);roomWindow.position.z=.1;house.add(roomWindow);
     // 每间卧室都有床、两只枕头、床头柜和自己的灯。
@@ -177,7 +260,7 @@ export function createHome(stage, onOpen) {
     }
     // 彩虹以生活装饰出现，三间房间都有一条彩虹挂饰。
     palette.forEach((c,n)=>box(.18,.19,.04,c,-.14+n*.19,3.54,-3.41));
-    const resident=avatars[i];resident.position.set(2.30,1.15,-1.96);resident.rotation.y=-.2;house.add(resident);
+    const resident=avatars[i];resident.name='resident-'+i;house.add(resident);
     if(i===0){
       // Piggy：摇滚和游戏共享一个房间，暖灰紫里放一点舞台色。
       smallDesk(-1.64,-2.48,t.wood);screen(-1.64,2.05,-2.81,'#65576f',1.55);chair(-1.6,-1.27,'#625766');
@@ -197,7 +280,7 @@ export function createHome(stage, onOpen) {
       // 4010：黑胶柜、唱片机、左右音箱，房间是温暖的聆听空间。
       round(2.24,1.05,.84,t.wood,-1.60,.77,-2.75,.06);
       for(const x of [-2.22,-1.0]){box(.94,.71,.04,'#8b735d',x,.78,-2.31);for(let n=0;n<8;n++)box(.074,.56,.37,palette[(n+2)%6],x-.36+n*.095,.78,-2.38)}
-      round(1.05,.12,.64,'#80634f',-1.55,1.40,-2.75,.035);cylinder(.25,.25,.035,'#38343a',-1.62,1.49,-2.75);cylinder(.072,.072,.038,'#c39b70',-1.62,1.492,-2.75);
+      round(1.05,.12,.64,'#80634f',-1.55,1.40,-2.75,.035);const vinyl=cylinder(.25,.25,.035,'#38343a',-1.62,1.49,-2.75);vinyl.name='spinning-vinyl';animatedProps.push({kind:'vinyl',mesh:vinyl});box(.022,.002,.09,'#f5d5a1',.10,.019,0,vinyl);cylinder(.072,.072,.038,'#c39b70',-1.62,1.492,-2.75);
       const arm=box(.36,.026,.026,'#d6c5b2',-1.24,1.54,-2.78);arm.rotation.y=-.5;ball(.026,'#e8d7c0',-1.06,1.54,-2.68);
       for(const x of [-3.16,-.03]){round(.58,1.36,.55,'#654e40',x,.95,-2.75,.04);for(const y of [.76,1.35]){const speaker=cylinder(y>.9?.11:.20,y>.9?.11:.20,.02,'#3e3838',x,y,-2.46);speaker.rotation.x=Math.PI/2;const ring=mesh(new THREE.TorusGeometry(y>.9?.105:.19,.012,8,24),'#b19470',x,y,-2.44)}}
       // 展示的唱片为原创封套，避免虚构具体歌手与专辑。
@@ -221,9 +304,16 @@ export function createHome(stage, onOpen) {
       round(.65,.12,.62,'#ae8ebd',1.32,.44,1.40,.05);for(let n=0;n<4;n++)box(.035,.30,.035,'#836b91',1.05+(n%2)*.54,.24,1.14+Math.floor(n/2)*.52);
       plant(3.12,.21,2.45,1.2);
     }
-    hit('room'+i,2.3,1.8,-1.96,.75,1.0,.7);
-    roomHotDefs.push([{id:'room'+i,text:['Piggy · 摇滚与电玩','4010 · 黑胶聆听室','Joey · 亚文化与 K-pop'][i],p:new THREE.Vector3(2.3,2.2,-1.4)},{id:'frames'+i,text:'相框 · 上传照片',p:new THREE.Vector3(1.78,3.67,-3.10)},{id:'notes',text:'给家里留句话',p:new THREE.Vector3(.3,.95,1.75)}]);
+    dressRoom(i,resident);
+    hit('room'+i,resident.position.x,resident.position.y+.45,resident.position.z,.85,1.15,.85);
+    roomHotDefs.push([{id:'room'+i,text:['Piggy · 摇滚与电玩','4010 · 黑胶聆听室','Joey · 亚文化与 K-pop'][i],p:resident.position.clone().add(new THREE.Vector3(0,1.30,.2))},{id:'frames'+i,text:'相框 · 上传照片',p:new THREE.Vector3(1.78,3.67,-3.10)},{id:'notes',text:'给家里留句话',p:new THREE.Vector3(.3,.95,1.75)}]);
   }
+  // 三个人共同生活的痕迹：外套、杂志和一盘零食。
+  house=livingRoom;
+  round(.72,.035,.68,'#847291',1.20,1.47,-2.72,.015);
+  for(let n=0;n<3;n++)box(.045,.02,.50,'#c1aacf',.95+n*.12,1.50,-2.70);
+  magazine(-.22,.99,.76,'#927482','OUR DAYS',table);
+  cylinder(.23,.23,.035,'#ead7b5',-.67,.98,.35,table);for(let n=0;n<5;n++)ball(.045,'#c69262',-.82+(n%3)*.12,1.02,.27+Math.floor(n/3)*.13,table);
   // 客厅居中：北侧 Piggy、西侧 4010、东侧 Joey，南侧玄关。
   const layout=[new THREE.Vector3(0,0,-7.3),new THREE.Vector3(-8.3,0,0),new THREE.Vector3(8.3,0,0)];
   livingRoom.name='living-room';livingRoom.position.set(0,0,0);
@@ -241,6 +331,7 @@ export function createHome(stage, onOpen) {
   function doorway(group,wall,axis,center,color,label,id){
     group.remove(wall);const half=axis==='x'?4.125:3.65,width=1.2,opening=2.45;
     const leftEnd=center-width/2,rightStart=center+width/2;
+    const trim=group.getObjectByName('room-left-trim');if(axis==='z'&&trim){group.remove(trim);box(.1,.14,leftEnd+half,'#f4e6d2',-3.93,.28,(-half+leftEnd)/2,group);box(.1,.14,half-rightStart,'#f4e6d2',-3.93,.28,(rightStart+half)/2,group);}
     if(axis==='x'){
       box(leftEnd+half,3.9,.18,color,(-half+leftEnd)/2,2.08,-3.56,group);
       box(half-rightStart,3.9,.18,color,(rightStart+half)/2,2.08,-3.56,group);
@@ -296,6 +387,18 @@ export function createHome(stage, onOpen) {
   function frame(time){
     requestAnimationFrame(frame);
     if(tween){const p=Math.min((time-tween.start)/tween.duration,1),s=1-Math.pow(1-p,3);camera.position.lerpVectors(tween.from,tween.to,s);controls.target.lerpVectors(tween.targetFrom,tween.targetTo,s);if(p===1)tween=null}
+    if(!reduced){
+      const seconds=time*.001;
+      residentPoses.forEach(({resident,room,position,rotation})=>{
+        // 只在当前房间或全景播放轻微日常动作，保留稳定的点击位置。
+        const moving=currentView===-2||currentView===room;
+        resident.position.y=position.y+(moving?Math.sin(seconds*(room===0?2.8:1.4)+room)*.012:0);
+        resident.rotation.y=rotation+(moving?Math.sin(seconds*(room===2?.8:1.1)+room)*.045:0);
+        if(room===0){const hand=resident.getObjectByName('right-hand');hand.position.y=.24+(moving?Math.sin(seconds*6)*.018:0)}
+        if(room===2){const hand=resident.getObjectByName('right-hand');hand.position.y=.40+(moving?Math.sin(seconds*1.7)*.055:0)}
+      });
+      animatedProps.forEach(({kind,mesh})=>{if(kind==='vinyl')mesh.rotation.y=seconds*1.7;else mesh.material.emissiveIntensity=.55+Math.sin(seconds*2)*.20});
+    }
     controls.update();renderer.render(scene,camera);
     hotDefs.forEach(h=>{const point=h.root.localToWorld(h.p.clone()),p=point.project(camera);h.el.style.left=((p.x*.5+.5)*stage.clientWidth)+'px';h.el.style.top=((-p.y*.5+.5)*stage.clientHeight)+'px';const visible=p.z<1&&Math.abs(p.x)<.96&&Math.abs(p.y)<.96;h.el.style.opacity=Number(visible);h.el.style.pointerEvents=visible?'auto':'none'});
   }
@@ -318,5 +421,5 @@ export function createHome(stage, onOpen) {
     if(![-2,-1,0,1,2].includes(index))return;
     currentView=index;hotDefs=index===-2?overviewHotDefs:index===-1?livingHotDefs:roomHotDefs[index];mountHotspots();down=null;
     const view=viewFor(index);move(view.position,view.target);
-  },setNight(value){night=value;ambient.intensity=night?.9:2.7;sun.intensity=night?.55:4.3;fill.intensity=night?1.7:1.5;fill.color.set(night?'#9783ef':'#bfb8ed');renderer.toneMappingExposure=night?1.1:1.35;homeLights.forEach(light=>light.intensity=night||lit?6:0);lampMat.emissiveIntensity=night||lit?1:.35;sky.material.color.set(night?'#9d90c4':'#ffffff')},setLamp(value){lit=value;homeLights.forEach(light=>light.intensity=night||lit?6:0);lampMat.emissiveIntensity=night||lit?1:.35},zoom(factor){const delta=camera.position.clone().sub(controls.target);delta.setLength(THREE.MathUtils.clamp(delta.length()*factor,9,85));move(controls.target.clone().add(delta),controls.target.clone())},reset(){currentView=-2;hotDefs=overviewHotDefs;mountHotspots();const view=viewFor(-2);move(view.position,view.target)},renderer};
+  },setNight(value){night=value;ambient.intensity=night?.9:2.7;sun.intensity=night?.55:4.3;fill.intensity=night?1.7:1.5;fill.color.set(night?'#9783ef':'#bfb8ed');renderer.toneMappingExposure=night?1.1:1.35;homeLights.forEach(light=>light.intensity=night||lit?6:0);decorLights.forEach(light=>light.intensity=night?1.6:.35);lampMat.emissiveIntensity=night||lit?1:.35;sky.material.color.set(night?'#9d90c4':'#ffffff')},setLamp(value){lit=value;homeLights.forEach(light=>light.intensity=night||lit?6:0);decorLights.forEach(light=>light.intensity=night?1.6:.35);lampMat.emissiveIntensity=night||lit?1:.35},zoom(factor){const delta=camera.position.clone().sub(controls.target);delta.setLength(THREE.MathUtils.clamp(delta.length()*factor,9,85));move(controls.target.clone().add(delta),controls.target.clone())},reset(){currentView=-2;hotDefs=overviewHotDefs;mountHotspots();const view=viewFor(-2);move(view.position,view.target)},renderer};
 }

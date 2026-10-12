@@ -1,4 +1,4 @@
-import { createHome } from './scene.js';
+import { createHome } from './scene.js?v=2-decor';
 import { createRoomMusic } from './room-music.js?v=1';
 import { watchSystemTheme } from './time-theme.js?v=2-system';
 const $=s=>document.querySelector(s);
@@ -46,7 +46,7 @@ function openPanel(id){const focus=/^focus(-1|[0-2])$/.exec(id);if(focus){switch
 function renderPanel(id){currentPanelId=id;const content=$('#panel-content');
  if(/^room[0-2]$/.test(id)){
  const i=Number(id.slice(-1)),r=data.rooms[i];
- content.innerHTML=`<h2>${esc(data.people[i].name)}的小房间。</h2><p class="panel-desc">${['电吉他、音箱、游戏桌和手柄；圆润的 Piggy 玩偶穿着闪电摇滚 T 恤。','黑胶唱片、唱片机和一对音箱；戴着耳机的 4010 玩偶，让喜欢的欧美音乐慢慢转。','专辑展示、穿衣镜和街头穿搭；Joey 是短寸男生玩偶，穿星星 T 恤、宽松外套和深色长裤。'][i]}<br>这是初始布置，之后可以继续换成你们的风格。</p><form id="room-form"><label class="room-label" for="room-title">房间名</label><input id="room-title" name="title" value="${esc(r.title)}" maxlength="20" required style="width:100%;margin-bottom:16px"><label class="room-label" for="room-note">房间的小心情</label><textarea id="room-note" name="note" maxlength="120" placeholder="最近喜欢什么，或者想留下一句什么？">${esc(r.note)}</textarea><button class="primary" style="margin-top:15px">留在房间里</button></form><button class="primary room-photos-entry" id="room-photos-entry">给三个相框放照片</button><button class="back-home" id="back-home">回客厅，和大家坐坐</button>`;
+ content.innerHTML=`<h2>${esc(data.people[i].name)}的小房间。</h2><p class="panel-desc">${['演出海报、游戏收藏、懒人沙发与电吉他；圆润的 Piggy 坐在电脑前拿着手柄打游戏。','胡桃木唱片架、阅读角和暖光落地灯；4010 戴耳机坐在听音椅上翻唱片，黑胶缓缓旋转。','金属拼贴板、镜边灯、专辑、杂志与鞋盒；Joey 是短寸男生，站在镜前整理宽松外套。'][i]}<br>点上方相框入口，把你们自己的照片挂进来。</p><form id="room-form"><label class="room-label" for="room-title">房间名</label><input id="room-title" name="title" value="${esc(r.title)}" maxlength="20" required style="width:100%;margin-bottom:16px"><label class="room-label" for="room-note">房间的小心情</label><textarea id="room-note" name="note" maxlength="120" placeholder="最近喜欢什么，或者想留下一句什么？">${esc(r.note)}</textarea><button class="primary" style="margin-top:15px">留在房间里</button></form><button class="primary room-photos-entry" id="room-photos-entry">给三个相框放照片</button><button class="back-home" id="back-home">回客厅，和大家坐坐</button>`;
  $('#room-form').onsubmit=e=>{e.preventDefault();const f=new FormData(e.target),title=f.get('title').trim(),note=f.get('note').trim();if(!title){toast('给房间起个名字吧');return}const rooms=data.rooms.map((r,j)=>j===i?{...r,title,note}:r);if(update({rooms})){refreshRoomUI();toast('房间记下你的小心情啦');panel.close()}};
  $('#room-photos-entry').onclick=()=>renderPanel('frames'+i);
  $('#back-home').onclick=()=>{panel.close();switchRoom(-1)};
