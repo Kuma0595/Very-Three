@@ -17,7 +17,7 @@ async function enterHome(){
   shell.hidden=false;
   gate.hidden=true;
   try{
-    await import('./app.js');
+    await import('./app.js?v=3-music');
     try{sessionStorage.setItem(SESSION_KEY,'open')}catch{}
     input.value='';
     document.querySelector('#lock-home').onclick=()=>{

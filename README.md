@@ -58,3 +58,8 @@
 这是前端体验门，不能保护公开源码或静态资源，也不能代替服务器认证。不要将私人照片或敏感内容提交到公开仓库。
 
 GitHub Pages 使用 `.github/workflows/pages.yml` 将 `dist/` 发布到站点根目录。首次在仓库 Settings → Pages → Build and deployment → Source 选择 **GitHub Actions**，随后在 Actions 中运行 **Deploy Very Three to GitHub Pages**。后续 `main` 分支的 `dist/` 更新自动发布。所有资源使用相对路径，兼容 `/Very-Three/` 子目录。
+
+
+## 房间音乐
+
+每次点击进入卧室播放 15 秒原创 Web Audio 合成短曲，播放一次后结束。Piggy 为摇滚与电玩音色，4010 为黑胶底噪与复古流行，Joey 为 K-pop 风格电子舞曲。切换房间、回全景/客厅或隐藏页面会停止，支持重播和记住静音偏好。音频仅在用户点击后启动；若浏览器限制音频可点「播放」重试，不下载外部音乐。

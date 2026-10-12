@@ -1,4 +1,5 @@
 import { createHome } from './scene.js';
+import { createRoomMusic } from './room-music.js?v=1';
 import { isNightTime, millisecondsUntilThemeBoundary } from './time-theme.js';
 const $=s=>document.querySelector(s);
 const KEY='three-at-home-v1';
@@ -14,6 +15,18 @@ data.rooms=data.rooms.map((r,i)=>r.title===oldTitles[i]?structuredClone(initial.
 data.rooms=data.rooms.map(r=>({...r,framePhotos:Array.from({length:3},(_,i)=>r.framePhotos?.[i]??null)}));
 if(!['auto','manual'].includes(data.themeMode))data.themeMode='auto';
 let activeRoom=-2;
+const roomMusic=createRoomMusic(({state,room,muted,track})=>{
+ $('#room-music').hidden=room<0;
+ $('#music-toggle').textContent=muted?'开启音乐':'静音';
+ $('#music-toggle').setAttribute('aria-pressed',String(muted));
+ $('#music-status').textContent=track?`${track.title} · ${track.style} · ${state==='playing'?'播放中 / 15 秒':state==='muted'?'已静音':state==='blocked'?'点播放听听':state==='unavailable'?'浏览器暂不支持音频':'15 秒试听'}`:'';
+ $('#music-replay').disabled=muted||state==='unavailable';
+ $('#music-replay').textContent=state==='playing'?'重播':'播放';
+});
+$('#music-toggle').onclick=()=>roomMusic.setMuted(!roomMusic.muted);
+$('#music-replay').onclick=()=>void roomMusic.play(activeRoom);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)roomMusic.stop()});
+window.addEventListener('pagehide',()=>roomMusic.stop());
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let toastTimer;
 function toast(text){$('#toast').textContent=text;$('#toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('#toast').classList.remove('show'),2800)}
@@ -27,7 +40,7 @@ function refreshRoomUI(){
  if($('#edit-room'))$('#edit-room').onclick=()=>openPanel('room'+activeRoom);
  $('#scene-caption').textContent=activeRoom<0?(data.night?'夜晚的小家 · 不管多晚，都有你的位置':'晴天的小家 · 灯一直为你留着'):`${data.people[activeRoom].name}的${['摇滚电玩房','黑胶聆听室','亚文化小天地'][activeRoom]} · ${data.night?'晚安，也爱自己':'今天也自在做自己'}`;
 }
-function switchRoom(index){if(!Number.isInteger(index)||index<-2||index>2)return;activeRoom=index;home?.setRoom(index);refreshRoomUI()}
+function switchRoom(index){if(!Number.isInteger(index)||index<-2||index>2)return;activeRoom=index;home?.setRoom(index);refreshRoomUI();void roomMusic.play(index)}
 function members(){ $('#members').innerHTML=data.people.map((p,i)=>`<button data-person="${i}" title="${esc(p.status)}"><span class="avatar">${esc(p.emoji)}</span><span class="member-name">${esc(p.name)}</span></button>`).join('');$('#members').querySelectorAll('button').forEach(b=>b.onclick=()=>switchRoom(Number(b.dataset.person)));}
 const panel=$('#panel');let lastFocus,currentPanelId;
 function openPanel(id){const focus=/^focus(-1|[0-2])$/.exec(id);if(focus){switchRoom(Number(focus[1]));return}const frameMatch=/^frame([0-2])-([0-2])$/.exec(id);if(frameMatch)id='frames'+frameMatch[1];if(id==='lamp'){toggleLamp();return}lastFocus=document.activeElement;renderPanel(id);if(!panel.open)panel.showModal();}
