@@ -115,8 +115,16 @@ export function createHome(stage, onOpen) {
   box(1.74,1.02,.02,'#d9b58f',1.83,2.87,-3.30);
   for(let i=0;i<3;i++){const n=box(.43,.45,.025,['#ffe6a0','#cddfca','#d7bce8'][i],1.25+i*.57,2.89,-3.27);n.rotation.z=[.12,-.08,.15][i];ball(.025,'#d47e7b',1.25+i*.57,3.065,-3.244)}
   const album=new THREE.Group();album.position.set(-3.91,2.4,2.65);album.rotation.y=Math.PI/2;house.add(album);
-  box(1.6,1.4,.08,'#b08769',0,0,0,album);
-  for(let i=0;i<3;i++){const frame=new THREE.Group();frame.position.set((i-1)*.46,i===1?.25:-.13,.075);frame.rotation.z=[.12,-.09,.1][i];album.add(frame);box(.44,.58,.028,'#fff7e6',0,0,0,frame);art(.36,.38,0,.045,.018,(ctx,w,h)=>{ctx.fillStyle=['#b2c8c5','#d0b8d2','#edc6a8'][i];ctx.fillRect(0,0,w,h);ctx.fillStyle='#fff1cb';ctx.beginPath();ctx.arc(370,130,55,0,7);ctx.fill();ctx.fillStyle=['#6f968d','#a282ae','#c38d71'][i];ctx.beginPath();ctx.moveTo(0,h);ctx.lineTo(0,390);ctx.quadraticCurveTo(200,200,320,410);ctx.lineTo(w,320);ctx.lineTo(w,h);ctx.fill()},frame)}
+  box(2.0,1.5,.08,'#b08769',0,0,0,album);
+  const livingFrames=[];
+  for(let i=0;i<8;i++){
+    const frame=new THREE.Group();frame.position.set((i%4-1.5)*.46,i<4?.34:-.34,.075);frame.rotation.z=[.035,-.025,.02,-.03][i%4];album.add(frame);
+    box(.44,.58,.028,'#fff7e6',0,0,0,frame);
+    const photo=art(.36,.38,0,.045,.018,()=>{},frame);photo.name='living-photo-'+i;
+    const ctx=photo.material.map.image.getContext('2d');
+    function placeholder(){ctx.fillStyle=['#b2c8c5','#d0b8d2','#edc6a8'][i%3];ctx.fillRect(0,0,512,512);ctx.fillStyle='#fff3df';ctx.font='140px sans-serif';ctx.textAlign='center';ctx.fillText('♡',256,310);photo.material.map.needsUpdate=true}
+    placeholder();livingFrames.push({photo,ctx,placeholder,revision:0});
+  }
   // 矮柜、唱片、书与小植物。
   round(1.25,1.0,1.1,'#deb48e',-3.23,.73,2.35,.06);
   for(const x of [-3.52,-2.93])round(.5,.7,.08,'#eac49e',x,.75,2.94,.025);
@@ -137,7 +145,7 @@ export function createHome(stage, onOpen) {
   let hotDefs=livingHotDefs;const hotEl=stage.querySelector('#hotspots');function mountHotspots(){hotEl.replaceChildren();hotDefs.forEach(h=>{const b=document.createElement('button');b.className='hotspot';b.textContent=h.text;b.onclick=()=>onOpen(h.id);hotEl.append(b);h.el=b})}mountHotspots();
   // 点击真实物件也能打开面板；拖动时不误触。
   const hits=[];function hit(id,x,y,z,w,h,d){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshBasicMaterial({visible:false}));m.position.set(x,y,z);m.userData.id=id;m.userData.room=house;house.add(m);hits.push(m)}
-  hit('people',0,1.7,-2.05,3.8,1.2,.9);hit('notes',1.85,2.85,-3.25,2,1.25,.2);hit('memories',-3.83,2.4,2.65,.3,1.4,1.7);hit('plans',0,.95,.65,2.5,.3,1.6);hit('lamp',-2.72,2.7,-2.08,1,.7,1);
+  hit('people',0,1.7,-2.05,3.8,1.2,.9);hit('notes',1.85,2.85,-3.25,2,1.25,.2);hit('memories',-3.83,2.4,2.65,.3,1.5,2.0);hit('plans',0,.95,.65,2.5,.3,1.6);hit('lamp',-2.72,2.7,-2.08,1,.7,1);
   // 三个卧室始终处于同一户型，家具分组用于定位和维护。
   const rooms=[],roomHotDefs=[],roomFrames=[[],[],[]],decorLights=[],animatedProps=[],residentPoses=[];
   const themes=[{wall:'#77717f',side:'#b8adaf',base:'#514958',quilt:'#4d505f',wood:'#9b8475'},
@@ -407,17 +415,29 @@ export function createHome(stage, onOpen) {
     if(reduced){camera.position.copy(to);controls.target.copy(target);controls.update()}
     else tween={from:camera.position.clone(),to,targetFrom:controls.target.clone(),targetTo:target.clone(),start:performance.now(),duration:900};
   }
-  return {async setRoomPhoto(room,slot,src){
-    const frame=roomFrames[room]?.[slot];if(!frame)throw new Error('相框不存在');
+  async function updatePhotoFrame(frame,src){
+    if(!frame)throw new Error('相框不存在');
     const revision=++frame.revision;
     if(!src){frame.placeholder();return}
     // 版本号避免快速替换图片时旧图片覆盖新图片。
-    const img=new Image();await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(new Error('图片读取失败'));img.src=src});
+    const img=new Image();
+    // 签名图片来自 Supabase，必须先启用 CORS，否则 Canvas 无法用于 WebGL。
+    img.crossOrigin='anonymous';
+    await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(new Error('图片读取失败'));img.src=src});
     if(frame.revision!==revision)return;
-    const side=Math.min(img.width,img.height);frame.ctx.clearRect(0,0,512,512);
-    frame.ctx.drawImage(img,(img.width-side)/2,(img.height-side)/2,side,side,0,0,512,512);
+    // 重置画布，清除旧贴图和曾被跨域图片污染的画布状态。
+    const canvas=frame.photo.material.map.image;canvas.width=512;canvas.height=512;
+    const side=Math.min(img.width,img.height);
+    try{
+      frame.ctx.drawImage(img,(img.width-side)/2,(img.height-side)/2,side,side,0,0,512,512);
+      // 在渲染前验证画布可读取，让错误进入加载重试而不是中断整帧渲染。
+      frame.ctx.getImageData(0,0,1,1);
+    }catch(error){
+      canvas.width=512;canvas.height=512;frame.placeholder();throw error;
+    }
     frame.photo.material.map.needsUpdate=true;
-  },setRoom(index){
+  }
+  return {setRoomPhoto(room,slot,src){return updatePhotoFrame(roomFrames[room]?.[slot],src)},setLivingPhoto(slot,src){return updatePhotoFrame(livingFrames[slot],src)},setRoom(index){
     if(![-2,-1,0,1,2].includes(index))return;
     currentView=index;hotDefs=index===-2?overviewHotDefs:index===-1?livingHotDefs:roomHotDefs[index];mountHotspots();down=null;
     const view=viewFor(index);move(view.position,view.target);

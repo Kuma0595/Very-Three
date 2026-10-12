@@ -1,5 +1,5 @@
 import {loadCloud,saveCloud,currentMember,cloudError,startCloudSync} from './cloud.js?v=1';
-import { createHome } from './scene.js?v=2-decor';
+import { createHome } from './scene.js?v=3-photo-cors';
 import { createRoomMusic } from './room-music.js?v=1';
 import { watchSystemTheme } from './time-theme.js?v=2-system';
 const $=s=>document.querySelector(s);
@@ -36,11 +36,25 @@ function commitPreferences(change){
  try{const saved=JSON.parse(localStorage.getItem(KEY)||'{}');localStorage.setItem(KEY,JSON.stringify({...saved,themeMode:data.themeMode,night:data.night,lit:data.lit}))}catch{}
  return true;
 }
+const displayedPhotos=Array.from({length:4},(_,i)=>Array(i===3?8:3).fill(undefined));
+const pendingPhotos=Array.from({length:4},(_,i)=>Array(i===3?8:3).fill(null));
+let lastPhotoError=0;
+function syncRoomPhotos(){
+ if(!home)return;
+ const sync=(i,slot,src,load,current)=>{
+  if(displayedPhotos[i][slot]===src||pendingPhotos[i][slot]?.src===src)return;
+  const request={src};pendingPhotos[i][slot]=request;
+  load(src).then(()=>{
+   if(pendingPhotos[i][slot]===request&&current()===src)displayedPhotos[i][slot]=src;
+  }).catch(()=>{
+   if(pendingPhotos[i][slot]===request&&Date.now()-lastPhotoError>30000){toast('相框照片暂时未显示，下一次同步会自动重试');lastPhotoError=Date.now()}
+  }).finally(()=>{if(pendingPhotos[i][slot]===request)pendingPhotos[i][slot]=null});
+ };
+ data.rooms.forEach((room,i)=>room.framePhotos.forEach((photo,slot)=>sync(i,slot,photo?.src??null,src=>home.setRoomPhoto(i,slot,src),()=>data.rooms[i].framePhotos[slot]?.src??null)));
+ for(let slot=0;slot<8;slot++)sync(3,slot,data.photos[slot]?.src??null,src=>home.setLivingPhoto(slot,src),()=>data.photos[slot]?.src??null);
+}
 function applyCloud(next){
- const old=data;data={...data,...next};members();refreshRoomUI();
- data.rooms.forEach((room,i)=>room.framePhotos.forEach((photo,slot)=>{
-  if(photo?.src!==old.rooms[i]?.framePhotos[slot]?.src)home?.setRoomPhoto(i,slot,photo?.src??null).catch(()=>toast('有一张照片暂时无法读取，请稍后重试'));
- }));
+ data={...data,...next};members();refreshRoomUI();syncRoomPhotos();
 }
 async function update(change){
  if(!Object.keys(change).some(key=>['people','rooms','notes','plans','photos'].includes(key)))return commitPreferences(change);
@@ -91,7 +105,7 @@ function renderPanel(id){currentPanelId=id;const content=$('#panel-content');
  });
  content.querySelectorAll('[data-frame-clear]').forEach(button=>button.onclick=async()=>{
   const slot=Number(button.dataset.frameClear),rooms=data.rooms.map((r,i)=>i===room?{...r,framePhotos:r.framePhotos.map((p,j)=>j===slot?null:p)}:r);
-  if(await update({rooms})){await home?.setRoomPhoto(room,slot,null);renderPanel(id);toast('相框已腾出位置')}
+  if(await update({rooms})){renderPanel(id);toast('相框已腾出位置')}
  });
  $('#view-photo-room').onclick=()=>{panel.close();switchRoom(room)};
  }
@@ -136,7 +150,7 @@ window.addEventListener('pageshow',()=>syncSystemTheme());
 async function toggleLamp(){if(await update({lit:!data.lit})){applyTheme();toast(data.lit?'灯留着了，等你们回来 ♡':'灯关好了，下次回来再亮起来')}}
 $('#lamp').onclick=toggleLamp;$('#zoom-in').onclick=()=>home?.zoom(.85);$('#zoom-out').onclick=()=>home?.zoom(1.15);$('#reset').onclick=()=>switchRoom(-2);
 applyCloud(await loadCloud());
-try{home=createHome($('#stage'),openPanel);$('#loading').remove();data.rooms.forEach((r,i)=>r.framePhotos.forEach((p,j)=>{if(p)home.setRoomPhoto(i,j,p.src).catch(()=>toast('有一张相框照片无法读取，请重新选择'))}))}catch(error){console.error(error);$('#loading').innerHTML='这个浏览器暂时无法显示 3D 小屋<small>试试 Safari / Chrome；下方留言与相册仍可使用。</small>'}
+try{home=createHome($('#stage'),openPanel);$('#loading').remove();syncRoomPhotos()}catch(error){console.error(error);$('#loading').innerHTML='这个浏览器暂时无法显示 3D 小屋<small>试试 Safari / Chrome；下方留言与相册仍可使用。</small>'}
 syncSystemTheme(true);
 
 
