@@ -16,3 +16,5 @@
 
 .header-actions .music-toggle{width:42px;padding:0;display:grid;place-items:center;flex-shrink:0}.music-toggle svg{width:19px;height:19px}.music-toggle .sound-muted{display:none}.music-toggle[aria-pressed=true] .sound-waves{display:none}.music-toggle[aria-pressed=true] .sound-muted{display:block}.header-actions .music-toggle[aria-pressed=true]{background:#d9c9e4;color:#796195}body.night .header-actions .music-toggle[aria-pressed=true]{background:#70557f;color:#efe3f8}
 @media(max-width:850px){.header-actions .music-toggle{width:36px}}@media(max-width:420px){.header-actions .music-toggle{width:30px}.music-toggle svg{width:17px;height:17px}}@media(max-width:360px){header{padding:0 12px}.brand{font-size:16px;gap:4px}.brand small{letter-spacing:1px}.header-actions{gap:3px}.header-actions #help{width:28px}.header-actions #theme{padding:0 7px}.header-actions #theme-auto{padding:0 6px}}
+
+.access-card .access-password-label{margin-top:18px}.read-only{font-size:12px;color:var(--muted);line-height:1.8}.cloud-state{font-size:10px;color:var(--muted);padding:10px 0}button:disabled{cursor:default;opacity:.55}
