@@ -8,11 +8,13 @@ export const TRACK_SECONDS=15;
 const frequency=midi=>440*2**((midi-69)/12);
 
 export function createRoomMusic(onState=()=>{}){
-  let context=null,active=null,revision=0,room=-2,muted=false;
+  let context=null,active=null,revision=0,room=-2,muted=false,lastMeow=-Infinity;
+  const effects=new Set();
   try{muted=localStorage.getItem('very-three-music-muted')==='true'}catch{}
   const publish=state=>onState({state,room,muted,track:ROOM_TRACKS[room]??null});
   function stop(){
     revision++;
+    for(const effect of effects)effect();effects.clear();
     if(active){
       clearTimeout(active.timer);
       // 停止所有已排期的声源，快速切房也不会叠加或留下尾音。
@@ -117,8 +119,26 @@ export function createRoomMusic(onState=()=>{}){
       if(request===revision){stop();publish('blocked')}
     }
   }
+  // 短促的原创合成喵叫，和房间音乐共用静音及后台停止逻辑。
+  async function meow(){
+    if(muted||globalThis.document?.hidden)return false;
+    const request=revision;
+    try{
+      const Audio=globalThis.AudioContext||globalThis.webkitAudioContext;if(!Audio)return false;
+      context??=new Audio();await context.resume();
+      if(muted||request!==revision||context.state!=='running'||globalThis.document?.hidden)return false;
+      const t=context.currentTime;if(t-lastMeow<1)return false;lastMeow=t;
+      const voice=context.createOscillator(),filter=context.createBiquadFilter(),gain=context.createGain();
+      voice.type='sawtooth';voice.frequency.setValueAtTime(610,t);voice.frequency.exponentialRampToValueAtTime(890,t+.12);voice.frequency.exponentialRampToValueAtTime(430,t+.52);
+      filter.type='bandpass';filter.Q.value=2.3;filter.frequency.setValueAtTime(1400,t);filter.frequency.exponentialRampToValueAtTime(780,t+.55);
+      gain.gain.setValueAtTime(.0001,t);gain.gain.exponentialRampToValueAtTime(.13,t+.06);gain.gain.exponentialRampToValueAtTime(.065,t+.3);gain.gain.exponentialRampToValueAtTime(.0001,t+.62);
+      voice.connect(filter);filter.connect(gain);gain.connect(context.destination);
+      const cleanup=()=>{try{voice.stop()}catch{};voice.disconnect();filter.disconnect();gain.disconnect();effects.delete(cleanup)};
+      effects.add(cleanup);voice.onended=cleanup;voice.start(t);voice.stop(t+.65);return true;
+    }catch{return false}
+  }
   return {
-    play,
+    play,meow,
     setMuted(value){muted=Boolean(value);try{localStorage.setItem('very-three-music-muted',String(muted))}catch{};if(muted){stop();publish(room<0?'idle':'muted')}else void play(room)},
     get muted(){return muted},
     stop(){stop();publish(room<0?'idle':muted?'muted':'ended')}
