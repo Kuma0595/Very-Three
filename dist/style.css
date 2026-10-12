@@ -34,3 +34,6 @@
 .dock #lamp.active{background:#f4dfb7;color:#67441f;box-shadow:inset 0 0 0 1px #dbc08e}
 .dock #lamp.active>span:first-child{color:inherit}
 body.night .dock #lamp.active{background:#6a4d31;color:#fff0cb;box-shadow:inset 0 0 0 1px #a58253}
+
+/* 手机通过点地面串门，收起方向按钮与键盘提示。 */
+@media(max-width:850px),(pointer:coarse){#walk-pad,#walk-hint .keyboard-hint{display:none!important}}
