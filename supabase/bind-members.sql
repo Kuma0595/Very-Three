@@ -1,8 +1,7 @@
--- 先在 Authentication → Users 创建三位家人的账号。
--- 用对应账号的 User UID 替换下面的三个占位符；密码不用填到这里。
+-- 三个登录账号与个人房间的绑定；只在 Supabase SQL Editor 执行。
 begin;
-update public.vt_members set user_id='PIGGY_USER_UID'::uuid where id=0;
-update public.vt_members set user_id='4010_USER_UID'::uuid where id=1;
-update public.vt_members set user_id='JOEY_USER_UID'::uuid where id=2;
+update public.vt_members set user_id='deee1da3-dd34-4485-9190-286d5bbc8477'::uuid where id=0;
+update public.vt_members set user_id='c097649d-070b-4b24-ad0d-24506ba8500e'::uuid where id=1;
+update public.vt_members set user_id='d82e643f-2747-4173-a45b-13671c9f2769'::uuid where id=2;
 commit;
 select id,name,user_id from public.vt_members order by id;
