@@ -33,3 +33,7 @@ Publishable key 已配置在 `dist/cloud-config.js`。不需要数据库密码�
 ## 说明
 
 Supabase JS SDK 2.117.3 已打包到 `dist/vendor/supabase.js`，网页不依赖额外 CDN；本地仍 `npm run dev`，无需 npm install。以后更换项目，仅替换 `dist/cloud-config.js` 并在新项目执行初始化。
+
+## 已有项目启用庭院
+
+在 SQL Editor 新建查询，执行 `garden.sql`，再刷新网页。九个种植位会自动创建。账号绑定、原有照片和留言不变；仅自己的花圃可播种，家人均可帮忙浇水。

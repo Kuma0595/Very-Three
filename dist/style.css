@@ -40,3 +40,5 @@ body.night .dock #lamp.active{background:#6a4d31;color:#fff0cb;box-shadow:inset 
 
 /* 默认夜晚时，浅色登录卡片保持深色文字。 */
 body.night .access-card{--ink:#433552;--muted:#726480;color:var(--ink)}
+
+.garden-members{display:flex;gap:8px;margin-bottom:18px}.garden-members button{flex:1;background:#ece4f1;padding:10px 6px;border-radius:12px;font-size:12px}.garden-members button[aria-pressed=true]{background:#796195;color:#fff}.garden-slot{display:flex;gap:16px;padding:18px 0;border-bottom:1px solid #e7dfee}.garden-sprout{font-size:36px;min-width:42px;text-align:center}.garden-slot h3{margin:0 0 6px;font-size:16px}.garden-slot p,.garden-slot small{margin:0 0 12px;font-size:12px;color:var(--muted)}.garden-slot select{max-width:145px;margin-right:8px}.garden-slot .primary{padding:10px 15px}

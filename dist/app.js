@@ -1,5 +1,6 @@
+import {loadGarden,gardenAction,growthStage,SPECIES,STAGES} from './garden.js?v=1';
 import {loadCloud,saveCloud,currentMember,cloudError,startCloudSync} from './cloud.js?v=1';
-import { createHome } from './scene.js?v=7-dog';
+import { createHome } from './scene.js?v=8-garden';
 import { createRoomMusic } from './room-music.js?v=2-cat';
 import { watchSystemTheme } from './time-theme.js?v=2-system';
 const $=s=>document.querySelector(s);
@@ -16,6 +17,7 @@ data.rooms=data.rooms.map((r,i)=>r.title===oldTitles[i]?structuredClone(initial.
 data.rooms=data.rooms.map(r=>({...r,framePhotos:Array.from({length:3},(_,i)=>r.framePhotos?.[i]??null)}));
 if(!['auto','manual'].includes(data.themeMode))data.themeMode='manual';
 let activeRoom=-2;
+let gardenData={ready:false,plants:[]},gardenLoading=false,gardenSaving=false;
 let walking=false,lastWalkerRoom=null;
 function updateMuteButton(muted){
  const button=$('#music-toggle');
@@ -56,7 +58,7 @@ function syncRoomPhotos(){
  for(let slot=0;slot<4;slot++)sync(3,slot,livingPhotos()[slot]?.src??null,src=>home.setLivingPhoto(slot,src),()=>livingPhotos()[slot]?.src??null);
 }
 function applyCloud(next){
- data={...data,...next};members();refreshRoomUI();syncRoomPhotos();
+ data={...data,...next};members();refreshRoomUI();syncRoomPhotos();void syncGarden();
 }
 async function update(change){
  if(!Object.keys(change).some(key=>['people','rooms','notes','plans','photos'].includes(key)))return commitPreferences(change);
@@ -71,17 +73,17 @@ const ownRecord=record=>record.creator===currentMember()?.user_id;
 function refreshRoomUI(){
  document.body.classList.toggle('room-focus',activeRoom!==-2||walking);
  document.body.classList.toggle('walking',walking);
- $('#focus-heading').textContent=activeRoom===-1?'我们的客厅':activeRoom>=0?`${data.people[activeRoom].name}的房间`:walking?'在家里走走':'';
- $('#focus-info').textContent=activeRoom>=0?'房间手记':'小家手记';
- const nav=$('#room-nav');nav.innerHTML=`<button data-room="-2" aria-pressed="${activeRoom===-2}">⌂ 全景</button><button data-room="-1" aria-pressed="${activeRoom===-1}">客厅</button>${data.people.map((p,i)=>`<button data-room="${i}" aria-pressed="${activeRoom===i}"><span class="room-color color-${i}"></span>${esc(p.name)}</button>`).join('')}`;
+ $('#focus-heading').textContent=activeRoom===-3?'我们的庭院':activeRoom===-1?'我们的客厅':activeRoom>=0?`${data.people[activeRoom].name}的房间`:walking?'在家里走走':'';
+ $('#focus-info').textContent=activeRoom===-3?'照顾花园':activeRoom>=0?'房间手记':'小家手记';
+ const nav=$('#room-nav');nav.innerHTML=`<button data-room="-2" aria-pressed="${activeRoom===-2}">⌂ 全景</button><button data-room="-1" aria-pressed="${activeRoom===-1}">客厅</button><button data-room="-3" aria-pressed="${activeRoom===-3}">庭院</button>${data.people.map((p,i)=>`<button data-room="${i}" aria-pressed="${activeRoom===i}"><span class="room-color color-${i}"></span>${esc(p.name)}</button>`).join('')}`;
  nav.querySelectorAll('button').forEach(b=>b.onclick=()=>switchRoom(Number(b.dataset.room)));
  $('#home-heading').innerHTML=activeRoom<0?'世界很大，<br>我们有个小家。':`${esc(data.people[activeRoom].name)}的房间<br><span class="room-subtitle">${esc(data.rooms[activeRoom].title)}</span>`;
  $('#home-description').innerHTML=activeRoom<0?'三个人，三种可爱。<br>在这里，可以自在做自己。':`${esc(data.rooms[activeRoom].note)}<br><button id="edit-room" class="edit-room">写下房间的小心情</button>`;
  if($('#edit-room'))$('#edit-room').onclick=()=>openPanel('room'+activeRoom);
- $('#scene-caption').textContent=activeRoom<0?(data.night?'夜晚的小家 · 不管多晚，都有你的位置':'晴天的小家 · 灯一直为你留着'):`${data.people[activeRoom].name}的${['摇滚电玩房','黑胶聆听室','亚文化小天地'][activeRoom]} · ${data.night?'晚安，也爱自己':'今天也自在做自己'}`;
+ $('#scene-caption').textContent=activeRoom===-3?'我们的庭院 · 一起等花开':activeRoom<0?(data.night?'夜晚的小家 · 不管多晚，都有你的位置':'晴天的小家 · 灯一直为你留着'):`${data.people[activeRoom].name}的${['摇滚电玩房','黑胶聆听室','亚文化小天地'][activeRoom]} · ${data.night?'晚安，也爱自己':'今天也自在做自己'}`;
 }
-function switchRoom(index){if(!Number.isInteger(index)||index<-2||index>2)return;activeRoom=index;home?.setRoom(index);refreshRoomUI();void roomMusic.play(index)}
-$('#focus-info').onclick=()=>openPanel(activeRoom>=0?'room'+activeRoom:'about');
+function switchRoom(index){if(!Number.isInteger(index)||index<-3||index>2)return;activeRoom=index;home?.setRoom(index);refreshRoomUI();void roomMusic.play(index)}
+$('#focus-info').onclick=()=>openPanel(activeRoom===-3?'garden':activeRoom>=0?'room'+activeRoom:'about');
 const walkKeys=new Set();
 function setWalkKeys(){
  const down=key=>walkKeys.has(key);
@@ -120,8 +122,9 @@ document.querySelectorAll('[data-walk]').forEach(button=>{
 });
 function members(){ $('#members').innerHTML=data.people.map((p,i)=>`<button data-person="${i}" title="${esc(p.status)}"><span class="avatar">${esc(p.emoji)}</span><span class="member-name">${esc(p.name)}</span></button>`).join('');$('#members').querySelectorAll('button').forEach(b=>b.onclick=()=>switchRoom(Number(b.dataset.person)));}
 const panel=$('#panel');let lastFocus,currentPanelId;
-function openPanel(id){if(id==='dog-pet'){toast('小狗摇了摇尾巴，贴过来让你摸摸');return}if(id==='cat-pet'){void roomMusic.meow();toast('喵～ 小猫蹭了蹭你的手');return}const focus=/^focus(-1|[0-2])$/.exec(id);if(focus){switchRoom(Number(focus[1]));return}const frameMatch=/^frame([0-2])-([0-2])$/.exec(id);if(frameMatch)id='frames'+frameMatch[1];if(id==='lamp'){toggleLamp();return}cancelMovement();lastFocus=document.activeElement;renderPanel(id);if(!panel.open)panel.showModal();}
+function openPanel(id){if(id==='dog-pet'){toast('小狗摇了摇尾巴，贴过来让你摸摸');return}if(id==='cat-pet'){void roomMusic.meow();toast('喵～ 小猫蹭了蹭你的手');return}const focus=/^focus(-3|-1|[0-2])$/.exec(id);if(focus){switchRoom(Number(focus[1]));return}const frameMatch=/^frame([0-2])-([0-2])$/.exec(id);if(frameMatch)id='frames'+frameMatch[1];if(id==='lamp'){toggleLamp();return}cancelMovement();lastFocus=document.activeElement;renderPanel(id);if(!panel.open)panel.showModal();}
 function renderPanel(id){currentPanelId=id;const content=$('#panel-content');
+ if(/^garden[0-2]?$/.test(id)){renderGarden(id);return}
  if(/^room[0-2]$/.test(id)){
  const i=Number(id.slice(-1)),r=data.rooms[i];
  content.innerHTML=`<h2>${esc(data.people[i].name)}的小房间。</h2><p class="panel-desc">${['演出海报、游戏收藏、懒人沙发与电吉他；圆润的 Piggy 坐在电脑前拿着手柄打游戏。','胡桃木唱片架、阅读角和暖光落地灯；4010 戴耳机坐在听音椅上翻唱片，黑胶缓缓旋转。','金属拼贴板、镜边灯、专辑、杂志与鞋盒；Joey 是短寸男生，站在镜前整理宽松外套。'][i]}<br>点上方相框入口，把你们自己的照片挂进来。</p><form id="room-form"><label class="room-label" for="room-title">房间名</label><input id="room-title" name="title" value="${esc(r.title)}" ${ownRoom(i)?'':'readonly'} maxlength="20" required style="width:100%;margin-bottom:16px"><label class="room-label" for="room-note">房间的小心情</label><textarea id="room-note" name="note" ${ownRoom(i)?'':'readonly'} maxlength="120" placeholder="最近喜欢什么，或者想留下一句什么？">${esc(r.note)}</textarea>${ownRoom(i)?'<button class="primary" style="margin-top:15px">留在房间里</button>':'<p class="read-only">这间房由主人编辑，你可以看看他的照片和心情。</p>'}</form><button class="primary room-photos-entry" id="room-photos-entry">${ownRoom(i)?'给三个相框放照片':'看看他的相框'}</button><button class="back-home" id="back-home">回客厅，和大家坐坐</button>`;
@@ -173,12 +176,34 @@ function renderPanel(id){currentPanelId=id;const content=$('#panel-content');
  content.querySelectorAll('[data-photo]').forEach(b=>b.onclick=async()=>{if(await update({photos:data.photos.filter((_,i)=>i!==Number(b.dataset.photo))}))renderPanel(id)});
  $('#photo-upload').onchange=async e=>{const file=e.target.files[0];if(!file)return;if(data.photos.length>=8){toast('先移除一张，再留下新的回忆吧');return}if(!file.type.startsWith('image/')){toast('请选择一张图片');return}const caption=$('#caption').value.trim()||'一起的日子';const url=URL.createObjectURL(file);try{const img=new Image();await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;img.src=url});const c=document.createElement('canvas');const scale=Math.min(1,900/Math.max(img.width,img.height));c.width=Math.round(img.width*scale);c.height=Math.round(img.height*scale);c.getContext('2d').drawImage(img,0,0,c.width,c.height);const src=c.toDataURL('image/jpeg',.78);if(await update({photos:[...data.photos,{src,caption}]})){renderPanel(id);toast('回忆已经留下来了')}}catch{toast('这张照片暂时无法读取，试试 JPG 或 PNG')}finally{URL.revokeObjectURL(url)}};
  }
- if(id==='help')content.innerHTML=`<h2>在小家里转一转。</h2><p class="panel-desc">电脑：按住鼠标拖动旋转，滚轮缩放。<br>手机：一根手指旋转，两根手指缩放。<br><br>点击门牌、上方的房间入口或头像，镜头会靠近个人房间。<br>点击房间上的小标签或底部按钮，打开对应内容。<br>每次打开默认是黑夜；点击“天亮”可以切到白天。<br>自动模式跟随系统外观：深色为黑夜，浅色为白天。<br>右上角可手动切换；点击“自动”恢复跟随系统外观。<br>点击“留盏灯”，为今天的小家留一点温暖。<br><br>点击“去串门”，控制当前账号的玩偶：电脑用 WASD / 方向键，也能点击地面自动走过去；手机直接点地面移动。走进另一间房时镜头和音乐随房间切换；“找到我”回到人物所在房间，“结束串门”让玩偶回到日常位置。<br><br>客厅的小狗会休息和散步，点击它或“摸摸小狗”，它会抬头摇尾巴。<br>小猫会睡觉和散步。点击它或“摸摸小猫”可以摸头，串门时它还会跟着你走一会儿；右上角静音同时控制喵叫与音乐。<br><br>转迷路了？点“全景”或右侧的 ⌂ 看整个家。</p>`;
+ if(id==='help')content.innerHTML=`<h2>在小家里转一转。</h2><p class="panel-desc">电脑：按住鼠标拖动旋转，滚轮缩放。<br>手机：一根手指旋转，两根手指缩放。<br><br>点击门牌、上方的房间入口或头像，镜头会靠近个人房间。<br>点击房间上的小标签或底部按钮，打开对应内容。<br>每次打开默认是黑夜；点击“天亮”可以切到白天。<br>自动模式跟随系统外观：深色为黑夜，浅色为白天。<br>右上角可手动切换；点击“自动”恢复跟随系统外观。<br>点击“留盏灯”，为今天的小家留一点温暖。<br><br>点击“去串门”，控制当前账号的玩偶：电脑用 WASD / 方向键，也能点击地面自动走过去；手机直接点地面移动。走过南侧玄关就能进入庭院，也可点击上方“庭院”。点击花圃照顾植物。走进另一间房时镜头和音乐随房间切换；“找到我”回到人物所在房间，“结束串门”让玩偶回到日常位置。<br><br>客厅的小狗会休息和散步，点击它或“摸摸小狗”，它会抬头摇尾巴。<br>小猫会睡觉和散步。点击它或“摸摸小猫”可以摸头，串门时它还会跟着你走一会儿；右上角静音同时控制喵叫与音乐。<br><br>转迷路了？点“全景”或右侧的 ⌂ 看整个家。</p>`;
  if(id==='about')content.innerHTML=`<h2>Very Three，刚好我们仨。</h2><p class="panel-desc">我们想把群聊里的陪伴，变成一间能走进来的小家。<br><br>彩虹是墙上的旗，是沙发上的抱枕，也是这里的一点骄傲。在这里，可以自在做自己。<br><br>现在是一套完整的小家：共享客厅连着三个卧室。点击门牌、上方入口或头像，镜头会靠近房间；点击“全景”看整个家。Piggy 喜欢摇滚与电玩，4010 喜欢黑胶与欧美音乐，Joey 喜欢亚文化与 K-pop。人物穿搭是原创的第一版想象，可以继续调整。</p><p class="panel-desc">照片、留言、计划和房间心情保存在小家云端，只有绑定的三个账号可访问。房间由主人编辑，共享计划由大家维护；内容每十秒同步一次，音乐和外观偏好保留在当前设备。</p>`;
 }
 function closePanel(){panel.close()}
 $('#close').onclick=closePanel;panel.addEventListener('click',e=>{if(e.target===panel){const r=panel.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)closePanel()}});panel.addEventListener('close',()=>lastFocus?.focus());
 document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openPanel(b.dataset.open));$('#help').onclick=()=>openPanel('help');$('#about').onclick=()=>openPanel('about');
+async function syncGarden(){
+ if(gardenLoading||gardenSaving)return;gardenLoading=true;
+ try{gardenData=await loadGarden();home?.setGardenPlants(gardenData.plants.map(p=>({...p,stage:growthStage(p)})));
+  if(panel.open&&/^garden[0-2]?$/.test(currentPanelId)&&!panel.contains(document.activeElement))renderGarden(currentPanelId);
+ }catch{if(panel.open&&/^garden/.test(currentPanelId))toast('花园暂时未能同步，稍后会重试')}
+ finally{gardenLoading=false}
+}
+function renderGarden(id){
+ const content=$('#panel-content'),room=/[0-2]$/.test(id)?Number(id.at(-1)):currentMember().id;
+ content.innerHTML=`<h2>一起等花开。</h2><p class="panel-desc">每人三个种植位，自己的花圃自己播种，大家都可以帮忙浇水。约 12 小时长成，离线也会生长；每次浇水提前一小时，四小时后可再浇。不照顾也不会枯死。</p><div class="garden-members">${data.people.map((p,i)=>`<button data-garden-room="${i}" aria-pressed="${room===i}">${esc(p.name)}</button>`).join('')}</div>${gardenData.ready?'':'<p class="read-only">花圃正在准备中，种植暂未开启。</p>'}<div class="garden-slots">${[0,1,2].map(slot=>{
+ const plant=gardenData.plants.find(p=>p.room_id===room&&p.slot===slot),stage=growthStage(plant),wet=plant?.watered_at&&Date.now()-Date.parse(plant.watered_at)<14400000;
+ return `<section class="garden-slot"><span class="garden-sprout">${stage<0?'◌':stage===0?'·':stage<3?'🌱':plant.species==='sunflower'?'🌻':plant.species==='mint'?'🌿':'🌸'}</span><div><h3>${stage<0?'空种植位':SPECIES[plant.species]?.name??'植物'}</h3><p>${stage<0?'选一颗种子种下去':STAGES[stage]}</p>${stage<0?room===currentMember().id?`<select id="seed-${slot}" aria-label="第 ${slot+1} 个种植位的植物" ${gardenData.ready?'':'disabled'}>${Object.entries(SPECIES).map(([key,v])=>`<option value="${key}">${v.name}</option>`).join('')}</select><button class="primary" data-plant="${slot}" ${gardenData.ready?'':'disabled'}>播种</button>`:'<small>等主人来播种</small>':`<button class="primary" data-water="${slot}" ${wet?'disabled':''}>${wet?'土壤湿润':'浇水'}</button>`}</div></section>`;
+ }).join('')}</div>`;
+ content.querySelectorAll('[data-garden-room]').forEach(b=>b.onclick=()=>openPanel('garden'+b.dataset.gardenRoom));
+ async function act(slot,action,species){if(gardenSaving)return;let saved=false;gardenSaving=true;content.querySelectorAll('button,select').forEach(b=>b.disabled=true);
+  try{const result=await gardenAction(room,slot,action,species);saved=true;const plant=Array.isArray(result)?result[0]:result;if(plant?.room_id===room&&plant.slot===slot)gardenData={ready:true,plants:gardenData.plants.map(p=>p.room_id===room&&p.slot===slot?plant:p)};else gardenData=await loadGarden();home?.setGardenPlants(gardenData.plants.map(p=>({...p,stage:growthStage(p)})));toast(action==='plant'?'种子种好了，一起等它长大':'浇过水啦，长得再快一点')}
+  catch(error){const known=['只能在自己的花圃播种','这里已经有植物了','土壤还湿润，四小时后再浇水'];toast(saved?'已保存，花园稍后会重新同步':known.includes(error.message)?error.message:'花园保存未完成，请稍后重试')}
+  finally{gardenSaving=false;if(panel.open&&(currentPanelId==='garden'+room||currentPanelId==='garden'))renderGarden(currentPanelId)}
+ }
+ content.querySelectorAll('[data-plant]').forEach(b=>b.onclick=()=>act(Number(b.dataset.plant),'plant',$('#seed-'+b.dataset.plant).value));
+ content.querySelectorAll('[data-water]').forEach(b=>b.onclick=()=>act(Number(b.dataset.water),'water'));
+}
 function applyTheme(){$('#theme-auto').setAttribute('aria-pressed',String(data.themeMode==='auto'));$('#theme-auto').title=data.themeMode==='auto'?'跟随系统深色／浅色外观':'点击恢复跟随系统外观';document.body.classList.toggle('night',data.night);$('#theme').innerHTML=data.night?'☀ <span>天亮</span>':'☾ <span>入夜</span>';$('#theme').setAttribute('aria-label',data.night?'切换到白天':'切换到夜晚');$('#scene-caption').textContent=data.night?'夜晚的小家 · 不管多晚，都有你的位置':'晴天的小家 · 灯一直为你留着';home?.setNight(data.night);$('#lamp-label').textContent=data.lit?'灯已留着':'留盏灯';$('#lamp').classList.toggle('active',data.lit);home?.setLamp(data.lit);refreshRoomUI()}
 $('#theme').onclick=async()=>{if(await update({themeMode:'manual',night:!data.night})){applyTheme();toast('已手动切换，点击“自动”恢复跟随系统外观')}};
 $('#theme-auto').onclick=async()=>{if(await update({themeMode:'auto'})){syncSystemTheme(true);toast('已恢复跟随系统外观：深色为黑夜，浅色为白天')}};
@@ -194,7 +219,7 @@ async function toggleLamp(){if(await update({lit:!data.lit})){applyTheme();toast
 $('#lamp').onclick=toggleLamp;$('#zoom-in').onclick=()=>home?.zoom(.85);$('#zoom-out').onclick=()=>home?.zoom(1.15);$('#reset').onclick=()=>switchRoom(-2);
 applyCloud(await loadCloud());
 try{home=createHome($('#stage'),openPanel,onWalkState);$('#loading').remove();syncRoomPhotos()}catch(error){console.error(error);$('#loading').innerHTML='这个浏览器暂时无法显示 3D 小屋<small>试试 Safari / Chrome；下方留言与相册仍可使用。</small>'}
-syncSystemTheme(true);
+syncSystemTheme(true);void syncGarden();
 
 
 let lastSyncError=0;

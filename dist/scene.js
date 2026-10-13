@@ -445,7 +445,36 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
   lampLight.position.add(livingRoom.position);const homeLights=[lampLight];
   rooms.forEach(room=>{const light=new THREE.PointLight('#ffbf7b',0,8,1.6);light.position.copy(room.position).add(new THREE.Vector3(3.48,1.4,-2.72));scene.add(light);homeLights.push(light)});
   livingHotDefs.forEach(h=>h.root=h.id==='cat-pet'?cat:h.id==='dog-pet'?dog:livingRoom);roomHotDefs.forEach((defs,i)=>defs.forEach(h=>h.root=rooms[i]));
-  const overviewHotDefs=[{id:'focus-1',text:'我们的客厅',root:livingRoom,p:new THREE.Vector3(0,4.5,0)},...rooms.map((root,i)=>({id:'focus'+i,text:['Piggy','4010','Joey'][i]+'的房间',root,p:new THREE.Vector3(0,4.5,0)}))];
+  // 南侧庭院与玄关直接相接，草坪保持与室内相同地面高度。
+  const garden=new THREE.Object3D();garden.name='garden';scene.add(garden);
+  box(8,.48,8,'#a7a287',0,-.16,12.3,garden);
+  box(8,.12,8,'#91ad88',0,.12,12.3,garden).name='floor-garden';
+  for(let i=0;i<7;i++)round(1.3,.025,.7,i%2?'#d7c9b3':'#cabcaa',0,.205,8.8+i,.10,garden);
+  for(const x of [-3.85,3.85]){box(.09,.12,8,'#ccb79b',x,.55,12.3,garden);for(let i=0;i<9;i++)box(.12,.75,.12,'#e1ccae',x,.56,8.5+i*.94,garden)}
+  box(7.8,.12,.09,'#ccb79b',0,.55,16.15,garden);for(let i=0;i<11;i++)box(.12,.75,.12,'#e1ccae',-3.7+i*.74,.56,16.15,garden);
+  const gardenCrops=[],gardenHotDefs=[];
+  for(let room=0;room<3;room++){
+    const x=(room-1)*2.7;
+    round(1.5,.4,1.6,'#ac8061',x,.4,13.65,.07,garden);box(1.3,.035,1.4,'#675143',x,.61,13.65,garden);
+    art(1.05,.3,x,.65,14.48,ctx=>{ctx.fillStyle='#f6ebd5';ctx.fillRect(0,0,512,512);ctx.fillStyle='#6c5849';ctx.font='bold 110px sans-serif';ctx.textAlign='center';ctx.fillText(['Piggy','4010','Joey'][room],256,300)},garden);
+    for(let slot=0;slot<3;slot++){const crop=new THREE.Group();crop.name='garden-plants';crop.position.set(x+(slot-1)*.43,.63,13.65);garden.add(crop);gardenCrops.push({room,slot,crop,key:null})}
+    const m=new THREE.Mesh(new THREE.BoxGeometry(1.5,1.6,1.6),new THREE.MeshBasicMaterial({visible:false}));m.position.set(x,1,13.65);m.userData={id:'garden'+room,room:garden};garden.add(m);hits.push(m);
+    gardenHotDefs.push({id:'garden'+room,text:['Piggy','4010','Joey'][room]+'的花圃',root:garden,p:new THREE.Vector3(x,2.4,13.65)});
+  }
+  for(const x of [-3.3,3.3]){cylinder(.07,.07,1.7,'#8c7966',x,1.06,10.2,garden);const bulb=ball(.16,'#ffe5b4',x,1.98,10.2,garden);bulb.material.emissive.set('#ffcc87');bulb.material.emissiveIntensity=.9;const light=new THREE.PointLight('#ffd49d',0,7,1.7);light.position.set(x,2,10.2);scene.add(light);decorLights.push(light)}
+  round(1.8,.18,.65,'#bc9a77',-2.4,.63,10.5,.06,garden);box(1.8,.65,.10,'#c9ad8d',-2.4,1.02,10.2,garden);for(const x of [-3,-1.8])for(const z of [10.28,10.7])box(.09,.42,.09,'#8d775f',x,.39,z,garden);
+  function setGardenPlants(plants){
+    for(const frame of gardenCrops){const plant=plants.find(p=>p.room_id===frame.room&&p.slot===frame.slot),stage=plant?.stage??-1,key=(plant?.species??'empty')+stage;if(frame.key===key)continue;frame.key=key;
+      frame.crop.traverse(o=>{if(o.isMesh){o.geometry.dispose()}});frame.crop.clear();if(stage<0)continue;
+      const seed=ball(.05,'#c4a17b',0,.035,0,frame.crop);if(stage===0)continue;seed.visible=false;
+      const height=[0,.22,.55,.95][stage];cylinder(.025,.035,height,'#658b61',0,height/2,0,frame.crop);
+      for(let i=0;i<(stage===1?2:stage===2?4:6);i++){const side=i%2?1:-1,leaf=ball(.105,plant.species==='mint'?'#87b997':'#7da26d',side*.09,.13+i*.10,0,frame.crop);leaf.scale.set(1.5,.4,.7);leaf.rotation.z=side*.45}
+      if(stage===3&&plant.species==='sunflower'){ball(.12,'#72583b',0,height,0,frame.crop);for(let i=0;i<10;i++){const a=i*Math.PI/5,petal=ball(.10,'#ecc45c',Math.cos(a)*.19,height+Math.sin(a)*.19,.015,frame.crop);petal.scale.z=.4}}
+      if(stage===3&&plant.species==='hydrangea')for(let i=0;i<13;i++){const a=i*2.4;ball(.09,i%2?'#a78aca':'#c4addf',Math.cos(a)*.17,height+Math.sin(i)*.1,Math.sin(a)*.17,frame.crop)}
+      if(stage===3&&plant.species==='mint')for(let i=0;i<5;i++)ball(.035,'#d5c5e1',0,height+i*.05,0,frame.crop);
+    }
+  }
+  const overviewHotDefs=[{id:'focus-3',text:'我们的庭院',root:garden,p:new THREE.Vector3(0,3,11.8)},{id:'focus-1',text:'我们的客厅',root:livingRoom,p:new THREE.Vector3(0,4.5,0)},...rooms.map((root,i)=>({id:'focus'+i,text:['Piggy','4010','Joey'][i]+'的房间',root,p:new THREE.Vector3(0,4.5,0)}))];
   hotDefs=overviewHotDefs;mountHotspots();scene.updateMatrixWorld(true);
 
   house=livingRoom;
@@ -463,10 +492,10 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
       if(!object.isMesh)return;
       if(object.name.startsWith('floor-')){
         const b=new THREE.Box3().setFromObject(object);floorMeshes.push(object);
-        floors.push({minX:b.min.x,maxX:b.max.x,minZ:b.min.z,maxZ:b.max.z,room:object.name.startsWith('floor-room-')?Number(object.name[11]):-1});return;
+        floors.push({minX:b.min.x,maxX:b.max.x,minZ:b.min.z,maxZ:b.max.z,room:object.name==='floor-garden'?-3:object.name.startsWith('floor-room-')?Number(object.name[11]):-1});return;
       }
       if(object.material.visible===false)return;
-      for(let parent=object;parent;parent=parent.parent)if(!parent.visible||parent.name.startsWith('resident-')||parent.name==='home-cat'||parent.name==='home-dog')return;
+      for(let parent=object;parent;parent=parent.parent)if(!parent.visible||parent.name.startsWith('resident-')||parent.name==='home-cat'||parent.name==='home-dog'||parent.name==='garden-plants')return;
       const b=new THREE.Box3().setFromObject(object);if(b.isEmpty()||b.max.y<.35||b.min.y>1.55)return;
       const obstacle={minX:b.min.x,maxX:b.max.x,minZ:b.min.z,maxZ:b.max.z};obstacles.push(obstacle);
       let inBed=false;for(let parent=object;parent;parent=parent.parent)if(parent.name==='cat-bed'||parent.name==='dog-bed')inBed=true;
@@ -595,8 +624,8 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
   const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
   function viewFor(index){
     const bounds=new THREE.Box3();
-    if(index===-2){[livingRoom,...rooms,building].forEach(root=>bounds.union(new THREE.Box3().setFromObject(root)))}
-    else{bounds.setFromObject(index===-1?livingRoom:rooms[index]);if(index===-1)bounds.union(new THREE.Box3().setFromObject(building.getObjectByName('floor-entry')))}
+    if(index===-2){[livingRoom,...rooms,building,garden].forEach(root=>bounds.union(new THREE.Box3().setFromObject(root)))}
+    else{bounds.setFromObject(index===-3?garden:index===-1?livingRoom:rooms[index]);if(index===-1)bounds.union(new THREE.Box3().setFromObject(building.getObjectByName('floor-entry')))}
     const target=bounds.getCenter(new THREE.Vector3());
     const direction=(index===-2?new THREE.Vector3(1,1.8,1.75):new THREE.Vector3(7,9,12)).normalize();
     const right=new THREE.Vector3(direction.z,0,-direction.x).normalize(),up=new THREE.Vector3().crossVectors(direction,right).normalize();
@@ -657,9 +686,9 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
     }
     frame.photo.material.map.needsUpdate=true;
   }
-  return {petDog,getDogState:()=>({mode:dogMode,position:dog.position.clone()}),petCat,getCatState:()=>({mode:catMode,position:cat.position.clone()}),startWalking,stopWalking,walkTo,cancelWalk,getWalkState:walkState,setWalkInput(x,y){if(!walker)return;walkInput.set(x,y);walkPath=[];destination.visible=false},setRoomPhoto(room,slot,src){return updatePhotoFrame(roomFrames[room]?.[slot],src)},setLivingPhoto(slot,src){return updatePhotoFrame(livingFrames[slot],src)},setRoom(index){
-    if(![-2,-1,0,1,2].includes(index))return;
-    currentView=index;hotDefs=index===-2?overviewHotDefs:index===-1?livingHotDefs:roomHotDefs[index];mountHotspots();down=null;
+  return {setGardenPlants,petDog,getDogState:()=>({mode:dogMode,position:dog.position.clone()}),petCat,getCatState:()=>({mode:catMode,position:cat.position.clone()}),startWalking,stopWalking,walkTo,cancelWalk,getWalkState:walkState,setWalkInput(x,y){if(!walker)return;walkInput.set(x,y);walkPath=[];destination.visible=false},setRoomPhoto(room,slot,src){return updatePhotoFrame(roomFrames[room]?.[slot],src)},setLivingPhoto(slot,src){return updatePhotoFrame(livingFrames[slot],src)},setRoom(index){
+    if(![-3,-2,-1,0,1,2].includes(index))return;
+    currentView=index;hotDefs=index===-3?gardenHotDefs:index===-2?overviewHotDefs:index===-1?livingHotDefs:roomHotDefs[index];mountHotspots();down=null;
     const view=viewFor(index);move(view.position,view.target);
   },setNight(value){night=value;ambient.intensity=night?.9:2.7;sun.intensity=night?.55:4.3;fill.intensity=night?1.7:1.5;fill.color.set(night?'#9783ef':'#bfb8ed');renderer.toneMappingExposure=night?1.1:1.35;homeLights.forEach(light=>light.intensity=night||lit?6:0);decorLights.forEach(light=>light.intensity=night?1.6:.35);lampMat.emissiveIntensity=night||lit?1:.35;sky.material.color.set(night?'#9d90c4':'#ffffff')},setLamp(value){lit=value;homeLights.forEach(light=>light.intensity=night||lit?6:0);decorLights.forEach(light=>light.intensity=night?1.6:.35);lampMat.emissiveIntensity=night||lit?1:.35},zoom(factor){const delta=camera.position.clone().sub(controls.target);delta.setLength(THREE.MathUtils.clamp(delta.length()*factor,9,85));move(controls.target.clone().add(delta),controls.target.clone())},reset(){currentView=-2;hotDefs=overviewHotDefs;mountHotspots();const view=viewFor(-2);move(view.position,view.target)},renderer};
 }
