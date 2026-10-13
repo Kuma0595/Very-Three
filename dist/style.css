@@ -37,3 +37,6 @@ body.night .dock #lamp.active{background:#6a4d31;color:#fff0cb;box-shadow:inset 
 
 /* 手机通过点地面串门，收起方向按钮与键盘提示。 */
 @media(max-width:850px),(pointer:coarse){#walk-pad,#walk-hint .keyboard-hint{display:none!important}}
+
+/* 默认夜晚时，浅色登录卡片保持深色文字。 */
+body.night .access-card{--ink:#433552;--muted:#726480;color:var(--ink)}

@@ -158,13 +158,33 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
   const rim=mesh(new THREE.TorusGeometry(.51,.09,10,32),'#d9c9de',0,.09,0,bed);rim.rotation.x=Math.PI/2;rim.scale.y=.8;
   const toy=ball(.10,'#a1bfb2',-1.45,.32,4.3);toy.name='cat-toy';
   const heart=art(.34,.34,0,.95,0,ctx=>{ctx.fillStyle='#d28fa7';ctx.font='bold 360px sans-serif';ctx.textAlign='center';ctx.fillText('♥',256,390)},cat);heart.name='cat-heart';heart.material.transparent=true;heart.material.depthWrite=false;heart.visible=false;
+  // 短腿小狗：奶油色胸口、垂耳和独立尾巴，与小猫共用地面寻路。
+  const dog=new THREE.Object3D();dog.name='home-dog';dog.position.set(1.25,.22,5.5);dog.scale.setScalar(.85);scene.add(dog);
+  const dogBody=ball(.29,'#c89262',0,.27,0,dog);dogBody.scale.set(1.35,.85,.8);
+  const dogHead=new THREE.Group();dogHead.position.set(.29,.43,0);dog.add(dogHead);
+  const skull=ball(.22,'#c89262',0,0,0,dogHead);skull.scale.set(1,1,.85);
+  const muzzle=ball(.14,'#f4e4c9',.16,-.065,0,dogHead);muzzle.scale.set(1.1,.7,.9);
+  ball(.042,'#51423d',.285,-.035,0,dogHead);
+  const dogEyes=[];for(const z of [-.13,.13]){
+    dogEyes.push(ball(.024,'#473b38',.135,.035,z,dogHead));
+    const ear=ball(.12,'#946943',-.055,-.02,z*1.4,dogHead);ear.scale.set(.65,1.55,.55);ear.rotation.x=z>0?-.18:.18;
+  }
+  const chest=ball(.17,'#f4e4c9',.22,.24,0,dog);chest.scale.set(.5,1,.95);
+  const dogFeet=[];for(const x of [-.22,.22])for(const z of [-.14,.14]){const foot=ball(.085,'#f4e4c9',x,.065,z,dog);foot.scale.y=1.25;dogFeet.push(foot)}
+  const dogTail=new THREE.Group();dogTail.position.set(-.32,.32,0);dog.add(dogTail);
+  const tuft=ball(.10,'#c89262',-.13,.07,0,dogTail);tuft.scale.set(1.6,.7,.7);
+  const dogCollar=cylinder(.18,.18,.045,'#87b9b0',.24,.35,0,dog);dogCollar.rotation.z=Math.PI/2;ball(.038,'#e4ba68',.26,.21,0,dog);
+  const dogBed=new THREE.Group();dogBed.name='dog-bed';dogBed.position.set(1.25,.21,5.5);house.add(dogBed);
+  const dogCushion=cylinder(.62,.65,.08,'#8eaaa1',0,.04,0,dogBed);dogCushion.scale.z=.8;
+  const dogRim=mesh(new THREE.TorusGeometry(.55,.075,10,32),'#bdd1c4',0,.075,0,dogBed);dogRim.rotation.x=Math.PI/2;dogRim.scale.y=.8;
   // 不遮挡模型的底部软阴影。
   const ground=new THREE.Mesh(new THREE.PlaneGeometry(200,200),new THREE.ShadowMaterial({opacity:.10}));ground.rotation.x=-Math.PI/2;ground.name='shadow-ground';ground.position.y=-.52;ground.receiveShadow=true;scene.add(ground);
-  const livingHotDefs=[{id:'cat-pet',text:'摸摸小猫',p:new THREE.Vector3(0,1.15,0)},{id:'memories',text:'我们的回忆',p:new THREE.Vector3(-3.5,3.85,3.9)},{id:'notes',text:'留一句话',p:new THREE.Vector3(2.0,3.75,-3.0)},{id:'people',text:'我们仨',p:new THREE.Vector3(.0,2.40,-1.8)},{id:'plans',text:'下一次见面',p:new THREE.Vector3(.35,1.3,1.3)}];
-  let hotDefs=livingHotDefs;const hotEl=stage.querySelector('#hotspots');function mountHotspots(){hotEl.replaceChildren();hotDefs.forEach(h=>{const b=document.createElement('button');b.className='hotspot';b.textContent=h.text;b.onclick=()=>h.id==='cat-pet'?petCat():onOpen(h.id);hotEl.append(b);h.el=b})}mountHotspots();
+  const livingHotDefs=[{id:'dog-pet',text:'摸摸小狗',p:new THREE.Vector3(0,1.2,0)},{id:'cat-pet',text:'摸摸小猫',p:new THREE.Vector3(0,1.15,0)},{id:'memories',text:'我们的回忆',p:new THREE.Vector3(-3.5,3.85,3.9)},{id:'notes',text:'留一句话',p:new THREE.Vector3(2.0,3.75,-3.0)},{id:'people',text:'我们仨',p:new THREE.Vector3(.0,2.40,-1.8)},{id:'plans',text:'下一次见面',p:new THREE.Vector3(.35,1.3,1.3)}];
+  let hotDefs=livingHotDefs;const hotEl=stage.querySelector('#hotspots');function mountHotspots(){hotEl.replaceChildren();hotDefs.forEach(h=>{const b=document.createElement('button');b.className='hotspot';b.textContent=h.text;b.onclick=()=>h.id==='cat-pet'?petCat():h.id==='dog-pet'?petDog():onOpen(h.id);hotEl.append(b);h.el=b})}mountHotspots();
   // 点击真实物件也能打开面板；拖动时不误触。
   const hits=[];function hit(id,x,y,z,w,h,d){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshBasicMaterial({visible:false}));m.position.set(x,y,z);m.userData.id=id;m.userData.room=house;house.add(m);hits.push(m)}
   const catHit=new THREE.Mesh(new THREE.BoxGeometry(.95,.75,.65),new THREE.MeshBasicMaterial({visible:false}));catHit.position.y=.3;catHit.userData={id:'cat-pet',room:livingRoom};cat.add(catHit);hits.push(catHit);
+  const dogHit=new THREE.Mesh(new THREE.BoxGeometry(1.05,.85,.65),new THREE.MeshBasicMaterial({visible:false}));dogHit.position.y=.35;dogHit.userData={id:'dog-pet',room:livingRoom};dog.add(dogHit);hits.push(dogHit);
   hit('people',0,1.7,-2.05,3.8,1.2,.9);hit('notes',1.85,2.85,-3.25,2,1.25,.2);hit('memories',-3.83,2.45,3.9,.3,2.3,2.65);hit('plans',0,.95,.65,2.5,.3,1.6);hit('lamp',-2.45,2.7,-2.08,1,.7,1);
   // 三个卧室始终处于同一户型，家具分组用于定位和维护。
   const rooms=[],roomHotDefs=[],roomFrames=[[],[],[]],decorLights=[],animatedProps=[],residentPoses=[];
@@ -424,7 +444,7 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
   // 每间房自己的床头灯，不再移动同一盏灯来模拟切换。
   lampLight.position.add(livingRoom.position);const homeLights=[lampLight];
   rooms.forEach(room=>{const light=new THREE.PointLight('#ffbf7b',0,8,1.6);light.position.copy(room.position).add(new THREE.Vector3(3.48,1.4,-2.72));scene.add(light);homeLights.push(light)});
-  livingHotDefs.forEach(h=>h.root=h.id==='cat-pet'?cat:livingRoom);roomHotDefs.forEach((defs,i)=>defs.forEach(h=>h.root=rooms[i]));
+  livingHotDefs.forEach(h=>h.root=h.id==='cat-pet'?cat:h.id==='dog-pet'?dog:livingRoom);roomHotDefs.forEach((defs,i)=>defs.forEach(h=>h.root=rooms[i]));
   const overviewHotDefs=[{id:'focus-1',text:'我们的客厅',root:livingRoom,p:new THREE.Vector3(0,4.5,0)},...rooms.map((root,i)=>({id:'focus'+i,text:['Piggy','4010','Joey'][i]+'的房间',root,p:new THREE.Vector3(0,4.5,0)}))];
   hotDefs=overviewHotDefs;mountHotspots();scene.updateMatrixWorld(true);
 
@@ -446,10 +466,10 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
         floors.push({minX:b.min.x,maxX:b.max.x,minZ:b.min.z,maxZ:b.max.z,room:object.name.startsWith('floor-room-')?Number(object.name[11]):-1});return;
       }
       if(object.material.visible===false)return;
-      for(let parent=object;parent;parent=parent.parent)if(!parent.visible||parent.name.startsWith('resident-')||parent.name==='home-cat')return;
+      for(let parent=object;parent;parent=parent.parent)if(!parent.visible||parent.name.startsWith('resident-')||parent.name==='home-cat'||parent.name==='home-dog')return;
       const b=new THREE.Box3().setFromObject(object);if(b.isEmpty()||b.max.y<.35||b.min.y>1.55)return;
       const obstacle={minX:b.min.x,maxX:b.max.x,minZ:b.min.z,maxZ:b.max.z};obstacles.push(obstacle);
-      let inBed=false;for(let parent=object;parent;parent=parent.parent)if(parent.name==='cat-bed')inBed=true;
+      let inBed=false;for(let parent=object;parent;parent=parent.parent)if(parent.name==='cat-bed'||parent.name==='dog-bed')inBed=true;
       if(!inBed)catObstacles.push(obstacle);
     });
     navigator=createNavigator(floors,obstacles);
@@ -493,6 +513,28 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
     tail.rotation.z=!reduced&&!sleep?Math.sin(time*.003)*.18:0;
     if(!reduced){body.scale.z=.9+Math.sin(time*.002)*.025;if(catMode==='pet')heart.position.y=.95+Math.sin(time*.005)*.04}
     heart.quaternion.copy(cat.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(camera.quaternion));
+  }
+  let dogMode='rest',dogTimer=10,dogPath=[],dogReady=false,dogPetCooldown=0;
+  function petDog(){if(dogPetCooldown>0)return false;dogMode='pet';dogTimer=3;dogPath=[];dogPetCooldown=1;onOpen('dog-pet');return true}
+  function updateDog(time,dt){
+    if(!dogReady){const p=catNavigator.nearest(dog.position);if(p){dog.position.x=p.x;dog.position.z=p.z}dogReady=true}
+    dogTimer-=dt;dogPetCooldown=Math.max(0,dogPetCooldown-dt);
+    if(dogTimer<=0&&!dogPath.length){
+      if(dogMode==='return'){dogMode='rest';dogTimer=night?24:10}
+      else if(dogMode==='rest'||dogMode==='pet'){dogMode='idle';dogTimer=4}
+      else{const returning=dogMode==='roam'||(night&&Math.random()<.65);dogMode=returning?'return':'roam';dogTimer=5;
+        const targets=[{x:0,z:4.7},{x:1.1,z:3.8},{x:-.75,z:5.5}];dogPath=catNavigator.findPath(dog.position,returning?dogBed.position:targets[Math.floor(Math.random()*targets.length)])??[];
+        if(!dogPath.length){dogMode='idle';dogTimer=5}
+      }
+    }
+    let moving=false;
+    if(dogPath.length){const p=dogPath[0],x=p.x-dog.position.x,z=p.z-dog.position.z,d=Math.hypot(x,z);
+      if(d<.01){dog.position.x=p.x;dog.position.z=p.z;dogPath.shift()}
+      else{const step=Math.min(d,dt*1.1),next=catNavigator.move(dog.position,x/d*step,z/d*step);moving=Math.hypot(next.x-dog.position.x,next.z-dog.position.z)>.0001;dog.position.x=next.x;dog.position.z=next.z;if(moving)dog.rotation.y=Math.atan2(-z,x);else{dogPath=[];dogMode='idle';dogTimer=4}}
+    }
+    const rest=dogMode==='rest';dogBody.scale.y=rest?.65:.85;dogEyes.forEach(eye=>eye.scale.y=rest?.2:1);dogHead.rotation.z=dogMode==='pet'?-.2:rest?.12:0;
+    dogFeet.forEach((foot,i)=>foot.position.y=.065+(moving&&!reduced?Math.sin(time*.013+i*Math.PI)*.025:0));
+    dogTail.rotation.y=!reduced&&!rest?Math.sin(time*(dogMode==='pet'?.018:.006))*(dogMode==='pet'?.7:.25):0;
   }
   function walkState(){return {active:Boolean(walker),room:walker?navigator.roomAt(walker.actor.position):-1,moving:lastWalking}}
   function cancelWalk(){walkPath=[];walkInput.set(0,0);destination.visible=false;lastWalking=false;if(walker)onWalkState(walkState())}
@@ -546,7 +588,7 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
     if(!valid||Math.hypot(e.clientX-tap.x,e.clientY-tap.y)>8||performance.now()-tap.t>650)return;
     const r=renderer.domElement.getBoundingClientRect();pointer.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(pointer,camera);
     const h=ray.intersectObjects(hits.filter(m=>m.userData.room.visible&&(!walker||m.userData.id!=='room'+walker.index)))[0];
-    if(h?.object===catHit)petCat();else if(h)onOpen(h.object.userData.id);else if(walker){const floor=ray.intersectObjects(floorMeshes)[0];if(floor&&!walkTo(floor.point))onWalkState({...walkState(),blocked:true})}
+    if(h?.object===catHit)petCat();else if(h?.object===dogHit)petDog();else if(h)onOpen(h.object.userData.id);else if(walker){const floor=ray.intersectObjects(floorMeshes)[0];if(floor&&!walkTo(floor.point))onWalkState({...walkState(),blocked:true})}
   });
   renderer.domElement.addEventListener('pointercancel',e=>{activePointers.delete(e.pointerId);down=null;if(!activePointers.size)multiGesture=false});
   let night=false,lit=false,tween=null,currentView=-2;
@@ -570,7 +612,7 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
   controls.addEventListener('start',()=>{tween=null});
   function frame(time){
     requestAnimationFrame(frame);
-    const dt=lastFrameTime===null?0:Math.min(.05,Math.max(0,(time-lastFrameTime)/1000));lastFrameTime=time;updateWalking(time,dt);updateCat(time,dt);
+    const dt=lastFrameTime===null?0:Math.min(.05,Math.max(0,(time-lastFrameTime)/1000));lastFrameTime=time;updateWalking(time,dt);updateCat(time,dt);updateDog(time,dt);
     if(tween){const p=Math.min((time-tween.start)/tween.duration,1),s=1-Math.pow(1-p,3);camera.position.lerpVectors(tween.from,tween.to,s);controls.target.lerpVectors(tween.targetFrom,tween.targetTo,s);if(p===1)tween=null}
     if(!reduced){
       const seconds=time*.001;
@@ -615,7 +657,7 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
     }
     frame.photo.material.map.needsUpdate=true;
   }
-  return {petCat,getCatState:()=>({mode:catMode,position:cat.position.clone()}),startWalking,stopWalking,walkTo,cancelWalk,getWalkState:walkState,setWalkInput(x,y){if(!walker)return;walkInput.set(x,y);walkPath=[];destination.visible=false},setRoomPhoto(room,slot,src){return updatePhotoFrame(roomFrames[room]?.[slot],src)},setLivingPhoto(slot,src){return updatePhotoFrame(livingFrames[slot],src)},setRoom(index){
+  return {petDog,getDogState:()=>({mode:dogMode,position:dog.position.clone()}),petCat,getCatState:()=>({mode:catMode,position:cat.position.clone()}),startWalking,stopWalking,walkTo,cancelWalk,getWalkState:walkState,setWalkInput(x,y){if(!walker)return;walkInput.set(x,y);walkPath=[];destination.visible=false},setRoomPhoto(room,slot,src){return updatePhotoFrame(roomFrames[room]?.[slot],src)},setLivingPhoto(slot,src){return updatePhotoFrame(livingFrames[slot],src)},setRoom(index){
     if(![-2,-1,0,1,2].includes(index))return;
     currentView=index;hotDefs=index===-2?overviewHotDefs:index===-1?livingHotDefs:roomHotDefs[index];mountHotspots();down=null;
     const view=viewFor(index);move(view.position,view.target);
