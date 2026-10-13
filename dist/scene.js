@@ -1,4 +1,4 @@
-import {createDecorationSystem} from './decoration-scene.js?v=1';
+import {createDecorationSystem} from './decoration-scene.js?v=2';
 import * as THREE from 'three';
 import { OrbitControls } from './vendor/OrbitControls.js';
 import { createNavigator } from './navigation.js?v=1';
@@ -616,6 +616,27 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
     const room=navigator.roomAt(next);if(room!==walker.room||moving!==lastWalking){walker.room=room;lastWalking=moving;onWalkState(walkState())}
   }
   const decoration=createDecorationSystem({rooms,scene,box,ball,cylinder,round,stopWalking,invalidate(){navigator=null;catNavigator=null;floorMeshes=[];walkPath=[];catPath=[];dogPath=[];}});
+  const decorPreviewCache=new Map();
+  // 复用主场景的模型与渲染器生成缩略图，不额外创建 WebGL 上下文。
+  function getDecorPreviews(color){
+    if(decorPreviewCache.has(color))return decorPreviewCache.get(color);
+    const result={},size=192,target=new THREE.WebGLRenderTarget(size,size),previous=renderer.getRenderTarget();
+    target.texture.colorSpace=THREE.SRGBColorSpace;
+    const previewScene=new THREE.Scene();previewScene.background=new THREE.Color('#eee5dc');
+    previewScene.add(new THREE.HemisphereLight('#fff7e9','#a497b4',3));const light=new THREE.DirectionalLight('#fff3dc',3);light.position.set(3,5,4);previewScene.add(light);
+    const previewCamera=new THREE.PerspectiveCamera(35,1,.01,20);
+    try{for(const type of ['plant','lamp','stool','table','cushion','rug']){
+      const model=decoration.createPreviewModel({id:'preview',type,color,rotation:0});previewScene.add(model);
+      const bounds=new THREE.Box3().setFromObject(model),center=bounds.getCenter(new THREE.Vector3()),extent=bounds.getSize(new THREE.Vector3());
+      const distance=Math.max(extent.x,extent.y,extent.z,.6)*2.5;previewCamera.position.copy(center).add(new THREE.Vector3(1,1.1,1.5).normalize().multiplyScalar(distance));previewCamera.lookAt(center);
+      renderer.setRenderTarget(target);renderer.render(previewScene,previewCamera);
+      const pixels=new Uint8Array(size*size*4);renderer.readRenderTargetPixels(target,0,0,size,size,pixels);
+      const canvas=document.createElement('canvas');canvas.width=canvas.height=size;const ctx=canvas.getContext('2d'),data=ctx.createImageData(size,size);
+      for(let y=0;y<size;y++)data.data.set(pixels.subarray((size-1-y)*size*4,(size-y)*size*4),y*size*4);
+      ctx.putImageData(data,0,0);result[type]=canvas.toDataURL('image/png');previewScene.remove(model);model.traverse(o=>{if(o.isMesh)o.geometry.dispose()});
+    }}finally{renderer.setRenderTarget(previous);target.dispose()}
+    decorPreviewCache.set(color,result);return result;
+  }
   const ray=new THREE.Raycaster(),pointer=new THREE.Vector2();let down=null,multiGesture=false;const activePointers=new Set();
   renderer.domElement.addEventListener('pointerdown',e=>{activePointers.add(e.pointerId);if(activePointers.size>1){multiGesture=true;down=null}else if(!multiGesture)down={id:e.pointerId,x:e.clientX,y:e.clientY,t:performance.now()}});
   renderer.domElement.addEventListener('pointerup',e=>{
@@ -692,7 +713,7 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
     }
     frame.photo.material.map.needsUpdate=true;
   }
-  return {setDecorRoom:decoration.setRoom,setDecorationEditor:decoration.setEditor,canPlaceDecor:decoration.canPlace,setGardenPlants,petDog,getDogState:()=>({mode:dogMode,position:dog.position.clone()}),petCat,getCatState:()=>({mode:catMode,position:cat.position.clone()}),startWalking,stopWalking,walkTo,cancelWalk,getWalkState:walkState,setWalkInput(x,y){if(!walker)return;walkInput.set(x,y);walkPath=[];destination.visible=false},setRoomPhoto(room,slot,src){return updatePhotoFrame(roomFrames[room]?.[slot],src)},setLivingPhoto(slot,src){return updatePhotoFrame(livingFrames[slot],src)},setRoom(index){
+  return {getDecorPreviews,setDecorRoom:decoration.setRoom,setDecorationEditor:decoration.setEditor,canPlaceDecor:decoration.canPlace,setGardenPlants,petDog,getDogState:()=>({mode:dogMode,position:dog.position.clone()}),petCat,getCatState:()=>({mode:catMode,position:cat.position.clone()}),startWalking,stopWalking,walkTo,cancelWalk,getWalkState:walkState,setWalkInput(x,y){if(!walker)return;walkInput.set(x,y);walkPath=[];destination.visible=false},setRoomPhoto(room,slot,src){return updatePhotoFrame(roomFrames[room]?.[slot],src)},setLivingPhoto(slot,src){return updatePhotoFrame(livingFrames[slot],src)},setRoom(index){
     if(![-3,-2,-1,0,1,2].includes(index))return;
     currentView=index;hotDefs=index===-3?gardenHotDefs:index===-2?overviewHotDefs:index===-1?livingHotDefs:roomHotDefs[index];mountHotspots();down=null;
     const view=viewFor(index);move(view.position,view.target);

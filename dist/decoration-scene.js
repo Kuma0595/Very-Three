@@ -58,5 +58,5 @@ export function createDecorationSystem({rooms,scene,box,ball,cylinder,round,inva
    const p=rooms[editor].worldToLocal(hits[0].point.clone()),item={...preview.userData.item,x:Math.round(p.x*4)/4,z:Math.round(p.z*4)/4};const valid=canPlace(editor,item);callback({item,valid});
   }}return true;
  }
- return {setRoom,setEditor,canPlace,tap,get editing(){return editor>=0}};
+ return {createPreviewModel:item=>model(item,new THREE.Group()),setRoom,setEditor,canPlace,tap,get editing(){return editor>=0}};
 }

@@ -1,7 +1,7 @@
-import {setupDecoration} from './decoration.js?v=1';
+import {setupDecoration} from './decoration.js?v=2';
 import {loadGarden,gardenAction,growthStage,SPECIES,STAGES} from './garden.js?v=1';
 import {loadCloud,saveCloud,currentMember,cloudError,startCloudSync} from './cloud.js?v=1';
-import { createHome } from './scene.js?v=9-decor';
+import { createHome } from './scene.js?v=10-decor-preview';
 import { createRoomMusic } from './room-music.js?v=2-cat';
 import { watchSystemTheme } from './time-theme.js?v=2-system';
 const $=s=>document.querySelector(s);
