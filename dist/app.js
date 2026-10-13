@@ -1,7 +1,8 @@
-import {setupDecoration} from './decoration.js?v=3';
+import {setupActivities} from './activities.js?v=1';
+import {setupDecoration} from './decoration.js?v=4';
 import {loadGarden,gardenAction,growthStage,SPECIES,STAGES} from './garden.js?v=1';
 import {loadCloud,saveCloud,currentMember,cloudError,startCloudSync} from './cloud.js?v=1';
-import { createHome } from './scene.js?v=12-room-wall';
+import { createHome } from './scene.js?v=13-activities';
 import { createRoomMusic } from './room-music.js?v=2-cat';
 import { watchSystemTheme } from './time-theme.js?v=2-system';
 const $=s=>document.querySelector(s);
@@ -83,7 +84,7 @@ function refreshRoomUI(){
  if($('#edit-room'))$('#edit-room').onclick=()=>openPanel('room'+activeRoom);
  $('#scene-caption').textContent=activeRoom===-3?'我们的庭院 · 一起等花开':activeRoom<0?(data.night?'夜晚的小家 · 不管多晚，都有你的位置':'晴天的小家 · 灯一直为你留着'):`${data.people[activeRoom].name}的${['摇滚电玩房','黑胶聆听室','亚文化小天地'][activeRoom]} · ${data.night?'晚安，也爱自己':'今天也自在做自己'}`;
 }
-let decorController=null;
+let decorController=null,activityController=null;
 function switchRoom(index){if(decorController?.editing&&index!==currentMember().id){toast('请先保存或退出房间布置');return}if(!Number.isInteger(index)||index<-3||index>2)return;activeRoom=index;home?.setRoom(index);refreshRoomUI();void roomMusic.play(index)}
 $('#focus-info').onclick=()=>openPanel(activeRoom===-3?'garden':activeRoom>=0?'room'+activeRoom:'about');
 const walkKeys=new Set();
@@ -124,7 +125,7 @@ document.querySelectorAll('[data-walk]').forEach(button=>{
 });
 function members(){ $('#members').innerHTML=data.people.map((p,i)=>`<button data-person="${i}" title="${esc(p.status)}"><span class="avatar">${esc(p.emoji)}</span><span class="member-name">${esc(p.name)}</span></button>`).join('');$('#members').querySelectorAll('button').forEach(b=>b.onclick=()=>switchRoom(Number(b.dataset.person)));}
 const panel=$('#panel');let lastFocus,currentPanelId;
-function openPanel(id){if(id==='dog-pet'){toast('小狗摇了摇尾巴，贴过来让你摸摸');return}if(id==='cat-pet'){void roomMusic.meow();toast('喵～ 小猫蹭了蹭你的手');return}const focus=/^focus(-3|-1|[0-2])$/.exec(id);if(focus){switchRoom(Number(focus[1]));return}const frameMatch=/^frame([0-2])-([0-2])$/.exec(id);if(frameMatch)id='frames'+frameMatch[1];if(id==='lamp'){toggleLamp();return}cancelMovement();lastFocus=document.activeElement;renderPanel(id);if(!panel.open)panel.showModal();}
+function openPanel(id){const activity=/^activity:(arcade|aquarium|telescope):([0-2])$/.exec(id);if(activity){cancelMovement();void activityController?.open(activity[1],Number(activity[2]));return}if(id==='dog-pet'){toast('小狗摇了摇尾巴，贴过来让你摸摸');return}if(id==='cat-pet'){void roomMusic.meow();toast('喵～ 小猫蹭了蹭你的手');return}const focus=/^focus(-3|-1|[0-2])$/.exec(id);if(focus){switchRoom(Number(focus[1]));return}const frameMatch=/^frame([0-2])-([0-2])$/.exec(id);if(frameMatch)id='frames'+frameMatch[1];if(id==='lamp'){toggleLamp();return}cancelMovement();lastFocus=document.activeElement;renderPanel(id);if(!panel.open)panel.showModal();}
 function renderPanel(id){currentPanelId=id;const content=$('#panel-content');
  if(/^garden[0-2]?$/.test(id)){renderGarden(id);return}
  if(/^room[0-2]$/.test(id)){
@@ -221,7 +222,7 @@ async function toggleLamp(){if(await update({lit:!data.lit})){applyTheme();toast
 $('#lamp').onclick=toggleLamp;$('#zoom-in').onclick=()=>home?.zoom(.85);$('#zoom-out').onclick=()=>home?.zoom(1.15);$('#reset').onclick=()=>switchRoom(-2);
 applyCloud(await loadCloud());
 try{home=createHome($('#stage'),openPanel,onWalkState);$('#loading').remove();syncRoomPhotos()}catch(error){console.error(error);$('#loading').innerHTML='这个浏览器暂时无法显示 3D 小屋<small>试试 Safari / Chrome；下方留言与相册仍可使用。</small>'}
-syncSystemTheme(true);void syncGarden();decorController=setupDecoration({home:()=>home,focus:switchRoom,notify:toast});
+syncSystemTheme(true);void syncGarden();decorController=setupDecoration({home:()=>home,focus:switchRoom,notify:toast});activityController=setupActivities({home:()=>home,notify:toast});
 
 
 let lastSyncError=0;
