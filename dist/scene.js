@@ -420,11 +420,11 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
   function doorway(group,wall,axis,center,color,label,id){
     group.remove(wall);const half=axis==='x'?4.125:3.65,width=1.2,opening=2.45;
     const leftEnd=center-width/2,rightStart=center+width/2;
-    const range=group.userData.floorPlan,min=axis==='z'?range.minZ:-half,max=axis==='z'?range.maxZ:half;
+    const range=group.userData.floorPlan,min=axis==='z'?range.minZ:range.minX+.025,max=axis==='z'?range.maxZ:range.maxX-.025;
     const trim=group.getObjectByName('room-left-trim');if(axis==='z'&&trim){group.remove(trim);box(.1,.14,leftEnd+half,'#f4e6d2',-3.93,.28,(-half+leftEnd)/2,group);box(.1,.14,half-rightStart,'#f4e6d2',-3.93,.28,(rightStart+half)/2,group);}
     if(axis==='x'){
-      box(leftEnd+half,3.9,.18,color,(-half+leftEnd)/2,2.08,-3.56,group);
-      box(half-rightStart,3.9,.18,color,(rightStart+half)/2,2.08,-3.56,group);
+      box(leftEnd-min,3.9,.18,color,(min+leftEnd)/2,2.08,-3.56,group).name='door-wall-left-'+id;
+      box(max-rightStart,3.9,.18,color,(rightStart+max)/2,2.08,-3.56,group).name='door-wall-right-'+id;
       box(width,4.03-opening,.18,color,center,(4.03+opening)/2,-3.56,group);
     }else{
       box(.18,3.9,leftEnd-min,color,-4.05,2.08,(min+leftEnd)/2,group);
