@@ -23,7 +23,7 @@ begin
   if c not in ('wall','floor','rug') or not ((p_config->'colors'->>c) = any(array['#dfc2bd','#c6d7c5','#c8bfdc','#e6d2aa','#a6becd','#9e806a'])) then raise exception '无效的配色'; end if;
  end loop;
  for item in select value from jsonb_array_elements(p_config->'items') loop
-  if jsonb_typeof(item)<>'object' or item->>'type' is null or item->>'type' not in ('plant','lamp','stool','table','cushion','rug') or item->>'id' is null or item->>'id' !~ '^[a-f0-9-]{36}$' or item->>'id'=any(ids) then raise exception '无效的装饰'; end if;
+  if jsonb_typeof(item)<>'object' or item->>'type' is null or item->>'type' not in ('plant','lamp','stool','table','cushion','rug','arcade','turntable','guitarstand','speaker','neon','recordrack','terrarium','aquarium','catTower','teaCart','flowerstand','telescope') or item->>'id' is null or item->>'id' !~ '^[a-f0-9-]{36}$' or item->>'id'=any(ids) then raise exception '无效的装饰'; end if;
   ids:=array_append(ids,item->>'id');
   if jsonb_typeof(item->'x') is distinct from 'number' or jsonb_typeof(item->'z') is distinct from 'number' or jsonb_typeof(item->'rotation') is distinct from 'number' then raise exception '无效的位置'; end if;
   if (item->>'x')::numeric not between -6.05 and 4.15 or (item->>'z')::numeric not between -3.65 and 8.95 or (item->>'rotation')::numeric not in (0,1,2,3) or item->>'color' is null or not (item->>'color'=any(array['#dfc2bd','#c6d7c5','#c8bfdc','#e6d2aa','#a6becd','#9e806a'])) then raise exception '无效的装饰参数'; end if;

@@ -1,4 +1,4 @@
-import {createDecorationSystem} from './decoration-scene.js?v=2';
+import {createDecorationSystem,DECOR_ITEMS} from './decoration-scene.js?v=3';
 import * as THREE from 'three';
 import { OrbitControls } from './vendor/OrbitControls.js';
 import { createNavigator } from './navigation.js?v=1';
@@ -618,14 +618,14 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
   const decoration=createDecorationSystem({rooms,scene,box,ball,cylinder,round,stopWalking,invalidate(){navigator=null;catNavigator=null;floorMeshes=[];walkPath=[];catPath=[];dogPath=[];}});
   const decorPreviewCache=new Map();
   // 复用主场景的模型与渲染器生成缩略图，不额外创建 WebGL 上下文。
-  function getDecorPreviews(color){
-    if(decorPreviewCache.has(color))return decorPreviewCache.get(color);
+  function getDecorPreviews(color,types=Object.keys(DECOR_ITEMS)){
+    const key=color+types.join(',');if(decorPreviewCache.has(key))return decorPreviewCache.get(key);
     const result={},size=192,target=new THREE.WebGLRenderTarget(size,size),previous=renderer.getRenderTarget();
     target.texture.colorSpace=THREE.SRGBColorSpace;
     const previewScene=new THREE.Scene();previewScene.background=new THREE.Color('#eee5dc');
     previewScene.add(new THREE.HemisphereLight('#fff7e9','#a497b4',3));const light=new THREE.DirectionalLight('#fff3dc',3);light.position.set(3,5,4);previewScene.add(light);
     const previewCamera=new THREE.PerspectiveCamera(35,1,.01,20);
-    try{for(const type of ['plant','lamp','stool','table','cushion','rug']){
+    try{for(const type of types){
       const model=decoration.createPreviewModel({id:'preview',type,color,rotation:0});previewScene.add(model);
       const bounds=new THREE.Box3().setFromObject(model),center=bounds.getCenter(new THREE.Vector3()),extent=bounds.getSize(new THREE.Vector3());
       const distance=Math.max(extent.x,extent.y,extent.z,.6)*2.5;previewCamera.position.copy(center).add(new THREE.Vector3(1,1.1,1.5).normalize().multiplyScalar(distance));previewCamera.lookAt(center);
@@ -633,9 +633,9 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
       const pixels=new Uint8Array(size*size*4);renderer.readRenderTargetPixels(target,0,0,size,size,pixels);
       const canvas=document.createElement('canvas');canvas.width=canvas.height=size;const ctx=canvas.getContext('2d'),data=ctx.createImageData(size,size);
       for(let y=0;y<size;y++)data.data.set(pixels.subarray((size-1-y)*size*4,(size-y)*size*4),y*size*4);
-      ctx.putImageData(data,0,0);result[type]=canvas.toDataURL('image/png');previewScene.remove(model);model.traverse(o=>{if(o.isMesh)o.geometry.dispose()});
+      ctx.putImageData(data,0,0);result[type]=canvas.toDataURL('image/png');previewScene.remove(model);model.traverse(o=>{if(o.isMesh){o.geometry.dispose();if(o.userData.ownedMaterial){o.material.map?.dispose();o.material.dispose()}}});
     }}finally{renderer.setRenderTarget(previous);target.dispose()}
-    decorPreviewCache.set(color,result);return result;
+    decorPreviewCache.set(key,result);return result;
   }
   const ray=new THREE.Raycaster(),pointer=new THREE.Vector2();let down=null,multiGesture=false;const activePointers=new Set();
   renderer.domElement.addEventListener('pointerdown',e=>{activePointers.add(e.pointerId);if(activePointers.size>1){multiGesture=true;down=null}else if(!multiGesture)down={id:e.pointerId,x:e.clientX,y:e.clientY,t:performance.now()}});

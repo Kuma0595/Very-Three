@@ -1,11 +1,11 @@
 import {client,currentMember} from './cloud.js?v=1';
-import {DECOR_ITEMS,DECOR_COLORS} from './decoration-scene.js?v=2';
+import {DECOR_ITEMS,DECOR_COLORS,DECOR_PAGES} from './decoration-scene.js?v=3';
 export function setupDecoration({home,focus,notify}){
  const button=document.createElement('button');button.id='decorate-room';button.textContent='布置我的房间';button.type='button';document.querySelector('.focus-summary').append(button);
  const drawer=document.createElement('section');drawer.className='decor-editor';drawer.hidden=true;drawer.setAttribute('aria-label','布置房间');document.querySelector('main').append(drawer);
  const catalog=document.createElement('dialog');catalog.className='decor-dialog';catalog.setAttribute('aria-labelledby','decor-dialog-title');document.body.append(catalog);
  catalog.addEventListener('click',event=>{if(event.target===catalog){const r=catalog.getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)catalog.close()}});
- let records=[],ready=false,editing=false,draft=null,history=[],selected=null,valid=false,busy=false,version=0;
+ let records=[],ready=false,editing=false,draft=null,history=[],selected=null,valid=false,busy=false,version=0,catalogPage=0;
  const empty=()=>({colors:{},items:[]}),room=()=>currentMember().id;
  async function sync(){if(busy)return;try{const {data,error}=await client.from('vt_decor').select('*');if(error){ready=false;return}ready=true;records=data;for(const row of data)if(!editing||row.room_id!==room())home()?.setDecorRoom(row.room_id,row.config)}catch{} }
  function push(){history.push(structuredClone(draft));if(history.length>30)history.shift()}
@@ -27,21 +27,23 @@ export function setupDecoration({home,focus,notify}){
    if(action==='reset'){push();draft=empty();selected=null}
    if(action==='save'){
     busy=true;render();try{const {data,error}=await client.rpc('vt_save_decor',{p_config:draft,p_version:version});if(error)throw error;const row=Array.isArray(data)?data[0]:data;records=records.filter(r=>r.room_id!==room()).concat(row);finish(true);notify('房间布置已保存，朋友也能看到啦')}
-    catch(error){notify(error.message?.includes('其他设备')?'其他设备更新了房间，请退出后重新布置':'布置保存未完成，请检查网络后重试')}finally{busy=false;if(editing)render()}return;
+    catch(error){notify(error.message?.includes('无效的装饰')?'新增装饰需要先在 Supabase 执行 decoration-items.sql':error.message?.includes('其他设备')?'其他设备更新了房间，请退出后重新布置':'布置保存未完成，请检查网络后重试')}finally{busy=false;if(editing)render()}return;
    }
    preview();render();
   });
  }
- function openCatalog(){
-  let images={};try{images=home().getDecorPreviews(DECOR_COLORS[room()])}catch(error){console.error('装饰预览生成失败',error);notify('物品预览暂时未能加载，仍可选择后在房间查看')}
+ function openCatalog(page=catalogPage){
+  catalogPage=page;const entries=Object.entries(DECOR_ITEMS).filter(([,v])=>v.page===page);
+  let images={};try{images=home().getDecorPreviews(DECOR_COLORS[room()],entries.map(([key])=>key))}catch(error){console.error('装饰预览生成失败',error);notify('物品预览暂时未能加载，仍可选择后在房间查看')}
   const full=draft.items.length>=12;
-  catalog.innerHTML=`<div class="decor-dialog-heading"><div><small>VERY THREE / 房间布置</small><h2 id="decor-dialog-title">给房间添点喜欢的。</h2></div><button data-close aria-label="关闭装饰选择">×</button></div><p class="decor-dialog-desc">${full?'房间已有 12 件装饰，先收回一件再添加。':'选一件装饰，再点房间地面摆放。预览与实际模型一致。'}</p><div class="decor-item-grid">${Object.entries(DECOR_ITEMS).map(([key,v])=>`<button class="decor-item-card" data-add="${key}" ${full?'disabled':''}>${images[key]?`<img src="${images[key]}" alt="${v.name}的三维模型预览" width="192" height="192">`:'<span class="decor-preview-empty">预览暂不可用</span>'}<span class="decor-item-name">${v.name}</span><small>${{plant:'给角落添一点绿',lamp:'柔和的落地灯',stool:'随手坐一会儿',table:'床边的小角落',cushion:'软软地坐下来',rug:'圈出自己的小天地'}[key]}</small><span class="decor-item-add">＋ 选它</span></button>`).join('')}</div><button class="decor-dialog-back" data-close>回房间继续布置</button>`;
+  catalog.innerHTML=`<div class="decor-dialog-heading"><div><small>VERY THREE / 房间布置</small><h2 id="decor-dialog-title">给房间添点喜欢的。</h2></div><button data-close aria-label="关闭装饰选择">×</button></div><p class="decor-dialog-desc">${full?'房间已有 12 件装饰，先收回一件再添加。':'选一件装饰，再点房间地面摆放。预览与实际模型一致。'}</p><nav class="decor-pages" aria-label="装饰分类">${DECOR_PAGES.map((name,i)=>`<button data-page="${i}" aria-pressed="${i===page}">${i+1} · ${name}</button>`).join('')}</nav><div class="decor-item-grid">${entries.map(([key,v])=>`<button class="decor-item-card" data-add="${key}" ${full?'disabled':''}>${images[key]?`<img src="${images[key]}" alt="${v.name}的三维模型预览" width="192" height="192">`:'<span class="decor-preview-empty">预览暂不可用</span>'}<span class="decor-item-name">${v.name}</span><small>${v.desc}</small><span class="decor-item-add">＋ 选它</span></button>`).join('')}</div><button class="decor-dialog-back" data-close>回房间继续布置</button>`;
+  catalog.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>{openCatalog(Number(b.dataset.page));catalog.querySelector(`[data-page="${catalogPage}"]`)?.focus()});
   catalog.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>catalog.close());
   catalog.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{selected={id:crypto.randomUUID(),type:b.dataset.add,rotation:0,color:DECOR_COLORS[room()]};valid=false;catalog.close();preview();render();notify('点房间地面选位置，再点击确定')});
   if(!catalog.open)catalog.showModal();
  }
  function finish(saved){catalog.close();editing=false;drawer.hidden=true;document.body.classList.remove('decorating');home()?.setDecorationEditor(-1,null);const row=records.find(r=>r.room_id===room());home()?.setDecorRoom(room(),row?.config??empty());selected=null;void sync()}
- button.onclick=async()=>{if(!home()){notify('3D 场景尚未准备好');return}await sync();if(!ready){notify('装饰功能需要先在 Supabase 执行 decoration.sql');return}const row=records.find(r=>r.room_id===room());version=row?.version??0;draft=structuredClone(row?.config??empty());history=[];selected=null;editing=true;document.querySelector('#panel').close();focus(room());drawer.hidden=false;document.body.classList.add('decorating');preview();render();openCatalog()};
+ button.onclick=async()=>{if(!home()){notify('3D 场景尚未准备好');return}await sync();if(!ready){notify('装饰功能需要先在 Supabase 执行 decoration.sql');return}const row=records.find(r=>r.room_id===room());version=row?.version??0;draft=structuredClone(row?.config??empty());history=[];selected=null;catalogPage=0;editing=true;document.querySelector('#panel').close();focus(room());drawer.hidden=false;document.body.classList.add('decorating');preview();render();openCatalog()};
  const timer=setInterval(sync,10000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)void sync()});window.addEventListener('pagehide',()=>clearInterval(timer));void sync();
  return {get editing(){return editing}};
 }
