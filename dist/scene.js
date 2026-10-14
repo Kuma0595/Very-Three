@@ -119,7 +119,7 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
   box(1.74,1.02,.02,'#d9b58f',1.83,2.87,-3.30);
   for(let i=0;i<3;i++){const n=box(.43,.45,.025,['#ffe6a0','#cddfca','#d7bce8'][i],1.25+i*.57,2.89,-3.27);n.rotation.z=[.12,-.08,.15][i];ball(.025,'#d47e7b',1.25+i*.57,3.065,-3.244)}
   const album=new THREE.Group();album.position.set(-3.91,2.45,3.9);album.rotation.y=Math.PI/2;house.add(album);
-  box(2.65,2.3,.08,'#b08769',0,0,0,album);
+  box(2.65,2.3,.08,'#b08769',0,0,0,album).name='living-memory-board';
   const livingFrames=[];
   for(let i=0;i<4;i++){
     const frame=new THREE.Group();frame.position.set((i%2-.5)*1.23,i<2?.55:-.55,.075);frame.rotation.z=[.02,-.02][i%2];album.add(frame);
@@ -423,7 +423,7 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
   }
   for(const child of livingRoom.children){if(Math.abs(child.position.x+7.15)<.001&&child.position.y>2)child.position.x=-7.8;if(Math.abs(child.position.x+6)<.001&&child.position.y>3)child.position.x=-5.9;}
   // 窗景、窗框与窗帘完整位于侧墙内侧面之前，避免天空面被墙遮住。
-  window.name='living-window';sky.name='window-sky';window.position.x=-16.025;album.position.x=-16.11;
+  window.name='living-window';sky.name='window-sky';window.position.x=-16.025;album.name='living-memory-wall';album.position.x=-16.00;
   livingHotDefs.forEach(h=>{if(!['cat-pet','dog-pet'].includes(h.id)){h.p.x-=5.5;h.p.z+=5.7;if(h.id==='memories')h.p.x=-15.7}});
   cat.position.copy(bed.position);cat.position.y=.22;dog.position.copy(dogBed.position);dog.position.y=.22;
   box(30.6,.12,10.1,'#d5b595',-.95,.12,7.1,livingRoom).name='floor-living';
