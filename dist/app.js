@@ -3,7 +3,7 @@ import {setupActivities} from './activities.js?v=4';
 import {setupDecoration} from './decoration.js?v=10';
 import {loadGarden,gardenAction,growthStage,SPECIES,STAGES} from './garden.js?v=3';
 import {loadCloud,saveCloud,currentMember,currentRoom,cloudError,startCloudSync} from './cloud.js?v=3';
-import { createHome } from './scene.js?v=23-family-routine';
+import { createHome } from './scene.js?v=24-living-label';
 import { createRoomMusic } from './room-music.js?v=2-cat';
 import { watchHomeTime } from './time-theme.js?v=3-time';
 const $=s=>document.querySelector(s);

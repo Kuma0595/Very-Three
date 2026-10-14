@@ -490,7 +490,7 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
       if(stage===3&&plant.species==='mint')for(let i=0;i<5;i++)ball(.035,'#d5c5e1',0,height+i*.05,0,frame.crop);
     }
   }
-  const overviewHotDefs=[{id:'focus-3',text:'我们的庭院',root:garden,p:new THREE.Vector3(0,3,11.8)},{id:'focus-1',text:'我们的客厅',root:livingRoom,p:new THREE.Vector3(0,4.5,0)},...rooms.map((root,i)=>({id:'focus'+i,text:['Piggy','4010','Joey & Zakery'][i]+'的房间',root,p:new THREE.Vector3(0,4.5,0)}))];
+  const overviewHotDefs=[{id:'focus-3',text:'我们的庭院',root:garden,p:new THREE.Vector3(0,3,11.8)},{id:'focus-1',text:'我们的客厅',root:livingRoom,p:new THREE.Vector3(-.95,1.6,7.8)},...rooms.map((root,i)=>({id:'focus'+i,text:['Piggy','4010','Joey & Zakery'][i]+'的房间',root,p:new THREE.Vector3(0,4.5,0)}))];
   hotDefs=overviewHotDefs;mountHotspots();scene.updateMatrixWorld(true);
 
   house=livingRoom;
