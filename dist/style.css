@@ -55,3 +55,5 @@ body.night .access-card{--ink:#433552;--muted:#726480;color:var(--ink)}
 
 .member-name{max-width:100px;overflow:hidden;text-overflow:ellipsis}.members{flex-wrap:wrap}@media(max-width:600px){.members{gap:10px}.members button{min-width:0}.members .avatar{width:44px;height:44px}}
 @media(min-width:801px){.intro .members{flex-wrap:nowrap}.intro .members button{width:60px}.intro .members .member-name{font-size:11px}}@media(max-width:800px){.intro .members{left:calc(88vw - 192px);flex-wrap:nowrap}.intro .members button{width:48px}}
+
+#decorate-living{padding:10px 14px;border-radius:12px;background:#dce6d7;color:#465d4b;font-weight:600}.decorating #decorate-living{visibility:hidden}.night #decorate-living{background:#3b5046;color:#e6f0df}.decor-pages{flex-wrap:wrap}

@@ -1,5 +1,5 @@
 import {createResidents} from './residents.js?v=2';
-import {createDecorationSystem,DECOR_ITEMS} from './decoration-scene.js?v=6';
+import {createDecorationSystem,DECOR_ITEMS} from './decoration-scene.js?v=7';
 import * as THREE from 'three';
 import { OrbitControls } from './vendor/OrbitControls.js';
 import { createNavigator } from './navigation.js?v=2';
@@ -70,8 +70,8 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
   palette.forEach((c,i)=>{const m=box(.08,.40,.02,c,1.46+i*.08,1.42,-2.408);m.rotation.z=-.25});
   // 地毯织纹与彩虹色边缘。
   round(4.75,.035,3.2,'#f4dfc3',.1,.225,.25,.012);
-  for(let i=0;i<6;i++)box(4.55,.006,.065,palette[i],.1,.247,-1.19+i*.074);
-  for(let i=0;i<6;i++)box(4.55,.006,.065,palette[i],.1,.247,1.38+i*.074);
+  for(let i=0;i<6;i++){const stripe=box(4.55,.008,.065,palette[i],.1,.258,-1.19+i*.074);stripe.castShadow=false;stripe.receiveShadow=false;}
+  for(let i=0;i<6;i++){const stripe=box(4.55,.008,.065,palette[i],.1,.258,1.38+i*.074);stripe.castShadow=false;stripe.receiveShadow=false;}
   for(let i=0;i<28;i++)for(const z of [-1.4,1.89])box(.023,.02,.16,'#f7e5c7',-2.18+i*.17,.23,z);
   // 椭圆茶几、三只杯子，以及一张手写便签。
   const table=new THREE.Group();table.position.set(0,0,.65);house.add(table);
@@ -263,9 +263,11 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
       const sleeve=new THREE.Group();sleeve.name='resident-record-sleeve';sleeve.position.set(0,.22,.29);resident.add(sleeve);
       box(.48,.48,.035,'#937657',0,.10,0,sleeve);art(.41,.41,0,.10,.022,(ctx,W,H)=>{ctx.fillStyle='#d5bc95';ctx.fillRect(0,0,W,H);ctx.fillStyle='#766650';ctx.font='bold 64px sans-serif';ctx.textAlign='center';ctx.fillText('SIDE A',W/2,150);ctx.beginPath();ctx.arc(256,320,105,0,Math.PI*2);ctx.fill()},sleeve);
       // 温暖胡桃木墙架、唱片分类与窗边落地灯。
-      box(2.42,.12,.42,'#836445',-1.73,3.65,-3.15);
-      for(let n=0;n<9;n++)box(.14,.26,.22,['#7d6d58','#bda782','#7b9080'][n%3],-2.73+n*.24,3.83,-3.15);
-      for(let n=0;n<9;n++)box(.09,1.34,.04,'#a17d59',-3.24+n*.36,1.05,-3.43);
+      extendZone('listening-zone',()=>{
+      box(2.42,.12,.42,'#836445',-1.73,3.65,-3.30);
+      for(let n=0;n<9;n++)box(.14,.26,.22,['#7d6d58','#bda782','#7b9080'][n%3],-2.73+n*.24,3.83,-3.30);
+      
+      });
       cylinder(.30,.30,.05,'#836445',-2.97,.25,.96);cylinder(.027,.027,2.43,'#836445',-2.97,1.46,.96);cylinder(.28,.49,.55,lampMat,-2.97,2.67,.96);
       // 曲线阅读地毯与书堆，留住慢节奏的听音氛围。
       const rug=cylinder(1.15,1.15,.022,'#d4c5a5',-1.47,.26,1.18);rug.scale.z=1.22;
@@ -318,7 +320,7 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
       box(.045,.04,wing.maxZ-wing.minZ,'#cfbfdc',wing.maxX-.14,.84,wz);
     }
     house.children.forEach(child=>child.userData.architecture=true);
-    const roomWindow=window.clone(true);roomWindow.name='room-window';roomWindow.rotation.y=0;roomWindow.position.set(-4.65,2.4,-3.43);roomWindow.userData.exteriorWindow=true;house.add(roomWindow);
+    const roomWindow=window.clone(true);roomWindow.name='room-window';roomWindow.rotation.y=0;roomWindow.position.set(-2.9,2.4,-3.43);roomWindow.userData.exteriorWindow=true;house.add(roomWindow);
     // 每间卧室都有床、两只枕头、床头柜和自己的灯。
     for(const x of [.5,2.9])for(const z of [-2.8,-.6])cylinder(.07,.07,.31,'#8c6a55',x,.34,z);
     round(3.0,.45,2.95,t.wood,1.7,.59,-1.72,.08);round(3.05,1.1,.18,t.base,1.7,1.14,-3.13,.08);
@@ -432,7 +434,8 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
   for(const x of [5.7,8.3])for(const z of [6.6,8])box(.09,.78,.09,'#987a60',x,.58,z,livingRoom);
   for(const [x,z] of [[5,7.3],[9,7.3],[7,5.9],[7,8.8]]){round(.75,.13,.70,'#a4bfae',x,.61,z,.035,livingRoom);for(const dx of [-.25,.25])for(const dz of [-.22,.22])box(.055,.45,.055,'#9b8067',x+dx,.32,z+dz,livingRoom)}
   cylinder(.14,.11,.20,'#d2abc3',6.7,1.23,7.3,livingRoom);box(.65,.04,.45,'#efe1c4',7.45,1.16,7.3,livingRoom);
-  round(3.2,.9,.7,'#b89b83',8.2,.66,3.35,.045,livingRoom);for(let n=0;n<11;n++)box(.12,.43,.36,palette[n%6],6.85+n*.25,1.32,3.35,livingRoom);
+  // Joey 门前保留通道，收藏柜移到客厅右侧墙边。
+  round(3.2,.9,.7,'#b89b83',11.2,.66,10.3,.045,livingRoom);for(let n=0;n<11;n++)box(.12,.43,.36,palette[n%6],9.85+n*.25,1.32,10.3,livingRoom);
   const building=new THREE.Group();building.name='shared-foundation';scene.add(building);
   box(30.6,.48,22.7,'#b89cbd',-.95,-.16,.8,building).name='foundation-slab';
   function frontDoor(group,x,z,min,max,label,id){
@@ -626,7 +629,7 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
   }
   const seats=avatars.map((a,index)=>{const room=rooms[Math.min(index,2)];return {local:a.position.clone(),world:{x:room.position.x+a.position.x,y:a.position.y,z:room.position.z+a.position.z},rotation:a.rotation.y}});
   const residents=createResidents({scene,sources:avatars,models:avatars.map((a,i)=>standingModel(i,'resident-npc-'+i)),rooms,seats,getNavigator(){prepareNavigation();return navigator},getControlled:()=>walker,getCat:()=>cat.position,getDog:()=>dog.position,onPet(kind){if(kind==='cat'){catMode='pet';catTimer=2.8;catPath=[];heart.visible=true}else{dogMode='pet';dogTimer=3;dogPath=[]}}});
-  const decoration=createDecorationSystem({rooms,scene,box,ball,cylinder,round,stopWalking,invalidate(){navigator=null;catNavigator=null;floorMeshes=[];walkPath=[];catPath=[];dogPath=[];}});
+  const decoration=createDecorationSystem({rooms:[...rooms,livingRoom],scene,box,ball,cylinder,round,stopWalking,invalidate(){navigator=null;catNavigator=null;floorMeshes=[];walkPath=[];catPath=[];dogPath=[];}});
   const decorPreviewCache=new Map();
   // 复用主场景的模型与渲染器生成缩略图，不额外创建 WebGL 上下文。
   function getDecorPreviews(color,types=Object.keys(DECOR_ITEMS)){

@@ -3,23 +3,26 @@ import {createNavigator} from './navigation.js?v=2';
 export const DECOR_ITEMS={
  plant:{name:'盆栽',w:.65,d:.65,page:0,desc:'陶盆与层叠叶片'},lamp:{name:'落地灯',w:.65,d:.65,page:0,desc:'有褶纹的暖光灯罩'},stool:{name:'小凳子',w:.7,d:.7,page:0,desc:'木腿与横撑的小凳'},table:{name:'边桌',w:.85,d:.85,page:0,desc:'双层木边桌'},cushion:{name:'坐垫',w:.8,d:.8,page:0,desc:'有滚边与纽扣的软垫'},rug:{name:'小地毯',w:1.4,d:1,page:0,desc:'条纹与流苏地毯'},
  arcade:{name:'迷你街机',w:.85,d:.85,page:1,desc:'像素游戏屏与摇杆'},turntable:{name:'黑胶听音柜',w:1.1,d:.8,page:1,desc:'唱针、黑胶与唱片槽'},guitarstand:{name:'电吉他架',w:.75,d:.65,page:1,desc:'琴弦、拾音器与琴架'},speaker:{name:'复古音箱',w:.7,d:.65,page:1,desc:'木壳与双单元音箱'},neon:{name:'彩虹灯牌',w:1.1,d:.55,page:1,desc:'桌架上的六色彩虹'},recordrack:{name:'专辑收藏架',w:1.1,d:.7,page:1,desc:'彩色封套与收藏小物'},
- terrarium:{name:'玻璃生态瓶',w:.85,d:.85,page:2,desc:'瓶中的苔藓与小蘑菇'},aquarium:{name:'小鱼缸',w:1.15,d:.75,page:2,desc:'水草、气泡与两条小鱼'},catTower:{name:'猫咪爬架',w:.95,d:.85,page:2,desc:'猫窝、抓柱与悬挂玩具'},teaCart:{name:'下午茶推车',w:1.15,d:.8,page:2,desc:'茶壶、双杯与小蛋糕'},flowerstand:{name:'阶梯花架',w:1.15,d:.85,page:2,desc:'三盆不同形态的花草'},telescope:{name:'观星望远镜',w:1.1,d:1.1,page:2,desc:'镜筒、镜头与三脚架'}
+ terrarium:{name:'玻璃生态瓶',w:.85,d:.85,page:2,desc:'瓶中的苔藓与小蘑菇'},aquarium:{name:'小鱼缸',w:1.15,d:.75,page:2,desc:'水草、气泡与两条小鱼'},catTower:{name:'猫咪爬架',w:.95,d:.85,page:2,desc:'猫窝、抓柱与悬挂玩具'},teaCart:{name:'下午茶推车',w:1.15,d:.8,page:2,desc:'茶壶、双杯与小蛋糕'},flowerstand:{name:'阶梯花架',w:1.15,d:.85,page:2,desc:'三盆不同形态的花草'},telescope:{name:'观星望远镜',w:1.1,d:1.1,page:2,desc:'镜筒、镜头与三脚架'},
+ sofa:{name:'双人沙发',w:2.3,d:1.2,page:3,desc:'滚边靠垫与木脚'},armchair:{name:'阅读扶手椅',w:1.1,d:1.1,page:3,desc:'弧形扶手与抱枕'},coffeeTable:{name:'圆形茶几',w:1.2,d:1.2,page:3,desc:'双层台面与茶杯'},bookcase:{name:'小书柜',w:1.2,d:.6,page:3,desc:'三层书籍和小收藏'},bench:{name:'软垫长凳',w:1.5,d:.65,page:3,desc:'圆角座垫与木横撑'},screen:{name:'藤编屏风',w:1.4,d:.5,page:3,desc:'三片折叠屏与编织纹'},
+ jukebox:{name:'复古点唱机',w:.9,d:.75,page:4,desc:'彩色灯环与唱片窗口'},gumball:{name:'糖果扭蛋机',w:.65,d:.65,page:4,desc:'透明球仓里的彩色糖果'},rocket:{name:'火箭氛围灯',w:.7,d:.7,page:4,desc:'舷窗、尾翼与暖色火焰'},chess:{name:'棋盘桌',w:1,d:1,page:4,desc:'双色棋盘与小棋子'},petBed:{name:'猫耳宠物窝',w:1,d:.85,page:4,desc:'软垫、猫耳与小玩球'},musicMobile:{name:'星月摆件',w:.7,d:.65,page:4,desc:'月亮、星星与吊线'},
+ wallArt:{name:'彩虹挂画',w:1.2,d:.12,page:5,wall:true,desc:'木框里的山丘与彩虹'},clock:{name:'猫咪挂钟',w:.65,d:.14,page:5,wall:true,desc:'猫耳、刻度与钟针'},wallShelf:{name:'收藏壁架',w:1.4,d:.4,page:5,wall:true,desc:'壁挂小花盆与书籍'},pegboard:{name:'生活洞洞板',w:1.15,d:.18,page:5,wall:true,desc:'挂钩、便签和小钥匙'}
 };
-export const DECOR_PAGES=['日常小物','兴趣收藏','慢生活角落'];
+export const DECOR_PAGES=['日常小物','兴趣收藏','慢生活角落','客厅家具','趣味角落','墙面装饰'];
 export const DECOR_COLORS=['#dfc2bd','#c6d7c5','#c8bfdc','#e6d2aa','#a6becd','#9e806a'];
 export function createDecorationSystem({rooms,scene,box,ball,cylinder,round,invalidate,stopWalking}){
  const groups=rooms.map(room=>{const g=new THREE.Group();g.name='custom-decoration';room.add(g);return g}),keys=['','',''];
  let editor=-1,callback=()=>{},preview=null;
  const defaults=rooms.map(room=>{
   const surfaces={wall:[],floor:[],rug:[]};room.children.forEach(o=>{if(!o.isMesh)return;
-   if(o.name.startsWith('floor-room'))surfaces.floor.push(o);
+   if(o.name.startsWith('floor-'))surfaces.floor.push(o);
    else if(o.position.y===2.08&&!o.userData.sharedWall)surfaces.wall.push(o);
    else if(o.geometry.parameters?.depth>2&&o.position.y>.19&&o.position.y<.26)surfaces.rug.push(o);
   });for(const objects of Object.values(surfaces))for(const o of objects){o.material=o.material.clone();o.userData.defaultColor=o.material.color.getHexString()}
-  return surfaces;
+  if(room.name==='living-room')scene.traverse(o=>{if(o.userData.sharedWall)surfaces.wall.push(o)});for(const o of surfaces.wall)if(!o.userData.defaultColor){o.material=o.material.clone();o.userData.defaultColor=o.material.color.getHexString()}return surfaces;
  });
  function model(item,parent){
-  const g=new THREE.Group();g.userData.decorId=item.id;g.userData.decorType=item.type;parent.add(g);g.position.set(item.x??0,.20,item.z??0);g.rotation.y=(item.rotation??0)*Math.PI/2;
+  const g=new THREE.Group();g.userData.decorId=item.id;g.userData.decorType=item.type;parent.add(g);g.position.set(item.x??0,DECOR_ITEMS[item.type]?.wall?2.85:.20,item.z??0);g.rotation.y=(item.rotation??0)*Math.PI/2;
   const color=item.color??'#b6c7a0';
   function shape(geometry,material,x,y,z){const o=new THREE.Mesh(geometry,material);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;g.add(o);o.userData.ownedMaterial=true;return o}
   function hoop(radius,tube,c,x,y,z){return shape(new THREE.TorusGeometry(radius,tube,8,24),new THREE.MeshStandardMaterial({color:c,roughness:.65}),x,y,z)}
@@ -90,6 +93,21 @@ export function createDecorationSystem({rooms,scene,box,ball,cylinder,round,inva
    for(let n=0;n<3;n++){const a=n*Math.PI*2/3;rod([Math.cos(a)*.42,.02,Math.sin(a)*.42],[0,.70,0],.023,'#b5a995');ball(.035,'#655b62',Math.cos(a)*.42,.035,Math.sin(a)*.42,g)}cylinder(.065,.065,.15,'#7c6a7c',0,.72,0,g);
    const tube=rod([-.30,.85,0],[.30,1.05,0],.11,color);const lens=cylinder(.11,.11,.025,'#80a5b9',.31,1.055,0,g);lens.quaternion.copy(tube.quaternion);const rim=cylinder(.125,.125,.045,'#756879',.27,1.04,0,g);rim.quaternion.copy(tube.quaternion);rod([-.32,.84,0],[-.4,.81,0],.04,'#554958');rod([0,.75,.02],[.12,.75,.16],.016,'#756879');ball(.03,'#a694ad',.12,.75,.16,g);
   }
+
+  if(item.type==='sofa'||item.type==='armchair'){const w=item.type==='sofa'?2.2:1;round(w,.35,1,color,0,.4,0,.09,g);round(w,.72,.22,color,0,.84,-.43,.08,g);for(const x of [-w/2+.1,w/2-.1])round(.2,.5,1,'#b0b9ab',x,.64,0,.07,g);for(const x of [-w*.36,w*.36])for(const z of [-.32,.32])cylinder(.04,.035,.25,'#97775e',x,.13,z,g);for(let n=0;n<(w>1?2:1);n++)round(.42,.42,.17,'#ebd5b1',w>1?-.42+n*.84:0,.89,-.23,.07,g)}
+  if(item.type==='coffeeTable'||item.type==='chess'){cylinder(.53,.53,.09,'#b59472',0,.62,0,g);for(const x of [-.3,.3])for(const z of [-.3,.3])cylinder(.035,.035,.56,'#8d7058',x,.30,z,g);if(item.type==='coffeeTable'){cylinder(.43,.43,.05,color,0,.20,0,g);cylinder(.08,.06,.10,'#f1dfc0',.16,.72,.08,g);hoop(.035,.009,'#f1dfc0',.23,.72,.08)}else{for(let x=0;x<8;x++)for(let z=0;z<8;z++)box(.095,.012,.095,(x+z)%2?'#665866':'#edddbc',-.3325+x*.095,.676,-.3325+z*.095,g);for(let n=0;n<8;n++)for(const z of [-.24,.24]){cylinder(.022,.025,.06,z<0?'#54475e':'#ede0c4',-.33+n*.095,.72,z,g);ball(.023,z<0?'#54475e':'#ede0c4',-.33+n*.095,.76,z,g)}}}
+  if(item.type==='bookcase'){for(const x of [-.55,.55])box(.07,1.45,.5,'#a98767',x,.74,0,g);for(const y of [.08,.55,1.05,1.48])round(1.16,.06,.54,'#c8aa84',0,y,0,.015,g);for(let row=0;row<3;row++)for(let n=0;n<7;n++)box(.085,.28+n%3*.035,.28,['#9aabc1','#cfadb9','#a9bc9d'][n%3],-.43+n*.13,.24+row*.47,.08,g)}
+  if(item.type==='bench'){round(1.4,.18,.56,color,0,.52,0,.06,g);for(const x of [-.55,.55])for(const z of [-.19,.19])box(.07,.42,.07,'#9b7b5c',x,.24,z,g);box(1.15,.06,.05,'#b48f6b',0,.24,0,g)}
+  if(item.type==='screen'){for(let n=0;n<3;n++){const x=-.45+n*.45;round(.43,1.55,.06,'#b79a73',x,.8,0,.02,g);for(let j=0;j<10;j++)box(.38,.025,.015,'#e0cbaa',x,.2+j*.125,.045,g);for(let j=0;j<5;j++)box(.016,1.35,.015,'#dbc39e',x-.16+j*.08,.8,.05,g)}}
+  if(item.type==='jukebox'){round(.82,1.1,.6,color,0,.58,0,.09,g);box(.65,.42,.025,'#4b405b',0,.7,.315,g);for(let n=0;n<3;n++)hoop(.27-n*.035,.017,['#dfa2ba','#e3c48a','#a8c1b0'][n],0,.9,.335);for(let n=0;n<7;n++)box(.035,.28,.025,'#9c849d',-.22+n*.075,.26,.32,g);for(let n=0;n<4;n++)ball(.018,'#ecd6ae',-.17+n*.11,.48,.34,g)}
+  if(item.type==='gumball'){round(.44,.46,.44,color,0,.25,0,.06,g);glass(new THREE.SphereGeometry(.27,20,14),0,.73,0);for(let n=0;n<22;n++)ball(.035,['#dca4b4','#e1c48d','#9ab9b1','#ada1c9'][n%4],Math.sin(n*2.4)*.17,.59+(n%4)*.065,Math.cos(n*2.4)*.17,g);box(.13,.07,.02,'#51485b',0,.16,.23,g);cylinder(.045,.045,.03,'#d4b285',0,.36,.24,g).rotation.x=Math.PI/2;cylinder(.24,.24,.035,'#b59878',0,.99,0,g)}
+  if(item.type==='rocket'){cylinder(.16,.20,.65,color,0,.6,0,g);shape(new THREE.ConeGeometry(.16,.25,18),new THREE.MeshStandardMaterial({color:'#d9acb9'}),0,1.05,0);hoop(.08,.018,'#efe0be',0,.75,.18);ball(.06,'#9dbbcc',0,.75,.19,g).scale.z=.3;for(let n=0;n<3;n++){const a=n*2.094;box(.10,.27,.15,'#b99ec5',Math.cos(a)*.2,.31,Math.sin(a)*.2,g)}const flame=ball(.13,'#e5bf7e',0,.19,0,g);flame.scale.y=1.5}
+  if(item.type==='petBed'){round(.9,.22,.73,color,0,.17,0,.09,g);round(.7,.12,.54,'#f1ddc4',0,.3,.03,.07,g);for(const x of [-.3,.3])shape(new THREE.ConeGeometry(.10,.20,3),new THREE.MeshStandardMaterial({color}),x,.42,-.26);ball(.06,'#d5a8bd',.31,.33,.19,g)}
+  if(item.type==='musicMobile'){cylinder(.26,.26,.05,'#a98b71',0,.025,0,g);rod([0,.05,-.18],[0,1.2,-.18],.018,'#a98b71');rod([-.26,1.2,-.18],[.26,1.2,-.18],.018,'#a98b71');for(let n=0;n<3;n++){const x=-.2+n*.2;rod([x,1.2,-.18],[x,.8+n%2*.12,-.18],.004,'#d0bda0');hoop(.07,.018,['#d6b992','#b5a4ca','#a9c1b6'][n],x,.73+n%2*.12,-.18)}}
+  if(item.type==='wallArt'){round(1.16,.83,.08,'#9b8068',0,0,0,.025,g);panel(1.04,.71,0,0,.045,ctx=>{ctx.fillStyle='#e8dac4';ctx.fillRect(0,0,256,256);for(let n=0;n<5;n++){ctx.strokeStyle=['#d69cae','#dfba88','#bdc58e','#98b9b6','#b7a3c8'][n];ctx.lineWidth=12;ctx.beginPath();ctx.arc(128,170,90-n*13,Math.PI,2*Math.PI);ctx.stroke()}ctx.fillStyle='#9baa8f';ctx.beginPath();ctx.moveTo(0,256);ctx.lineTo(75,155);ctx.lineTo(140,256);ctx.fill()})}
+  if(item.type==='clock'){cylinder(.26,.26,.06,'#9c859f',0,0,0,g).rotation.x=Math.PI/2;for(const x of [-.16,.16])shape(new THREE.ConeGeometry(.09,.14,3),new THREE.MeshStandardMaterial({color}),x,.26,0);panel(.43,.43,0,0,.035,ctx=>{ctx.fillStyle='#efe1c6';ctx.fillRect(0,0,256,256);ctx.strokeStyle='#65546f';ctx.lineWidth=5;for(let n=0;n<12;n++){const a=n*Math.PI/6;ctx.beginPath();ctx.moveTo(128+Math.sin(a)*86,128-Math.cos(a)*86);ctx.lineTo(128+Math.sin(a)*99,128-Math.cos(a)*99);ctx.stroke()}ctx.lineWidth=8;ctx.beginPath();ctx.moveTo(128,60);ctx.lineTo(128,128);ctx.lineTo(179,154);ctx.stroke()})}
+  if(item.type==='wallShelf'){round(1.3,.07,.35,'#b39878',0,-.15,.12,.015,g);for(const x of [-.45,.45])rod([x,-.36,0],[x,-.18,.23],.018,'#85738e');pot(-.38,-.12,.12,.10,color);for(let n=0;n<4;n++)box(.075,.3,.18,['#d0a9bb','#a3b99e','#b6a9c9'][n%3],.1+n*.08,.04,.14,g);bloom(-.38,.34,.12,'#e0b194')}
+  if(item.type==='pegboard'){round(1.08,.76,.06,color,0,0,0,.015,g);for(let x=0;x<8;x++)for(let y=0;y<5;y++)ball(.012,'#87738f',-.43+x*.12,-.25+y*.12,.034,g);for(let n=0;n<3;n++){box(.22,.22,.016,['#ecdbb6','#c7d6bf','#dec4d6'][n],-.3+n*.3,.08,.05,g);ball(.017,'#927796',-.3+n*.3,.19,.068,g)}hoop(.043,.009,'#b69b73',-.3,-.24,.065);rod([-.3,-.28,.065],[-.3,-.4,.065],.012,'#b69b73')}
   return g;
  }
  function dispose(g){g.traverse(o=>{if(o.isMesh){o.geometry.dispose();if(o.userData.previewMaterial||o.userData.ownedMaterial){o.material.map?.dispose();o.material.dispose()}}});g.clear()}
@@ -106,15 +124,18 @@ export function createDecorationSystem({rooms,scene,box,ball,cylinder,round,inva
  });return result}
  function canPlace(room,item){
   const spec=DECOR_ITEMS[item.type];if(!spec||!Number.isFinite(item.x)||!Number.isFinite(item.z))return false;
+  if(!rooms[room])return false;
+  if(spec.wall){if(room!==3||item.rotation!==0||Math.abs(item.z-2.08)>.01||item.x-spec.w/2<-15.95||item.x+spec.w/2>14.05)return false;const doors=[-11.1,.5,9.25];if(rooms[3].children.some(o=>o.isMesh&&o.material.visible!==false&&o.position.y>2.2&&o.position.z>1.9&&o.position.z<2.4&&Math.abs(o.position.x-item.x)<(o.geometry.parameters?.width??.4)/2+spec.w/2+.12))return false;if(doors.some(x=>Math.abs(x-item.x)<1.2+spec.w/2))return false;const root=groups[room];return !root.children.some(o=>o.userData.decorId!==item.id&&DECOR_ITEMS[o.userData.decorType]?.wall&&Math.abs(o.position.x-item.x)<(DECOR_ITEMS[o.userData.decorType].w+spec.w)/2+.1)}
   const p=rooms[room].userData.floorPlan,w=(item.rotation%2?spec.d:spec.w)/2+.08,d=(item.rotation%2?spec.w:spec.d)/2+.08;
   const regions=[p,...(p.wing?[p.wing]:[])];if(!regions.some(r=>item.x-w>=r.minX+.25&&item.x+w<=r.maxX-.25&&item.z-d>=r.minZ+.25&&item.z+d<=r.maxZ-.25))return false;
   // 始终给门洞和日常人物起点留出空间。
-  const spawn=[{x:-.9,z:3.7},{x:1.1,z:2.8},{x:-1.2,z:2.3}][room],exit=[{x:-.9,z:8},{x:.5,z:8},{x:-.95,z:8}][room];
-  if([spawn,exit].some(q=>Math.abs(q.x-item.x)<w+.65&&Math.abs(q.z-item.z)<d+.65))return false;
+  const spawn=[{x:-.9,z:3.7},{x:1.1,z:2.8},{x:-1.2,z:2.3},{x:0,z:7.8}][room],exit=[{x:-.9,z:8},{x:.5,z:8},{x:-.95,z:8},{x:0,z:11.3}][room];
+  const access=room===3?[spawn,exit,...[-11.1,.5,9.25].map(x=>({x,z:2.95}))]:[spawn,exit];
+  if(access.some(q=>Math.abs(q.x-item.x)<w+.65&&Math.abs(q.z-item.z)<d+.65))return false;
   const obs=obstacles(room,item.id),rect={minX:item.x-w,maxX:item.x+w,minZ:item.z-d,maxZ:item.z+d};
   if(obs.some(r=>rect.minX<r.maxX&&rect.maxX>r.minX&&rect.minZ<r.maxZ&&rect.maxZ>r.minZ))return false;
   if(item.type==='rug')return true;
-  const nav=createNavigator(regions,obs.concat(rect));return Boolean(nav.findPath(spawn,exit));
+  const nav=createNavigator(regions,obs.concat(rect));return access.every(q=>Boolean(nav.findPath(q,exit)));
  }
  function clearPreview(){if(preview){dispose(preview);preview.parent.remove(preview);preview=null}}
  function setEditor(room,item,onChange=()=>{}){clearPreview();editor=room;callback=onChange;stopWalking();if(room<0)return;
@@ -123,7 +144,8 @@ export function createDecorationSystem({rooms,scene,box,ball,cylinder,round,inva
  function tap(ray){if(editor<0)return false;
   const selected=ray.intersectObjects(groups[editor].children,true)[0];
   if(!preview&&selected){let o=selected.object;while(!o.userData.decorId&&o.parent)o=o.parent;callback({selected:o.userData.decorId});return true}
-  if(preview){const hits=ray.intersectObjects(rooms[editor].children.filter(o=>o.name.startsWith('floor-room')));if(hits[0]){
+  if(preview&&DECOR_ITEMS[preview.userData.item.type]?.wall){const p=ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,0,1),-2.08),new THREE.Vector3());if(p&&p.y>1.4&&p.y<4){const item={...preview.userData.item,x:Math.round(p.x*4)/4,z:2.08,rotation:0};callback({item,valid:canPlace(editor,item)})}return true;}
+  if(preview){const hits=ray.intersectObjects(rooms[editor].children.filter(o=>o.name.startsWith('floor-')));if(hits[0]){
    const p=rooms[editor].worldToLocal(hits[0].point.clone()),item={...preview.userData.item,x:Math.round(p.x*4)/4,z:Math.round(p.z*4)/4};const valid=canPlace(editor,item);callback({item,valid});
   }}return true;
  }
