@@ -2,7 +2,7 @@ import {setupActivities} from './activities.js?v=2';
 import {setupDecoration} from './decoration.js?v=6';
 import {loadGarden,gardenAction,growthStage,SPECIES,STAGES} from './garden.js?v=2';
 import {loadCloud,saveCloud,currentMember,currentRoom,cloudError,startCloudSync} from './cloud.js?v=2';
-import { createHome } from './scene.js?v=15-layout-a';
+import { createHome } from './scene.js?v=16-layout-goal';
 import { createRoomMusic } from './room-music.js?v=2-cat';
 import { watchSystemTheme } from './time-theme.js?v=2-system';
 const $=s=>document.querySelector(s);

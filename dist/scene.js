@@ -598,7 +598,7 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
   }
   function walkTo(point){
     if(!walker)return false;const path=navigator.findPath(walker.actor.position,point);if(!path?.length)return false;
-    walkPath=path;walkGoal={x:point.x,z:point.z};walkBlocked=0;walkInput.set(0,0);const last=path.at(-1);destination.position.set(last.x,.285,last.z);destination.visible=true;return true;
+    walkPath=path;walkGoal={x:path.at(-1).x,z:path.at(-1).z};walkBlocked=0;walkInput.set(0,0);const last=path.at(-1);destination.position.set(last.x,.285,last.z);destination.visible=true;return true;
   }
   function updateWalking(time,dt){
     if(!walker)return;const actor=walker.actor,start=actor.position.clone();let dx=0,dz=0;
@@ -615,7 +615,8 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
     if(moving)actor.rotation.y=Math.atan2(next.x-start.x,next.z-start.z);
     else if((dx||dz)&&walkPath.length){walkBlocked+=dt;if(walkBlocked>.7&&walkGoal){const path=navigator.findPath(actor.position,walkGoal,residents.blockers(walker.index));if(path?.length)walkPath=path;walkBlocked=0}}
     if(moving)walkBlocked=0;
-    if(!walkPath.length)destination.visible=false;
+    if(!walkPath.length&&walkGoal){if(Math.hypot(actor.position.x-walkGoal.x,actor.position.z-walkGoal.z)<.2)walkGoal=null;else{walkBlocked+=dt;if(walkBlocked>.5){const path=navigator.findPath(actor.position,walkGoal,residents.blockers(walker.index));if(path?.length)walkPath=path;walkBlocked=0}}}
+    if(!walkPath.length&&!walkGoal)destination.visible=false;
     const swing=moving&&!reduced?Math.sin(time*.012)*.28:0;actor.position.y=.63+(moving&&!reduced?Math.abs(Math.sin(time*.012))*.015:0);
     for(const side of ['left','right']){const sign=side==='left'?1:-1;actor.getObjectByName(side+'-leg').rotation.x=swing*sign;actor.getObjectByName(side+'-shoe').position.z=.10+swing*sign*.15;actor.getObjectByName(side+'-arm').rotation.x=-swing*sign}
     walkRing.position.set(next.x,.285,next.z);
