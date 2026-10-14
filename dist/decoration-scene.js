@@ -13,7 +13,7 @@ export function createDecorationSystem({rooms,scene,box,ball,cylinder,round,inva
  const defaults=rooms.map(room=>{
   const surfaces={wall:[],floor:[],rug:[]};room.children.forEach(o=>{if(!o.isMesh)return;
    if(o.name.startsWith('floor-room'))surfaces.floor.push(o);
-   else if(o.position.y===2.08)surfaces.wall.push(o);
+   else if(o.position.y===2.08&&!o.userData.sharedWall)surfaces.wall.push(o);
    else if(o.geometry.parameters?.depth>2&&o.position.y>.19&&o.position.y<.26)surfaces.rug.push(o);
   });for(const objects of Object.values(surfaces))for(const o of objects){o.material=o.material.clone();o.userData.defaultColor=o.material.color.getHexString()}
   return surfaces;
@@ -109,7 +109,7 @@ export function createDecorationSystem({rooms,scene,box,ball,cylinder,round,inva
   const p=rooms[room].userData.floorPlan,w=(item.rotation%2?spec.d:spec.w)/2+.08,d=(item.rotation%2?spec.w:spec.d)/2+.08;
   const regions=[p,...(p.wing?[p.wing]:[])];if(!regions.some(r=>item.x-w>=r.minX+.25&&item.x+w<=r.maxX-.25&&item.z-d>=r.minZ+.25&&item.z+d<=r.maxZ-.25))return false;
   // 始终给门洞和日常人物起点留出空间。
-  const spawn=[{x:-.9,z:3.7},{x:1.1,z:2.8},{x:-1.2,z:2.3}][room],exit=[{x:-.9,z:8},{x:.5,z:8},{x:-2.2,z:8}][room];
+  const spawn=[{x:-.9,z:3.7},{x:1.1,z:2.8},{x:-1.2,z:2.3}][room],exit=[{x:-.9,z:8},{x:.5,z:8},{x:-.95,z:8}][room];
   if([spawn,exit].some(q=>Math.abs(q.x-item.x)<w+.65&&Math.abs(q.z-item.z)<d+.65))return false;
   const obs=obstacles(room,item.id),rect={minX:item.x-w,maxX:item.x+w,minZ:item.z-d,maxZ:item.z+d};
   if(obs.some(r=>rect.minX<r.maxX&&rect.maxX>r.minX&&rect.minZ<r.maxZ&&rect.maxZ>r.minZ))return false;

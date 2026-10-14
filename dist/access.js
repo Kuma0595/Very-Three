@@ -13,7 +13,7 @@ async function enterHome(){
  try{
   await getMember();
   shell.hidden=false;gate.hidden=true;
-  await import('./app.js?v=24-direct-doors');
+  await import('./app.js?v=25-coherent-models');
   opened=true;input.value='';
   document.querySelector('#lock-home').textContent='退出登录';
   document.querySelector('#lock-home').onclick=async()=>{

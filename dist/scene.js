@@ -1,5 +1,5 @@
 import {createResidents} from './residents.js?v=2';
-import {createDecorationSystem,DECOR_ITEMS} from './decoration-scene.js?v=5';
+import {createDecorationSystem,DECOR_ITEMS} from './decoration-scene.js?v=6';
 import * as THREE from 'three';
 import { OrbitControls } from './vendor/OrbitControls.js';
 import { createNavigator } from './navigation.js?v=2';
@@ -196,27 +196,17 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
     {minX:-6.05,maxX:4.15,minZ:-3.65,maxZ:8.95},
     {minX:-6.05,maxX:4.15,minZ:-3.65,maxZ:8.95}
   ];
+  function captureZone(name,origin,destination,angle,build){
+    const before=new Set(house.children);build();const g=new THREE.Group();g.name=name;g.userData.origin=new THREE.Vector3(...origin);g.position.set(...destination);g.rotation.y=angle;
+    for(const child of [...house.children])if(!before.has(child)){child.position.sub(g.userData.origin);g.add(child)}house.add(g);return g;
+  }
+  function extendZone(name,build){const zone=house.getObjectByName(name),before=new Set(house.children);build();for(const child of [...house.children])if(!before.has(child)){child.position.sub(zone.userData.origin);zone.add(child)}}
   function redistributeRoom(index){
-    // 只平移功能区，绝不缩放床、玩偶或相框。
-    house.children.forEach(child=>{
-      if(child.userData.architecture||child.name==='room-window')return;
-      const {x,z}=child.position;
-      if(index===0){
-        if(x<-3.5)child.position.x-=1.9;
-        else if(x<-.3&&z<-1)child.position.x-=1.1;
-        else if(x<-.8&&z>1)child.position.x-=.7;
-      }else if(index===1&&z>.4&&x<.8){child.position.z+=2.1}
-      else if(index===2){
-        if(child.name==='resident-2'||(x>3.2&&z>-.6&&z<1.95)||(x>1&&x<1.65&&z>1&&z<1.8))child.position.z+=5.8;
-        else if(x<1&&z>1){
-          const bounds=new THREE.Box3().setFromObject(child),size=bounds.getSize(new THREE.Vector3());
-          if(size.x>1.5&&size.z>1.5)return;
-          child.position.x+=2.9;child.position.z+=4.8;
-        }
-      }
-    });
-    if(index===0)for(const child of house.children){if(!child.userData.architecture&&child.name!=='room-window'&&child.position.x<-3.1&&child.position.z<-3.25&&child.position.y>1.4&&child.position.y<3.45)child.position.x+=1.15;}
-    const pose=residentPoses.find(p=>p.room===index);pose.position.copy(pose.resident.position);
+    // 家具按完整功能组摆放，桌腿、椅背、窗帘与灯具不再逐个零件平移。
+    const resident=avatars[index];
+    if(index===0){resident.position.set(-3.44,1.0,.46);resident.rotation.y=Math.PI*1.5}
+    if(index===2){resident.position.set(.41,.62,4.01);resident.rotation.y=Math.PI/2}
+    const pose=residentPoses.find(p=>p.room===index);pose.position.copy(resident.position);pose.rotation=resident.rotation.y;
   }
   const themes=[{wall:'#77717f',side:'#b8adaf',base:'#514958',quilt:'#4d505f',wood:'#9b8475'},
     {wall:'#dec9ac',side:'#b6c3b2',base:'#836445',quilt:'#9aab90',wood:'#b28c66'},
@@ -238,10 +228,6 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
   function dressRoom(i,resident){
     const t=themes[i];
     // 窗边织物与床尾毯，增加柔软材质和高低层次。
-    for(const z of [-1.17,1.37]){
-      for(let n=0;n<5;n++)round(.12,2.05,.12,['#76717f','#b8a17e','#847a9c'][i],-3.79,2.38,z+(n-2)*.065,.025);
-      box(.06,.075,.55,t.base,-3.80,3.48,z);
-    }
     round(1.2,.09,.95,['#ca9b83','#d7c4a4','#ada4c9'][i],2.45,1.145,-.50,.025);
     for(let n=0;n<7;n++)box(.012,.011,.85,t.base,1.94+n*.16,1.195,-.50);
     // 床头竖向饰板保留上方相框，不遮挡照片上传入口。
@@ -256,12 +242,14 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
       round(.43,.13,.22,'#e5ddd5',0,0,0,.03,controller);for(const x of [-.12,.12])ball(.032,'#6c597f',x,.075,0,controller);
       for(const side of [-1,1]){const hand=resident.getObjectByName(side<0?'left-hand':'right-hand');hand.position.set(side*.22,.24,.25);const arm=resident.getObjectByName(side<0?'left-arm':'right-arm');arm.position.set(side*.29,.31,.13);arm.rotation.x=-.9;arm.rotation.z=side*.3}
       // 演出海报、游戏收藏与主机展示形成摇滚电玩角。
-      poster(1.30,.90,-2.26,2.95,-3.40,0);
+      extendZone('gaming-zone',()=>{
+      poster(1.30,.90,-2.26,2.95,-3.10,0);
       box(1.80,.11,.55,'#635365',-2.35,3.67,-3.04);
       for(let n=0;n<6;n++){box(.18,.34,.27,palette[(n+3)%6],-3.05+n*.23,3.90,-3.07);box(.09,.21,.01,'#efe6d3',-3.05+n*.23,3.90,-2.927)}
       const pcGlow=new THREE.MeshStandardMaterial({color:'#c79bdc',emissive:'#ae70d1',emissiveIntensity:.8});
       const indicator=box(.8,.025,.035,pcGlow,-1.64,1.75,-2.74);indicator.name='game-screen-pulse';animatedProps.push({kind:'screen',mesh:indicator});
       glow('#ba82e2',-2.99,1.1,-2.55);
+      });
       // 前侧懒人沙发与零食篮，不堵北侧通向客厅的门。
       const bean=ball(.66,'#59606c',.12,.64,2.25);bean.scale.set(1.25,.70,1.05);
       round(.55,.10,.55,'#d4a18c',.06,.99,2.35,.04);
@@ -288,18 +276,23 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
     }else{
       resident.position.set(2.64,.62,1.03);resident.rotation.y=Math.PI/2;
       // 金属网格拼贴板，用原创几何海报避免依赖外部艺人照片。
-      box(1.70,1.0,.055,'#5c5876',-2.02,3.07,-3.38);
-      for(let n=0;n<7;n++)box(.012,.88,.025,'#b4a2c9',-2.76+n*.245,3.07,-3.34);
-      for(let n=0;n<4;n++)box(1.55,.012,.025,'#b4a2c9',-2.02,2.65+n*.27,-3.34);
-      for(let n=0;n<3;n++){const card=box(.35,.43,.04,['#e0a4bf','#9daed1','#d0ba9c'][n],-2.57+n*.55,3.08,-3.30);card.rotation.z=[.12,-.1,.07][n]}
+      extendZone('album-zone',()=>{
+      box(1.70,1.0,.055,'#5c5876',-2.02,3.07,-3.06);
+      for(let n=0;n<7;n++)box(.012,.88,.025,'#b4a2c9',-2.76+n*.245,3.07,-3.02);
+      for(let n=0;n<4;n++)box(1.55,.012,.025,'#b4a2c9',-2.02,2.65+n*.27,-3.02);
+      for(let n=0;n<3;n++){const card=box(.35,.43,.04,['#e0a4bf','#9daed1','#d0ba9c'][n],-2.57+n*.55,3.08,-2.98);card.rotation.z=[.12,-.1,.07][n]}
       box(2.12,.10,.43,'#6d6686',-1.97,3.77,-3.04);
       for(let n=0;n<3;n++){cylinder(.085,.08,.22,palette[n+3],-2.56+n*.48,3.93,-3.05);ball(.10,'#eee2dc',-2.56+n*.48,4.12,-3.05)}
-      glow('#c38edc',-2.96,1.96,-3.06);glow('#83bcd9',3.45,2.15,.68);
+      glow('#c38edc',-2.02,2.50,-3.06).rotation.y=Math.PI/2;
+      });
+      extendZone('dressing-zone',()=>{glow('#83bcd9',3.45,2.15,.68);});
       // 镜边圆灯、首饰托盘、杂志与鞋盒组成换装空间。
+      extendZone('dressing-zone',()=>{
       for(const y of [.72,1.25,1.78,2.31,2.84])ball(.043,lampMat,3.35,y,.15);
       round(.62,.05,.38,'#a490ba',1.32,.53,1.40,.015);mesh(new THREE.TorusGeometry(.08,.014,8,16),'#d6be82',1.24,.58,1.4).rotation.x=Math.PI/2;
       for(let n=0;n<2;n++){box(.67,.28,.42,['#817494','#c3a8bd'][n],-.70,.38+n*.29,2.68);box(.70,.045,.44,'#ece0de',-.70,.54+n*.29,2.68)}
       magazine(.34,.27,2.0,'#907b9f','ZINE');magazine(.68,.32,2.12,'#7286aa','SEOUL');
+      });
       // 宽松外套放在镜前玩偶身上，手抬起整理衣袖。
       resident.getObjectByName('right-hand').position.set(.22,.40,.23);resident.getObjectByName('right-arm').rotation.x=-1.5;resident.getObjectByName('right-arm').position.set(.28,.38,.09);
     }
@@ -351,10 +344,12 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
     const resident=avatars[i];resident.name='resident-'+i;house.add(resident);
     if(i===0){
       // Piggy：摇滚和游戏共享一个房间，暖灰紫里放一点舞台色。
+      captureZone('gaming-zone',[-1.64,0,-2.48],[-4.65,0,.5],Math.PI/2,()=>{
       smallDesk(-1.64,-2.48,t.wood);screen(-1.64,2.05,-2.81,'#65576f',1.55);chair(-1.6,-1.27,'#625766');
       box(.92,.035,.29,'#413a4b',-1.7,1.51,-2.20);palette.forEach((c,n)=>box(.10,.008,.20,c,-2+n*.12,1.533,-2.2));
       round(.43,.85,.48,'#413a4b',-2.85,.70,-2.45,.05);for(let n=0;n<2;n++)mesh(new THREE.TorusGeometry(.12,.018,8,18),palette[n+3],-2.85,.53+n*.31,-2.20);
       round(.44,.10,.24,'#ece1de',-1.00,1.54,-2.18,.03);ball(.038,'#64536f',-1.12,1.61,-2.18);ball(.025,'#64536f',-.88,1.61,-2.18);
+      });
       // 电吉他由双圆琴身、琴颈、琴头和琴弦构成。
       const guitar=new THREE.Group();guitar.position.set(-2.70,.24,1.45);guitar.rotation.z=-.12;house.add(guitar);
       const lower=ball(.32,'#a55263',0,.45,0,guitar);lower.scale.set(1.0,1.04,.3);const upper=ball(.24,'#a55263',0,.86,0,guitar);upper.scale.set(1,1,.3);
@@ -366,6 +361,7 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
       plant(3.20,.21,2.45,1.05);
     }else if(i===1){
       // 4010：黑胶柜、唱片机、左右音箱，房间是温暖的聆听空间。
+      captureZone('listening-zone',[-1.6,0,-2.75],[-5.15,0,-.8],Math.PI/2,()=>{
       round(2.24,1.05,.84,t.wood,-1.60,.77,-2.75,.06);
       for(const x of [-2.22,-1.0]){box(.94,.71,.04,'#8b735d',x,.78,-2.31);for(let n=0;n<8;n++)box(.074,.56,.37,palette[(n+2)%6],x-.36+n*.095,.78,-2.38)}
       round(1.05,.12,.64,'#80634f',-1.55,1.40,-2.75,.035);const vinyl=cylinder(.25,.25,.035,'#38343a',-1.62,1.49,-2.75);vinyl.name='spinning-vinyl';animatedProps.push({kind:'vinyl',mesh:vinyl});box(.022,.002,.09,'#f5d5a1',.10,.019,0,vinyl);cylinder(.072,.072,.038,'#c39b70',-1.62,1.492,-2.75);
@@ -373,15 +369,19 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
       for(const x of [-3.16,-.03]){round(.58,1.36,.55,'#654e40',x,.95,-2.75,.04);for(const y of [.76,1.35]){const speaker=cylinder(y>.9?.11:.20,y>.9?.11:.20,.02,'#3e3838',x,y,-2.46);speaker.rotation.x=Math.PI/2;const ring=mesh(new THREE.TorusGeometry(y>.9?.105:.19,.012,8,24),'#b19470',x,y,-2.44)}}
       // 展示的唱片为原创封套，避免虚构具体歌手与专辑。
       for(let n=0;n<3;n++){box(.68,.74,.055,['#817382','#b29172','#739586'][n],-2.9+n*.82,2.83,-3.39);const record=cylinder(.19,.19,.022,'#3d373e',-2.9+n*.82,2.88,-3.34);record.rotation.x=Math.PI/2;const label=cylinder(.059,.059,.026,palette[n+2],-2.9+n*.82,2.88,-3.322);label.rotation.x=Math.PI/2}
+      });
       round(1.13,.33,1.1,'#c2ad8d',-1.78,.62,1.11,.10);round(1.13,.87,.22,'#b5a17f',-1.78,1.08,1.58,.09);for(const x of [-2.38,-1.18])round(.17,.48,1.06,'#b5a17f',x,.85,1.11,.04);
       cylinder(.43,.43,.09,t.wood,-.25,.78,1.30);cylinder(.055,.08,.50,'#92745b',-.25,.49,1.30);box(.30,.035,.37,'#dfc4a3',-.25,.85,1.30);
       plant(-3.12,.21,2.57,1.35);plant(3.10,.21,2.47,1.05);
     }else{
       // Joey：亚文化拼贴、专辑陈列和穿衣镜，粉紫也可以很有锋芒。
+      captureZone('album-zone',[-1.94,0,-3.03],[-5.65,0,-.8],Math.PI/2,()=>{
       box(1.9,.10,.65,'#b68fb3',-1.94,1.10,-3.03);box(1.9,.10,.65,'#b68fb3',-1.94,2.00,-3.03);
       for(let n=0;n<6;n++){const albumColor=['#836693','#dd9fbe','#7496bd','#bd829e','#bbafd3','#515066'][n];box(.24,.43,.36,albumColor,-2.64+n*.28,1.36,-3.0);ball(.035,'#f0d9ea',-2.64+n*.28,1.42,-2.80)}
       for(let n=0;n<3;n++){box(.45,.58,.06,['#d996bb','#7e91bb','#686078'][n],-2.54+n*.60,2.34,-2.89);art(.36,.43,-2.54+n*.60,2.34,-2.85,(ctx,W,H)=>{ctx.fillStyle=['#d996bb','#7e91bb','#686078'][n];ctx.fillRect(0,0,W,H);ctx.fillStyle='#fff0ed';ctx.font='270px sans-serif';ctx.textAlign='center';ctx.fillText(['✦','♡','★'][n],W/2,365)})}
+      });
       // 穿衣镜用柔和图案材质表达，不使用高成本实时反射。
+      captureZone('dressing-zone',[-1.07,0,1.52],[-3.3,0,4.5],0,()=>{
       const mirror=new THREE.Group();mirror.position.set(3.45,1.78,.7);mirror.rotation.y=-Math.PI/2;house.add(mirror);
       for(const x of [-.45,.45]){box(.06,.35,.06,'#897394',x,-1.43,0,mirror);box(.09,.06,.55,'#897394',x,-1.57,0,mirror)}
       round(1.18,2.61,.1,'#a582b5',0,0,0,.08,mirror);art(1.04,2.43,0,0,.065,(ctx,W,H)=>{const grad=ctx.createLinearGradient(0,0,W,H);grad.addColorStop(0,'#d3dce4');grad.addColorStop(1,'#b8bdd9');ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);ctx.strokeStyle='#efedf8';ctx.lineWidth=20;ctx.beginPath();ctx.moveTo(90,330);ctx.lineTo(330,100);ctx.moveTo(180,430);ctx.lineTo(415,210);ctx.stroke()},mirror);
@@ -391,6 +391,7 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
       round(.33,.35,.16,'#755c87',-.22,1.16,1.76,.05);mesh(new THREE.TorusGeometry(.12,.012,6,18,Math.PI),'#ba9cc6',-.22,1.4,1.76);
       round(.65,.12,.62,'#ae8ebd',1.32,.44,1.40,.05);for(let n=0;n<4;n++)box(.035,.30,.035,'#836b91',1.05+(n%2)*.54,.24,1.14+Math.floor(n/2)*.52);
       plant(3.12,.21,2.45,1.2);
+      });
     }
     dressRoom(i,resident);
     redistributeRoom(i);
@@ -418,6 +419,7 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
     if(d&&((child.position.y===4.07)||(child.position.y===.28&&d.height<=.15)||(child.position.y<.21&&(d.width>4||d.depth>3)))){livingRoom.remove(child);continue}
     child.position.x-=5.5;child.position.z+=child.position.z<-3.2?5.425:5.7;
   }
+  for(const child of livingRoom.children){if(Math.abs(child.position.x+7.15)<.001&&child.position.y>2)child.position.x=-7.8;if(Math.abs(child.position.x+6)<.001&&child.position.y>3)child.position.x=-5.9;}
   window.position.x=-16.135;album.position.x=-16.11;
   livingHotDefs.forEach(h=>{if(!['cat-pet','dog-pet'].includes(h.id)){h.p.x-=5.5;h.p.z+=5.7;if(h.id==='memories')h.p.x=-15.7}});
   cat.position.copy(bed.position);cat.position.y=.22;dog.position.copy(dogBed.position);dog.position.y=.22;
@@ -435,8 +437,8 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
   box(30.6,.48,22.7,'#b89cbd',-.95,-.16,.8,building).name='foundation-slab';
   function frontDoor(group,x,z,min,max,label,id){
     const gap=1.8,bedroom=id!=='focus-3',height=bedroom?3.9:1.05;
-    for(const [left,right] of [[min,x-gap/2],[x+gap/2,max]])box(right-left,height,.16,'#e8c7c8',(left+right)/2,bedroom?2.08:.68,z,group).name=bedroom?'bedroom-separator':'courtyard-wall';
-    if(bedroom)box(gap,1.58,.16,'#e8c7c8',x,3.24,z,group).name='bedroom-door-lintel';
+    for(const [left,right] of [[min,x-gap/2],[x+gap/2,max]]){const wall=box(right-left,height,.16,'#d2b8b0',(left+right)/2,bedroom?2.08:.68,z,group);wall.name=bedroom?'bedroom-separator':'courtyard-wall';wall.userData.sharedWall=bedroom;}
+    if(bedroom){const lintel=box(gap,1.58,.16,'#d2b8b0',x,3.24,z,group);lintel.name='bedroom-door-lintel';lintel.userData.sharedWall=true;}
     const door=new THREE.Group();door.name='door-'+label;door.position.set(x,0,z);group.add(door);
     for(const dx of [-.95,.95])box(.08,2.45,.12,'#f2dfc7',dx,1.36,0,door);
     box(2,.09,.12,'#f2dfc7',0,2.63,0,door);
@@ -444,7 +446,7 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
     art(1.8,.28,0,2.96,.07,(ctx,W,H)=>{ctx.fillStyle='#f4e6d5';ctx.fillRect(0,0,W,H);ctx.fillStyle='#705773';ctx.font='bold 75px sans-serif';ctx.textAlign='center';ctx.fillText(label,W/2,300)},door);
     const target=mesh(new THREE.BoxGeometry(2,2.8,.18),new THREE.MeshBasicMaterial({visible:false}),0,1.5,0,door);target.userData={id,room:group};hits.push(target);
   }
-  rooms.forEach((room,i)=>frontDoor(room,[-.9,.5,-2.2][i],8.85,room.userData.floorPlan.minX,room.userData.floorPlan.maxX,['Piggy','4010','Joey & Zakery'][i],'focus'+i));
+  rooms.forEach((room,i)=>frontDoor(room,[-.9,.5,-.95][i],8.85,room.userData.floorPlan.minX,room.userData.floorPlan.maxX,['Piggy','4010','Joey & Zakery'][i],'focus'+i));
   frontDoor(livingRoom,0,12.04,-16.225,14.325,'共同庭院','focus-3');
   // 每间房自己的床头灯，不再移动同一盏灯来模拟切换。
   lampLight.position.x-=5.5;lampLight.position.z+=5.7;const homeLights=[lampLight];

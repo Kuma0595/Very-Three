@@ -1,5 +1,5 @@
 import {client,currentMember,currentRoom} from './cloud.js?v=2';
-import {DECOR_ITEMS,DECOR_COLORS,DECOR_PAGES} from './decoration-scene.js?v=5';
+import {DECOR_ITEMS,DECOR_COLORS,DECOR_PAGES} from './decoration-scene.js?v=6';
 export function setupDecoration({home,focus,notify}){
  const button=document.createElement('button');button.id='decorate-room';button.textContent='布置我的房间';button.type='button';document.querySelector('.focus-summary').append(button);
  const drawer=document.createElement('section');drawer.className='decor-editor';drawer.hidden=true;drawer.setAttribute('aria-label','布置房间');document.querySelector('main').append(drawer);
