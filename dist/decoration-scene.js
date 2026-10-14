@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.js';
-import {createNavigator} from './navigation.js?v=1';
+import {createNavigator} from './navigation.js?v=2';
 export const DECOR_ITEMS={
  plant:{name:'盆栽',w:.65,d:.65,page:0,desc:'陶盆与层叠叶片'},lamp:{name:'落地灯',w:.65,d:.65,page:0,desc:'有褶纹的暖光灯罩'},stool:{name:'小凳子',w:.7,d:.7,page:0,desc:'木腿与横撑的小凳'},table:{name:'边桌',w:.85,d:.85,page:0,desc:'双层木边桌'},cushion:{name:'坐垫',w:.8,d:.8,page:0,desc:'有滚边与纽扣的软垫'},rug:{name:'小地毯',w:1.4,d:1,page:0,desc:'条纹与流苏地毯'},
  arcade:{name:'迷你街机',w:.85,d:.85,page:1,desc:'像素游戏屏与摇杆'},turntable:{name:'黑胶听音柜',w:1.1,d:.8,page:1,desc:'唱针、黑胶与唱片槽'},guitarstand:{name:'电吉他架',w:.75,d:.65,page:1,desc:'琴弦、拾音器与琴架'},speaker:{name:'复古音箱',w:.7,d:.65,page:1,desc:'木壳与双单元音箱'},neon:{name:'彩虹灯牌',w:1.1,d:.55,page:1,desc:'桌架上的六色彩虹'},recordrack:{name:'专辑收藏架',w:1.1,d:.7,page:1,desc:'彩色封套与收藏小物'},
@@ -109,7 +109,7 @@ export function createDecorationSystem({rooms,scene,box,ball,cylinder,round,inva
   const p=rooms[room].userData.floorPlan,w=(item.rotation%2?spec.d:spec.w)/2+.08,d=(item.rotation%2?spec.w:spec.d)/2+.08;
   const regions=[p,...(p.wing?[p.wing]:[])];if(!regions.some(r=>item.x-w>=r.minX+.25&&item.x+w<=r.maxX-.25&&item.z-d>=r.minZ+.25&&item.z+d<=r.maxZ-.25))return false;
   // 始终给门洞和日常人物起点留出空间。
-  const spawn=[{x:-.9,z:3.7},{x:1.1,z:2.8},{x:-1.2,z:2.3}][room],exit=[{x:-.8,z:-2.7},{x:3.3,z:.95},{x:-3.25,z:2.25}][room];
+  const spawn=[{x:-.9,z:3.7},{x:1.1,z:2.8},{x:-1.2,z:2.3}][room],exit=[{x:-.9,z:8},{x:.5,z:8},{x:-2.2,z:8}][room];
   if([spawn,exit].some(q=>Math.abs(q.x-item.x)<w+.65&&Math.abs(q.z-item.z)<d+.65))return false;
   const obs=obstacles(room,item.id),rect={minX:item.x-w,maxX:item.x+w,minZ:item.z-d,maxZ:item.z+d};
   if(obs.some(r=>rect.minX<r.maxX&&rect.maxX>r.minX&&rect.minZ<r.maxZ&&rect.maxZ>r.minZ))return false;

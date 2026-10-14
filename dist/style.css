@@ -54,3 +54,4 @@ body.night .access-card{--ink:#433552;--muted:#726480;color:var(--ink)}
 .fish-form select{width:100%;font-size:16px;padding:8px;margin-top:6px;background:#fffaf3;color:#51425e;border:1px solid #cfbcd6;border-radius:10px}
 
 .member-name{max-width:100px;overflow:hidden;text-overflow:ellipsis}.members{flex-wrap:wrap}@media(max-width:600px){.members{gap:10px}.members button{min-width:0}.members .avatar{width:44px;height:44px}}
+@media(min-width:801px){.intro .members{flex-wrap:nowrap}.intro .members button{width:60px}.intro .members .member-name{font-size:11px}}@media(max-width:800px){.intro .members{left:calc(88vw - 192px);flex-wrap:nowrap}.intro .members button{width:48px}}

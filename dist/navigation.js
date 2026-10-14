@@ -35,8 +35,14 @@ export function createNavigator(floors,obstacles,{radius=.40,step=.25}={}){
   }
   return best;
  }
- function findPath(start,end){
-  const from=nearestKey(start),to=nearestKey(end,.9);if(from<0||to<0)return null;
+ function findPath(start,end,extra=[]){
+  const usable=extra.length?walkable.slice():walkable;
+  const blocked=p=>extra.some(r=>p.x>r.minX-radius&&p.x<r.maxX+radius&&p.z>r.minZ-radius&&p.z<r.maxZ+radius);
+  if(extra.length)for(const r of extra){for(let z=Math.max(0,Math.floor((r.minZ-radius-minZ)/step));z<=Math.min(depth-1,Math.ceil((r.maxZ+radius-minZ)/step));z++)for(let x=Math.max(0,Math.floor((r.minX-radius-minX)/step));x<=Math.min(width-1,Math.ceil((r.maxX+radius-minX)/step));x++){const key=z*width+x;if(blocked(point(key)))usable[key]=0}}
+  const dynamicLine=(a,b)=>{if(!clearLine(a,b))return false;const count=Math.ceil(Math.hypot(b.x-a.x,b.z-a.z)/.05);for(let i=1;i<=count;i++){const t=i/count;if(blocked({x:a.x+(b.x-a.x)*t,z:a.z+(b.z-a.z)*t}))return false}return true};
+  const from=nearestKey(start);let to=nearestKey(end,.9);
+  if(to>=0&&!usable[to]){to=-1;let best=.95;for(let key=0;key<usable.length;key++){if(!usable[key])continue;const p=point(key),distance=Math.hypot(p.x-end.x,p.z-end.z);if(distance<best){best=distance;to=key}}}
+  if(extra.length&&from>=0)usable[from]=1;if(from<0||to<0)return null;
   const cost=new Float64Array(walkable.length).fill(Infinity),parent=new Int32Array(walkable.length).fill(-1),closed=new Uint8Array(walkable.length),heap=[];
   const estimate=key=>Math.hypot(key%width-to%width,Math.floor(key/width)-Math.floor(to/width));
   function push(value){heap.push(value);let i=heap.length-1;while(i){const p=(i-1)>>1;if(heap[p].score<=value.score)break;heap[i]=heap[p];i=p}heap[i]=value}
@@ -46,17 +52,17 @@ export function createNavigator(floors,obstacles,{radius=.40,step=.25}={}){
    const key=pop().key;if(closed[key])continue;closed[key]=1;
    if(key===to){
     const path=[];for(let k=to;k!==-1;k=parent[k])path.push(point(k));path.reverse();
-    if(canStand(end)&&clearLine(path.at(-1),end))path.push({x:end.x,z:end.z});
+    if(canStand(end)&&!blocked(end)&&dynamicLine(path.at(-1),end))path.push({x:end.x,z:end.z});
     // 合并直线段，减少行走时的小幅转向。
     const result=[];let anchor=start,index=0;
-    while(index<path.length){let last=index;while(last+1<path.length&&clearLine(anchor,path[last+1]))last++;result.push(path[last]);anchor=path[last];index=last+1}
+    while(index<path.length){let last=index;while(last+1<path.length&&dynamicLine(anchor,path[last+1]))last++;result.push(path[last]);anchor=path[last];index=last+1}
     return result;
    }
    const x=key%width,z=Math.floor(key/width);
    for(let dz=-1;dz<=1;dz++)for(let dx=-1;dx<=1;dx++){
     if(!dx&&!dz)continue;const nx=x+dx,nz=z+dz;if(nx<0||nx>=width||nz<0||nz>=depth)continue;
-    const next=nz*width+nx;if(!walkable[next]||closed[next])continue;
-    if(dx&&dz&&(!walkable[z*width+nx]||!walkable[nz*width+x]))continue;
+    const next=nz*width+nx;if(!usable[next]||closed[next])continue;
+    if(dx&&dz&&(!usable[z*width+nx]||!usable[nz*width+x]))continue;
     const candidate=cost[key]+(dx&&dz?Math.SQRT2:1);
     if(candidate<cost[next]){cost[next]=candidate;parent[next]=key;push({key:next,score:candidate+estimate(next)})}
    }

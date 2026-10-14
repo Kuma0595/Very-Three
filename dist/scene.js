@@ -1,8 +1,8 @@
-import {createResidents} from './residents.js?v=1';
-import {createDecorationSystem,DECOR_ITEMS} from './decoration-scene.js?v=4';
+import {createResidents} from './residents.js?v=2';
+import {createDecorationSystem,DECOR_ITEMS} from './decoration-scene.js?v=5';
 import * as THREE from 'three';
 import { OrbitControls } from './vendor/OrbitControls.js';
-import { createNavigator } from './navigation.js?v=1';
+import { createNavigator } from './navigation.js?v=2';
 
 // 所有模型由几何体原创搭建，不依赖外部模型或网络资源。
 export function createHome(stage, onOpen, onWalkState=()=>{}) {
@@ -192,9 +192,9 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
   const rooms=[],roomHotDefs=[],roomFrames=[[],[],[]],decorLights=[],animatedProps=[],residentPoses=[];
   // 扩建地面，家具保留原始比例；各房间向空闲方向扩展，保持连通和通道。
   const floorPlans=[
-    {minX:-6.05,maxX:4.15,minZ:-3.65,maxZ:5.05},
-    {minX:-4.15,maxX:4.15,minZ:-3.65,maxZ:6.65},
-    {minX:-4.15,maxX:4.15,minZ:-3.65,maxZ:3.65,wing:{minX:-.45,maxX:4.15,minZ:3.65,maxZ:8.95}}
+    {minX:-6.05,maxX:4.15,minZ:-3.65,maxZ:8.95},
+    {minX:-4.15,maxX:4.15,minZ:-3.65,maxZ:8.95},
+    {minX:-4.15,maxX:4.15,minZ:-3.65,maxZ:8.95}
   ];
   function redistributeRoom(index){
     // 只平移功能区，绝不缩放床、玩偶或相框。
@@ -407,63 +407,59 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
   house=rooms[2];const zakery=person(0,'#608c8e','#ddb799','#3b393d',1);zakery.name='resident-3';zakery.position.set(.7,.83,6.8);zakery.rotation.y=Math.PI;
   round(.88,.14,.85,'#94b0a5',.7,.49,6.8,.04,house);round(.88,.57,.16,'#aac3b6',.7,.85,7.15,.04,house);for(const x of [.37,1.03])for(const z of [6.5,7.08])box(.055,.4,.055,'#967a63',x,.25,z,house);
   residentPoses.push({resident:zakery,room:2,position:zakery.position.clone(),rotation:zakery.rotation.y});
-  // 客厅居中：北侧庭院、西侧 4010、东侧 Joey，南侧 Piggy。
-  const layout=[new THREE.Vector3(0,0,11.95),new THREE.Vector3(-8.3,0,0),new THREE.Vector3(8.3,0,0)];
-  livingRoom.name='living-room';livingRoom.position.set(0,0,0);
+  // A 户型：三间卧室在北侧，经公共走廊进入客厅，客厅直通南侧庭院。
+  const layout=[new THREE.Vector3(-8.3,0,-8.7),new THREE.Vector3(0,0,-8.7),new THREE.Vector3(8.3,0,-8.7)];
+  livingRoom.name='living-room';livingRoom.userData.floorPlan={minX:-14.35,maxX:12.45,minZ:2.05,maxZ:12.15};
   rooms.forEach((room,i)=>{room.position.copy(layout[i]);room.visible=true});
-  const building=new THREE.Group();building.name='shared-foundation';scene.add(building);
-  // 单一十字形地台；每个房间只有一层地板，避免共面引起深度闪烁。
-  const outline=[[-5,-11.65],[3,-11.65],[3,-3.65],[12.45,-3.65],[12.45,8.95],[7.85,8.95],[7.85,3.65],[4.15,3.65],[4.15,6.45],[2,6.45],[2,8.3],[4.15,8.3],[4.15,17],[-6.05,17],[-6.05,8.3],[-2,8.3],[-2,6.45],[-4.15,6.45],[-4.15,6.65],[-12.45,6.65],[-12.45,-3.65],[-5,-3.65]];
-  const footprint=new THREE.Shape();outline.forEach(([x,z],i)=>i?footprint.lineTo(x,z):footprint.moveTo(x,z));footprint.closePath();
-  const baseGeometry=new THREE.ExtrudeGeometry(footprint,{depth:.48,bevelEnabled:false,steps:1});baseGeometry.rotateX(Math.PI/2);
-  mesh(baseGeometry,'#b89cbd',0,.08,0,building).name='foundation-slab';
-  box(4,.12,1.85,'#d0b397',0,.12,7.375,building).name='floor-entry';
-  round(1.4,.025,.75,'#88b8a0',0,.20,7.35,.02,building);
-  art(1.2,.25,0,.215,7.3,(ctx,W,H)=>{ctx.fillStyle='#88b8a0';ctx.fillRect(0,0,W,H);ctx.fillStyle='#fff3df';ctx.font='bold 95px sans-serif';ctx.textAlign='center';ctx.fillText('WELCOME',W/2,300)},building).rotation.x=-Math.PI/2;
-  // 内墙保留门洞，让房间通过同一片地板连起来。
-  function doorway(group,wall,axis,center,color,label,id){
-    group.remove(wall);const half=axis==='x'?4.125:3.65,width=1.2,opening=2.45;
-    const leftEnd=center-width/2,rightStart=center+width/2;
-    const range=group.userData.floorPlan,min=axis==='z'?range.minZ:range.minX+.025,max=axis==='z'?range.maxZ:range.maxX-.025;
-    const trim=group.getObjectByName('room-left-trim');if(axis==='z'&&trim){group.remove(trim);box(.1,.14,leftEnd+half,'#f4e6d2',-3.93,.28,(-half+leftEnd)/2,group);box(.1,.14,half-rightStart,'#f4e6d2',-3.93,.28,(rightStart+half)/2,group);}
-    if(axis==='x'){
-      box(leftEnd-min,3.9,.18,color,(min+leftEnd)/2,2.08,-3.56,group).name='door-wall-left-'+id;
-      box(max-rightStart,3.9,.18,color,(rightStart+max)/2,2.08,-3.56,group).name='door-wall-right-'+id;
-      box(width,4.03-opening,.18,color,center,(4.03+opening)/2,-3.56,group);
-    }else{
-      box(.18,3.9,leftEnd-min,color,-4.05,2.08,(min+leftEnd)/2,group);
-      box(.18,3.9,max-rightStart,color,-4.05,2.08,(rightStart+max)/2,group);
-      box(.18,4.03-opening,width,color,-4.05,(4.03+opening)/2,center,group);
-    }
-    const door=new THREE.Group();door.name='door-'+label;group.add(door);
-    if(axis==='x')door.position.set(center,0,-3.43);else{door.position.set(-3.91,0,center);door.rotation.y=Math.PI/2}
-    for(const x of [-.65,.65])box(.09,2.45,.12,'#f2dfc7',x,1.36,0,door);
-    box(1.4,.09,.12,'#f2dfc7',0,2.63,0,door);box(1.38,.04,.35,'#e9d3b6',0,.20,0,door);
-    box(1.2,.32,.06,'#fff2de',0,2.92,0,door);
-    art(1.14,.27,0,2.92,.034,(ctx,W,H)=>{ctx.fillStyle='#fff2de';ctx.fillRect(0,0,W,H);ctx.fillStyle='#705773';ctx.font='bold 92px sans-serif';ctx.textAlign='center';ctx.fillText(label,W/2,290)},door);
-    const target=mesh(new THREE.BoxGeometry(1.42,2.9,.18),new THREE.MeshBasicMaterial({visible:false}),0,1.55,.05,door);target.userData={id,room:group};hits.push(target);
+  livingRoom.remove(livingBackWall,livingLeftWall,livingRoom.getObjectByName('floor-living'));
+  for(const child of [...livingRoom.children]){
+    const d=child.geometry?.parameters;
+    if(d&&((child.position.y===4.07)||(child.position.y===.28&&d.height<=.15)||(child.position.y<.21&&(d.width>4||d.depth>3)))){livingRoom.remove(child);continue}
+    child.position.x-=5.5;child.position.z+=5.7;
   }
-  doorway(livingRoom,livingBackWall,'x',-3.2,'#e8c7c8','庭院','focus-3');
-  doorway(livingRoom,livingLeftWall,'z',.95,'#c0c9c3','4010','focus1');
-  doorway(rooms[2],rooms[2].getObjectByName('room-left-wall'),'z',2.25,themes[2].side,'Joey & Zakery','focus2');
-  doorway(rooms[0],rooms[0].getObjectByName('room-back-wall'),'x',-.8,themes[0].wall,'Piggy','focus0');
-  // 移除门口横跨的踢脚线，保留两边。
-  const trim=rooms[0].children.find(o=>o.isMesh&&Math.abs(o.position.z+3.42)<.001&&o.position.y===.28&&o.geometry.parameters?.width>5);
-  if(trim){rooms[0].remove(trim);for(const [x,w] of [[-3.725,4.65],[1.975,4.35]])box(w,.14,.1,'#f4e6d2',x,.28,-3.42,rooms[0]);}
+  window.position.x=-14.235;album.position.x=-14.21;
+  livingHotDefs.forEach(h=>{if(!['cat-pet','dog-pet'].includes(h.id)){h.p.x-=5.5;h.p.z+=5.7;if(h.id==='memories')h.p.x=-13.8}});
+  cat.position.copy(bed.position);cat.position.y=.22;dog.position.copy(dogBed.position);dog.position.y=.22;
+  box(26.8,.12,10.1,'#d5b595',-.95,.12,7.1,livingRoom).name='floor-living';
+  for(let z=2.4;z<12;z+=.4)box(26.5,.012,.012,'#ba977a',-.95,.19,z,livingRoom);
+  const commonWall=box(.18,3.9,10.1,'#c0c9c3',-14.25,2.08,7.1,livingRoom);
+  // 内侧墙采用剖视高度，仍参与碰撞，全景下能看到卧室内部。
+  for(const [x,w] of [[-8.025,12.65],[7.075,10.75]])box(w,1.05,.16,'#e8c7c8',x,.68,2.14,livingRoom);
+  for(const x of [-4.4,-2.9])box(.065,1.8,.065,'#aa805c',x,1.2,2.32,livingRoom);
+  // 客厅右侧增加共同餐桌、收藏角；中央留出宽通道。
+  round(3.1,.16,1.9,'#c7a27e',7,1.05,7.3,.055,livingRoom);
+  for(const x of [5.7,8.3])for(const z of [6.6,8])box(.09,.78,.09,'#987a60',x,.58,z,livingRoom);
+  for(const [x,z] of [[5,7.3],[9,7.3],[7,5.9],[7,8.8]]){round(.75,.13,.70,'#a4bfae',x,.61,z,.035,livingRoom);for(const dx of [-.25,.25])for(const dz of [-.22,.22])box(.055,.45,.055,'#9b8067',x+dx,.32,z+dz,livingRoom)}
+  cylinder(.14,.11,.20,'#d2abc3',6.7,1.23,7.3,livingRoom);box(.65,.04,.45,'#efe1c4',7.45,1.16,7.3,livingRoom);
+  round(3.2,.9,.7,'#b89b83',8.2,.66,3.35,.045,livingRoom);for(let n=0;n<11;n++)box(.12,.43,.36,palette[n%6],6.85+n*.25,1.32,3.35,livingRoom);
+  const building=new THREE.Group();building.name='shared-foundation';scene.add(building);
+  box(26.8,.48,24.5,'#b89cbd',-.95,-.16,-.1,building).name='foundation-slab';
+  box(26.8,.12,1.8,'#d0b397',-.95,.12,1.15,building).name='floor-entry';
+  function frontDoor(group,x,z,min,max,label,id){
+    const gap=1.8,height=1.05;
+    for(const [left,right] of [[min,x-gap/2],[x+gap/2,max]])box(right-left,height,.16,'#d0c1c2',(left+right)/2,.68,z,group);
+    const door=new THREE.Group();door.name='door-'+label;door.position.set(x,0,z);group.add(door);
+    for(const dx of [-.95,.95])box(.08,2.45,.12,'#f2dfc7',dx,1.36,0,door);
+    box(2,.09,.12,'#f2dfc7',0,2.63,0,door);
+    art(1.8,.28,0,2.96,.07,(ctx,W,H)=>{ctx.fillStyle='#f4e6d5';ctx.fillRect(0,0,W,H);ctx.fillStyle='#705773';ctx.font='bold 75px sans-serif';ctx.textAlign='center';ctx.fillText(label,W/2,300)},door);
+    const target=mesh(new THREE.BoxGeometry(2,2.8,.18),new THREE.MeshBasicMaterial({visible:false}),0,1.5,0,door);target.userData={id,room:group};hits.push(target);
+  }
+  rooms.forEach((room,i)=>frontDoor(room,[-.9,.5,-2.2][i],8.85,room.userData.floorPlan.minX+.025,room.userData.floorPlan.maxX-.025,['Piggy','4010','Joey & Zakery'][i],'focus'+i));
+  frontDoor(livingRoom,0,12.04,-14.325,12.425,'共同庭院','focus-3');
   // 每间房自己的床头灯，不再移动同一盏灯来模拟切换。
-  lampLight.position.add(livingRoom.position);const homeLights=[lampLight];
+  lampLight.position.x-=5.5;lampLight.position.z+=5.7;const homeLights=[lampLight];
   rooms.forEach(room=>{const light=new THREE.PointLight('#ffbf7b',0,8,1.6);light.position.copy(room.position).add(new THREE.Vector3(3.48,1.4,-2.72));scene.add(light);homeLights.push(light)});
   livingHotDefs.forEach(h=>h.root=h.id==='cat-pet'?cat:h.id==='dog-pet'?dog:livingRoom);roomHotDefs.forEach((defs,i)=>defs.forEach(h=>h.root=rooms[i]));
   // 北侧庭院经客厅门洞相接，草坪保持与室内相同地面高度。
-  const garden=new THREE.Object3D();garden.name='garden';garden.position.set(-1,0,4.65);garden.rotation.y=Math.PI;scene.add(garden);
-  box(8,.48,8,'#a7a287',0,-.16,12.3,garden);
-  box(8,.12,8,'#91ad88',0,.12,12.3,garden).name='floor-garden';
+  const garden=new THREE.Object3D();garden.name='garden';garden.position.set(0,0,3.85);garden.rotation.y=0;scene.add(garden);
+  box(26.8,.48,8,'#a7a287',-.95,-.16,12.3,garden);
+  box(26.8,.12,8,'#91ad88',-.95,.12,12.3,garden).name='floor-garden';
   for(let i=0;i<7;i++)round(1.3,.025,.7,i%2?'#d7c9b3':'#cabcaa',0,.205,8.8+i,.10,garden);
-  for(const x of [-3.85,3.85]){box(.09,.12,8,'#ccb79b',x,.55,12.3,garden);for(let i=0;i<9;i++)box(.12,.75,.12,'#e1ccae',x,.56,8.5+i*.94,garden)}
-  box(7.8,.12,.09,'#ccb79b',0,.55,16.15,garden);for(let i=0;i<11;i++)box(.12,.75,.12,'#e1ccae',-3.7+i*.74,.56,16.15,garden);
+  for(const x of [-14.2,12.3]){box(.09,.12,8,'#ccb79b',x,.55,12.3,garden);for(let i=0;i<9;i++)box(.12,.75,.12,'#e1ccae',x,.56,8.5+i*.94,garden)}
+  for(const [left,right] of [[-14.2,-1.1],[1.1,12.3]]){box(right-left,.12,.09,'#ccb79b',(left+right)/2,.55,16.15,garden);for(let x=left;x<right;x+=.75)box(.12,.75,.12,'#e1ccae',x,.56,16.15,garden)}
   const gardenCrops=[],gardenHotDefs=[];
   for(let room=0;room<3;room++){
-    const x=(room-1)*2.7;
+    const x=-10+room*2.7;
     round(1.5,.4,1.6,'#ac8061',x,.4,13.65,.07,garden);box(1.3,.035,1.4,'#675143',x,.61,13.65,garden);
     art(1.05,.3,x,.65,14.48,ctx=>{ctx.fillStyle='#f6ebd5';ctx.fillRect(0,0,512,512);ctx.fillStyle='#6c5849';ctx.font='bold 110px sans-serif';ctx.textAlign='center';ctx.fillText(['Piggy','4010','Joey & Zakery'][room],256,300)},garden);
     for(let slot=0;slot<3;slot++){const crop=new THREE.Group();crop.name='garden-plants';crop.position.set(x+(slot-1)*.43,.63,13.65);garden.add(crop);gardenCrops.push({room,slot,crop,key:null})}
@@ -471,7 +467,7 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
     gardenHotDefs.push({id:'garden'+room,text:['Piggy','4010','Joey & Zakery'][room]+'的花圃',root:garden,p:new THREE.Vector3(x,2.4,13.65)});
   }
   for(const x of [-3.3,3.3]){cylinder(.07,.07,1.7,'#8c7966',x,1.06,10.2,garden);const bulb=ball(.16,'#ffe5b4',x,1.98,10.2,garden);bulb.material.emissive.set('#ffcc87');bulb.material.emissiveIntensity=.9;const light=new THREE.PointLight('#ffd49d',0,7,1.7);light.position.set(x,2,10.2);garden.add(light);decorLights.push(light)}
-  round(1.8,.18,.65,'#bc9a77',-2.4,.63,10.5,.06,garden);box(1.8,.65,.10,'#c9ad8d',-2.4,1.02,10.2,garden);for(const x of [-3,-1.8])for(const z of [10.28,10.7])box(.09,.42,.09,'#8d775f',x,.39,z,garden);
+  round(3,.18,.65,'#bc9a77',7,.63,12,.06,garden);box(3,.65,.10,'#c9ad8d',7,1.02,11.7,garden);for(const x of [5.8,8.2])for(const z of [11.8,12.2])box(.09,.42,.09,'#8d775f',x,.39,z,garden);
   function setGardenPlants(plants){
     for(const frame of gardenCrops){const plant=plants.find(p=>p.room_id===frame.room&&p.slot===frame.slot),stage=plant?.stage??-1,key=(plant?.species??'empty')+stage;if(frame.key===key)continue;frame.key=key;
       frame.crop.traverse(o=>{if(o.isMesh){o.geometry.dispose()}});frame.crop.clear();if(stage<0)continue;
@@ -488,7 +484,7 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
 
   house=livingRoom;
 
-  let walker=null,navigator=null,catNavigator=null,walkPath=[],lastFrameTime=null,lastWalking=false;
+  let walker=null,navigator=null,catNavigator=null,walkPath=[],walkGoal=null,walkBlocked=0,lastFrameTime=null,lastWalking=false;
   const walkInput=new THREE.Vector2();
   const walkRing=new THREE.Mesh(new THREE.RingGeometry(.33,.40,28),new THREE.MeshBasicMaterial({color:'#b28acc',transparent:true,opacity:.8,depthWrite:false}));
   const destination=new THREE.Mesh(new THREE.RingGeometry(.13,.20,24),new THREE.MeshBasicMaterial({color:'#796195',transparent:true,opacity:.7,depthWrite:false}));
@@ -535,7 +531,7 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
         if(catMode==='return'){catMode='sleep';catTimer=night?35:14}
         else if(catMode==='sleep'){catMode='idle';catTimer=4}
         else if(night||Math.random()<.35){catMode='return';if(!catRoute(bed.position)){catMode='idle';catTimer=6}}
-        else{catMode='roam';catTimer=6;const targets=[{x:0,z:4.7},{x:-1.45,z:4.3},{x:1.1,z:3.8},{x:-3.2,z:-.5}];catRoute(targets[Math.floor(Math.random()*targets.length)])}
+        else{catMode='roam';catTimer=6;const targets=[{x:-5.5,z:10.4},{x:-6.95,z:10},{x:-4.4,z:9.5},{x:0,z:5}];catRoute(targets[Math.floor(Math.random()*targets.length)])}
       }
     }
     let moving=false;
@@ -575,7 +571,7 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
     dogTail.rotation.y=!reduced&&!rest?Math.sin(time*(dogMode==='pet'?.018:.006))*(dogMode==='pet'?.7:.25):0;
   }
   function walkState(){return {active:Boolean(walker),room:walker?navigator.roomAt(walker.actor.position):-1,moving:lastWalking}}
-  function cancelWalk(){walkPath=[];walkInput.set(0,0);destination.visible=false;lastWalking=false;if(walker)onWalkState(walkState())}
+  function cancelWalk(){walkPath=[];walkGoal=null;walkBlocked=0;walkInput.set(0,0);destination.visible=false;lastWalking=false;if(walker)onWalkState(walkState())}
   function stopWalking(){
     if(walker){residents.resume(walker.index,walker.actor.position);walker.source.visible=false;scene.remove(walker.actor);walker.ownedGeometry.forEach(geometry=>geometry.dispose());walker=null}
     cancelWalk();walkRing.visible=false;onWalkState(walkState());
@@ -595,14 +591,14 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
     if(![0,1,2,3].includes(index))return false;
     stopWalking();prepareNavigation();
     const room=Math.min(index,2),spawn=[[-.9,3.7],[1.1,2.8],[-1.2,2.3],[.7,5.9]][index];
-    const point=navigator.nearest(residents.getPosition(index)??{x:spawn[0]+rooms[room].position.x,z:spawn[1]+rooms[room].position.z});if(!point)return false;
+    const point=residents.safePosition(residents.getPosition(index)??{x:spawn[0]+rooms[room].position.x,z:spawn[1]+rooms[room].position.z},index);if(!point)return false;
     const source=avatars[index],{actor,ownedGeometry}=standingModel(index,'walking-resident');
     actor.position.set(point.x,.63,point.z);actor.rotation.set(0,Math.PI,0);source.visible=false;scene.add(actor);
     walker={source,actor,ownedGeometry,index,room:navigator.roomAt(point)};walkRing.visible=true;walkRing.position.set(point.x,.285,point.z);onWalkState(walkState());return true;
   }
   function walkTo(point){
     if(!walker)return false;const path=navigator.findPath(walker.actor.position,point);if(!path?.length)return false;
-    walkPath=path;walkInput.set(0,0);const last=path.at(-1);destination.position.set(last.x,.285,last.z);destination.visible=true;return true;
+    walkPath=path;walkGoal={x:point.x,z:point.z};walkBlocked=0;walkInput.set(0,0);const last=path.at(-1);destination.position.set(last.x,.285,last.z);destination.visible=true;return true;
   }
   function updateWalking(time,dt){
     if(!walker)return;const actor=walker.actor,start=actor.position.clone();let dx=0,dz=0;
@@ -613,10 +609,12 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
       const target=walkPath[0],x=target.x-actor.position.x,z=target.z-actor.position.z,d=Math.hypot(x,z);
       if(d<.01){actor.position.x=target.x;actor.position.z=target.z;walkPath.shift()}else{const distance=Math.min(d,dt*2.6);dx=x/d*distance;dz=z/d*distance}
     }
-    const next=navigator.move(actor.position,dx,dz);actor.position.x=next.x;actor.position.z=next.z;
+    if(!navigator.canStand(actor.position)){const safe=residents.safePosition(actor.position,walker.index);if(safe){actor.position.x=safe.x;actor.position.z=safe.z;walkBlocked=0}}
+    const next=residents.resolveMove(actor.position,navigator.move(actor.position,dx,dz),walker.index);actor.position.x=next.x;actor.position.z=next.z;
     const moving=Math.hypot(next.x-start.x,next.z-start.z)>.001;
     if(moving)actor.rotation.y=Math.atan2(next.x-start.x,next.z-start.z);
-    else if((dx||dz)&&walkPath.length)walkPath=[];
+    else if((dx||dz)&&walkPath.length){walkBlocked+=dt;if(walkBlocked>.7&&walkGoal){const path=navigator.findPath(actor.position,walkGoal,residents.blockers(walker.index));if(path?.length)walkPath=path;walkBlocked=0}}
+    if(moving)walkBlocked=0;
     if(!walkPath.length)destination.visible=false;
     const swing=moving&&!reduced?Math.sin(time*.012)*.28:0;actor.position.y=.63+(moving&&!reduced?Math.abs(Math.sin(time*.012))*.015:0);
     for(const side of ['left','right']){const sign=side==='left'?1:-1;actor.getObjectByName(side+'-leg').rotation.x=swing*sign;actor.getObjectByName(side+'-shoe').position.z=.10+swing*sign*.15;actor.getObjectByName(side+'-arm').rotation.x=-swing*sign}
@@ -716,7 +714,7 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
     }
     frame.photo.material.map.needsUpdate=true;
   }
-  return {getResidentStates:residents.getStates,setResidentsPaused:residents.setPaused,setAquariumColors:decoration.setAquariumColors,getDecorPreviews,setDecorRoom:decoration.setRoom,setDecorationEditor:decoration.setEditor,canPlaceDecor:decoration.canPlace,setGardenPlants,petDog,getDogState:()=>({mode:dogMode,position:dog.position.clone()}),petCat,getCatState:()=>({mode:catMode,position:cat.position.clone()}),startWalking,stopWalking,walkTo,cancelWalk,getWalkState:walkState,setWalkInput(x,y){if(!walker)return;walkInput.set(x,y);walkPath=[];destination.visible=false},setRoomPhoto(room,slot,src){return updatePhotoFrame(roomFrames[room]?.[slot],src)},setLivingPhoto(slot,src){return updatePhotoFrame(livingFrames[slot],src)},setRoom(index){
+  return {getResidentStates:residents.getStates,setResidentsPaused:residents.setPaused,setAquariumColors:decoration.setAquariumColors,getDecorPreviews,setDecorRoom:decoration.setRoom,setDecorationEditor:decoration.setEditor,canPlaceDecor:decoration.canPlace,setGardenPlants,petDog,getDogState:()=>({mode:dogMode,position:dog.position.clone()}),petCat,getCatState:()=>({mode:catMode,position:cat.position.clone()}),startWalking,stopWalking,walkTo,cancelWalk,getWalkState:walkState,setWalkInput(x,y){if(!walker)return;walkInput.set(x,y);walkPath=[];walkGoal=null;destination.visible=false},setRoomPhoto(room,slot,src){return updatePhotoFrame(roomFrames[room]?.[slot],src)},setLivingPhoto(slot,src){return updatePhotoFrame(livingFrames[slot],src)},setRoom(index){
     if(![-3,-2,-1,0,1,2].includes(index))return;
     currentView=index;hotDefs=index===-3?gardenHotDefs:index===-2?overviewHotDefs:index===-1?livingHotDefs:roomHotDefs[index];mountHotspots();down=null;
     const view=viewFor(index);move(view.position,view.target);
