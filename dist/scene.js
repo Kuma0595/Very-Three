@@ -248,7 +248,7 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
       for(let n=0;n<6;n++){box(.18,.34,.27,palette[(n+3)%6],-3.05+n*.23,3.90,-3.07);box(.09,.21,.01,'#efe6d3',-3.05+n*.23,3.90,-2.927)}
       const pcGlow=new THREE.MeshStandardMaterial({color:'#c79bdc',emissive:'#ae70d1',emissiveIntensity:.8});
       const indicator=box(.8,.025,.035,pcGlow,-1.64,1.75,-2.74);indicator.name='game-screen-pulse';animatedProps.push({kind:'screen',mesh:indicator});
-      glow('#ba82e2',-2.99,1.1,-2.55);
+      const gamingLed=glow('#ba82e2',-1.64,1.315,-2.48);gamingLed.name='gaming-desk-led';gamingLed.rotation.y=Math.PI/2;gamingLed.scale.z=1.6/2.45;
       });
       // 前侧懒人沙发与零食篮，不堵北侧通向客厅的门。
       const bean=ball(.66,'#59606c',.12,.64,2.25);bean.scale.set(1.25,.70,1.05);
@@ -274,7 +274,7 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
       for(let n=0;n<4;n++)box(.44,.055,.58,['#b9a181','#738b7e','#cfb591','#8c7867'][n],.52,.27+n*.055,2.36);
       magazine(-.27,.86,1.30,'#8c785f','ANALOG');
       cylinder(.12,.10,.17,'#efe0c7',.03,.91,1.35);cylinder(.09,.09,.01,'#78593d',.03,1.0,1.35);
-      glow('#efc17d',-.44,1.45,-2.68);
+      extendZone('listening-zone',()=>{const cabinetLed=glow('#efc17d',-1.60,1.23,-2.315);cabinetLed.name='listening-cabinet-led';cabinetLed.rotation.y=Math.PI/2;cabinetLed.scale.z=1.8/2.45;});
     }else{
       resident.position.set(2.64,.62,1.03);resident.rotation.y=Math.PI/2;
       // 金属网格拼贴板，用原创几何海报避免依赖外部艺人照片。
@@ -422,7 +422,8 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
     child.position.x-=5.5;child.position.z+=child.position.z<-3.2?5.425:5.7;
   }
   for(const child of livingRoom.children){if(Math.abs(child.position.x+7.15)<.001&&child.position.y>2)child.position.x=-7.8;if(Math.abs(child.position.x+6)<.001&&child.position.y>3)child.position.x=-5.9;}
-  window.position.x=-16.135;album.position.x=-16.11;
+  // 窗景、窗框与窗帘完整位于侧墙内侧面之前，避免天空面被墙遮住。
+  window.name='living-window';sky.name='window-sky';window.position.x=-16.025;album.position.x=-16.11;
   livingHotDefs.forEach(h=>{if(!['cat-pet','dog-pet'].includes(h.id)){h.p.x-=5.5;h.p.z+=5.7;if(h.id==='memories')h.p.x=-15.7}});
   cat.position.copy(bed.position);cat.position.y=.22;dog.position.copy(dogBed.position);dog.position.y=.22;
   box(30.6,.12,10.1,'#d5b595',-.95,.12,7.1,livingRoom).name='floor-living';
