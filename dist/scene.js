@@ -193,8 +193,8 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
   // 扩建地面，家具保留原始比例；各房间向空闲方向扩展，保持连通和通道。
   const floorPlans=[
     {minX:-6.05,maxX:4.15,minZ:-3.65,maxZ:8.95},
-    {minX:-4.15,maxX:4.15,minZ:-3.65,maxZ:8.95},
-    {minX:-4.15,maxX:4.15,minZ:-3.65,maxZ:8.95}
+    {minX:-6.05,maxX:4.15,minZ:-3.65,maxZ:8.95},
+    {minX:-6.05,maxX:4.15,minZ:-3.65,maxZ:8.95}
   ];
   function redistributeRoom(index){
     // 只平移功能区，绝不缩放床、玩偶或相框。
@@ -215,6 +215,7 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
         }
       }
     });
+    if(index===0)for(const child of house.children){if(!child.userData.architecture&&child.name!=='room-window'&&child.position.x<-3.1&&child.position.z<-3.25&&child.position.y>1.4&&child.position.y<3.45)child.position.x+=1.15;}
     const pose=residentPoses.find(p=>p.room===index);pose.position.copy(pose.resident.position);
   }
   const themes=[{wall:'#77717f',side:'#b8adaf',base:'#514958',quilt:'#4d505f',wood:'#9b8475'},
@@ -324,7 +325,7 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
       box(.045,.04,wing.maxZ-wing.minZ,'#cfbfdc',wing.maxX-.14,.84,wz);
     }
     house.children.forEach(child=>child.userData.architecture=true);
-    const roomWindow=window.clone(true);roomWindow.name='room-window';roomWindow.position.set(plan.minX+.215,2.4,.1);house.add(roomWindow);
+    const roomWindow=window.clone(true);roomWindow.name='room-window';roomWindow.rotation.y=0;roomWindow.position.set(-4.65,2.4,-3.43);roomWindow.userData.exteriorWindow=true;house.add(roomWindow);
     // 每间卧室都有床、两只枕头、床头柜和自己的灯。
     for(const x of [.5,2.9])for(const z of [-2.8,-.6])cylinder(.07,.07,.31,'#8c6a55',x,.34,z);
     round(3.0,.45,2.95,t.wood,1.7,.59,-1.72,.08);round(3.05,1.1,.18,t.base,1.7,1.14,-3.13,.08);
@@ -407,25 +408,23 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
   house=rooms[2];const zakery=person(0,'#608c8e','#ddb799','#3b393d',1);zakery.name='resident-3';zakery.position.set(.7,.83,6.8);zakery.rotation.y=Math.PI;
   round(.88,.14,.85,'#94b0a5',.7,.49,6.8,.04,house);round(.88,.57,.16,'#aac3b6',.7,.85,7.15,.04,house);for(const x of [.37,1.03])for(const z of [6.5,7.08])box(.055,.4,.055,'#967a63',x,.25,z,house);
   residentPoses.push({resident:zakery,room:2,position:zakery.position.clone(),rotation:zakery.rotation.y});
-  // A 户型：三间卧室在北侧，经公共走廊进入客厅，客厅直通南侧庭院。
-  const layout=[new THREE.Vector3(-8.3,0,-8.7),new THREE.Vector3(0,0,-8.7),new THREE.Vector3(8.3,0,-8.7)];
-  livingRoom.name='living-room';livingRoom.userData.floorPlan={minX:-14.35,maxX:12.45,minZ:2.05,maxZ:12.15};
+  // A 户型：三间等面积卧室在北侧，直接开门进入客厅，客厅直通南侧庭院。
+  const layout=[new THREE.Vector3(-10.2,0,-6.9),new THREE.Vector3(0,0,-6.9),new THREE.Vector3(10.2,0,-6.9)];
+  livingRoom.name='living-room';livingRoom.userData.floorPlan={minX:-16.25,maxX:14.35,minZ:2.05,maxZ:12.15};
   rooms.forEach((room,i)=>{room.position.copy(layout[i]);room.visible=true});
   livingRoom.remove(livingBackWall,livingLeftWall,livingRoom.getObjectByName('floor-living'));
   for(const child of [...livingRoom.children]){
     const d=child.geometry?.parameters;
     if(d&&((child.position.y===4.07)||(child.position.y===.28&&d.height<=.15)||(child.position.y<.21&&(d.width>4||d.depth>3)))){livingRoom.remove(child);continue}
-    child.position.x-=5.5;child.position.z+=5.7;
+    child.position.x-=5.5;child.position.z+=child.position.z<-3.2?5.425:5.7;
   }
-  window.position.x=-14.235;album.position.x=-14.21;
-  livingHotDefs.forEach(h=>{if(!['cat-pet','dog-pet'].includes(h.id)){h.p.x-=5.5;h.p.z+=5.7;if(h.id==='memories')h.p.x=-13.8}});
+  window.position.x=-16.135;album.position.x=-16.11;
+  livingHotDefs.forEach(h=>{if(!['cat-pet','dog-pet'].includes(h.id)){h.p.x-=5.5;h.p.z+=5.7;if(h.id==='memories')h.p.x=-15.7}});
   cat.position.copy(bed.position);cat.position.y=.22;dog.position.copy(dogBed.position);dog.position.y=.22;
-  box(26.8,.12,10.1,'#d5b595',-.95,.12,7.1,livingRoom).name='floor-living';
-  for(let z=2.4;z<12;z+=.4)box(26.5,.012,.012,'#ba977a',-.95,.19,z,livingRoom);
-  const commonWall=box(.18,3.9,10.1,'#c0c9c3',-14.25,2.08,7.1,livingRoom);
-  // 内侧墙采用剖视高度，仍参与碰撞，全景下能看到卧室内部。
-  for(const [x,w] of [[-8.025,12.65],[7.075,10.75]])box(w,1.05,.16,'#e8c7c8',x,.68,2.14,livingRoom);
-  for(const x of [-4.4,-2.9])box(.065,1.8,.065,'#aa805c',x,1.2,2.32,livingRoom);
+  box(30.6,.12,10.1,'#d5b595',-.95,.12,7.1,livingRoom).name='floor-living';
+  for(let z=2.4;z<12;z+=.4)box(30.3,.012,.012,'#ba977a',-.95,.19,z,livingRoom);
+  const commonWall=box(.18,3.9,10.1,'#c0c9c3',-16.15,2.08,7.1,livingRoom);
+  // 一道连续分隔墙开三个卧室门，装饰挂在门洞之间。
   // 客厅右侧增加共同餐桌、收藏角；中央留出宽通道。
   round(3.1,.16,1.9,'#c7a27e',7,1.05,7.3,.055,livingRoom);
   for(const x of [5.7,8.3])for(const z of [6.6,8])box(.09,.78,.09,'#987a60',x,.58,z,livingRoom);
@@ -433,30 +432,31 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
   cylinder(.14,.11,.20,'#d2abc3',6.7,1.23,7.3,livingRoom);box(.65,.04,.45,'#efe1c4',7.45,1.16,7.3,livingRoom);
   round(3.2,.9,.7,'#b89b83',8.2,.66,3.35,.045,livingRoom);for(let n=0;n<11;n++)box(.12,.43,.36,palette[n%6],6.85+n*.25,1.32,3.35,livingRoom);
   const building=new THREE.Group();building.name='shared-foundation';scene.add(building);
-  box(26.8,.48,24.5,'#b89cbd',-.95,-.16,-.1,building).name='foundation-slab';
-  box(26.8,.12,1.8,'#d0b397',-.95,.12,1.15,building).name='floor-entry';
+  box(30.6,.48,22.7,'#b89cbd',-.95,-.16,.8,building).name='foundation-slab';
   function frontDoor(group,x,z,min,max,label,id){
-    const gap=1.8,height=1.05;
-    for(const [left,right] of [[min,x-gap/2],[x+gap/2,max]])box(right-left,height,.16,'#d0c1c2',(left+right)/2,.68,z,group);
+    const gap=1.8,bedroom=id!=='focus-3',height=bedroom?3.9:1.05;
+    for(const [left,right] of [[min,x-gap/2],[x+gap/2,max]])box(right-left,height,.16,'#e8c7c8',(left+right)/2,bedroom?2.08:.68,z,group).name=bedroom?'bedroom-separator':'courtyard-wall';
+    if(bedroom)box(gap,1.58,.16,'#e8c7c8',x,3.24,z,group).name='bedroom-door-lintel';
     const door=new THREE.Group();door.name='door-'+label;door.position.set(x,0,z);group.add(door);
     for(const dx of [-.95,.95])box(.08,2.45,.12,'#f2dfc7',dx,1.36,0,door);
     box(2,.09,.12,'#f2dfc7',0,2.63,0,door);
+    if(bedroom){const leaf=new THREE.Group();leaf.name='open-bedroom-door';leaf.position.set(-.9,0,-.02);leaf.rotation.y=Math.PI/2;door.add(leaf);round(1.74,2.2,.065,'#b99779',.87,1.27,0,.02,leaf);round(1.44,1.88,.018,'#cfb094',.87,1.27,.041,.02,leaf);ball(.04,'#9a7f58',1.55,1.18,.075,leaf);}
     art(1.8,.28,0,2.96,.07,(ctx,W,H)=>{ctx.fillStyle='#f4e6d5';ctx.fillRect(0,0,W,H);ctx.fillStyle='#705773';ctx.font='bold 75px sans-serif';ctx.textAlign='center';ctx.fillText(label,W/2,300)},door);
     const target=mesh(new THREE.BoxGeometry(2,2.8,.18),new THREE.MeshBasicMaterial({visible:false}),0,1.5,0,door);target.userData={id,room:group};hits.push(target);
   }
-  rooms.forEach((room,i)=>frontDoor(room,[-.9,.5,-2.2][i],8.85,room.userData.floorPlan.minX+.025,room.userData.floorPlan.maxX-.025,['Piggy','4010','Joey & Zakery'][i],'focus'+i));
-  frontDoor(livingRoom,0,12.04,-14.325,12.425,'共同庭院','focus-3');
+  rooms.forEach((room,i)=>frontDoor(room,[-.9,.5,-2.2][i],8.85,room.userData.floorPlan.minX,room.userData.floorPlan.maxX,['Piggy','4010','Joey & Zakery'][i],'focus'+i));
+  frontDoor(livingRoom,0,12.04,-16.225,14.325,'共同庭院','focus-3');
   // 每间房自己的床头灯，不再移动同一盏灯来模拟切换。
   lampLight.position.x-=5.5;lampLight.position.z+=5.7;const homeLights=[lampLight];
   rooms.forEach(room=>{const light=new THREE.PointLight('#ffbf7b',0,8,1.6);light.position.copy(room.position).add(new THREE.Vector3(3.48,1.4,-2.72));scene.add(light);homeLights.push(light)});
   livingHotDefs.forEach(h=>h.root=h.id==='cat-pet'?cat:h.id==='dog-pet'?dog:livingRoom);roomHotDefs.forEach((defs,i)=>defs.forEach(h=>h.root=rooms[i]));
   // 北侧庭院经客厅门洞相接，草坪保持与室内相同地面高度。
   const garden=new THREE.Object3D();garden.name='garden';garden.position.set(0,0,3.85);garden.rotation.y=0;scene.add(garden);
-  box(26.8,.48,8,'#a7a287',-.95,-.16,12.3,garden);
-  box(26.8,.12,8,'#91ad88',-.95,.12,12.3,garden).name='floor-garden';
+  box(30.6,.48,8,'#a7a287',-.95,-.16,12.3,garden);
+  box(30.6,.12,8,'#91ad88',-.95,.12,12.3,garden).name='floor-garden';
   for(let i=0;i<7;i++)round(1.3,.025,.7,i%2?'#d7c9b3':'#cabcaa',0,.205,8.8+i,.10,garden);
-  for(const x of [-14.2,12.3]){box(.09,.12,8,'#ccb79b',x,.55,12.3,garden);for(let i=0;i<9;i++)box(.12,.75,.12,'#e1ccae',x,.56,8.5+i*.94,garden)}
-  for(const [left,right] of [[-14.2,-1.1],[1.1,12.3]]){box(right-left,.12,.09,'#ccb79b',(left+right)/2,.55,16.15,garden);for(let x=left;x<right;x+=.75)box(.12,.75,.12,'#e1ccae',x,.56,16.15,garden)}
+  for(const x of [-16.1,14.2]){box(.09,.12,8,'#ccb79b',x,.55,12.3,garden);for(let i=0;i<9;i++)box(.12,.75,.12,'#e1ccae',x,.56,8.5+i*.94,garden)}
+  for(const [left,right] of [[-16.1,-1.1],[1.1,14.2]]){box(right-left,.12,.09,'#ccb79b',(left+right)/2,.55,16.15,garden);for(let x=left;x<right;x+=.75)box(.12,.75,.12,'#e1ccae',x,.56,16.15,garden)}
   const gardenCrops=[],gardenHotDefs=[];
   for(let room=0;room<3;room++){
     const x=-10+room*2.7;
@@ -663,7 +663,7 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
   function viewFor(index){
     const bounds=new THREE.Box3();
     if(index===-2){[livingRoom,...rooms,building,garden].forEach(root=>bounds.union(new THREE.Box3().setFromObject(root)))}
-    else{bounds.setFromObject(index===-3?garden:index===-1?livingRoom:rooms[index]);if(index===-1)bounds.union(new THREE.Box3().setFromObject(building.getObjectByName('floor-entry')))}
+    else{bounds.setFromObject(index===-3?garden:index===-1?livingRoom:rooms[index])}
     const target=bounds.getCenter(new THREE.Vector3());
     const direction=(index===-2?new THREE.Vector3(1,1.8,1.75):new THREE.Vector3(7,9,12)).normalize();
     const right=new THREE.Vector3(direction.z,0,-direction.x).normalize(),up=new THREE.Vector3().crossVectors(direction,right).normalize();
