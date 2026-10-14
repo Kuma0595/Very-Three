@@ -6,6 +6,8 @@ let member=null,loading=null,writing=false;
 const checked=({data,error})=>{if(error)throw error;return data};
 export function cloudError(error){
  if(error?.code==='42P01'||error?.code==='PGRST205')return '小家数据库还未初始化，请先执行 setup.sql。';
+ if(error?.code==='23514')return '新增共用相册需要先在 Supabase 执行 couple-album.sql。';
+ if(error?.code==='23505')return '这个相框刚被另一位家人更新了，请刷新相册后重试。';
  if(error?.code==='42501')return '没有修改权限，请使用自己的家人账号。';
  if(error?.message?.includes('8 张'))return '共享相册最多保留 8 张照片。';
  return '同步未完成，请检查网络后重试。';
@@ -35,8 +37,8 @@ export function loadCloud(){
   if(![3,4].includes(people.length)||rooms.length!==3)throw Error('小家数据尚未准备好');
   if(people.length===3)people.push({id:3,room_id:2,user_id:null,name:'Zakery',status:'Joey 的男朋友'});
   const lookup=Object.fromEntries(people.map(p=>[p.user_id,p.name]));
-  const mappedRooms=rooms.map(r=>({...r,framePhotos:[null,null,null]}));
-  await Promise.all(frames.map(async f=>{mappedRooms[f.room_id].framePhotos[f.slot]={path:f.path,name:f.name,src:await signed(f.path)}}));
+  const mappedRooms=rooms.map((r,i)=>({...r,framePhotos:[null,null,null],sharedPhotos:Array(i===2?6:0).fill(null)}));
+  await Promise.all(frames.map(async f=>{const photo={path:f.path,name:f.name,src:await signed(f.path)};if(f.slot<3)mappedRooms[f.room_id].framePhotos[f.slot]=photo;else if(f.room_id===2&&f.slot<9)mappedRooms[2].sharedPhotos[f.slot-3]=photo}));
   const mappedPhotos=await Promise.all(photos.map(async p=>({...p,src:await signed(p.path)})));
   return {people:people.map((p,i)=>({...p,room_id:p.room_id??Math.min(i,2),emoji:['🐷','◎','✦','♡'][i]})),rooms:mappedRooms,
    notes:notes.map(n=>({...n,author:lookup[n.creator]??'家人',date:new Date(n.created_at).toLocaleDateString('zh-CN')})),plans,photos:mappedPhotos};
@@ -59,7 +61,8 @@ export async function saveCloud(previous,change){
   if(!member)await getMember();
   // 先检查整次操作，避免在遇到越权字段前已经保存部分内容。
   if(change.people?.some((p,i)=>i!==member.id&&(p.name!==previous.people[i].name||p.status!==previous.people[i].status)))throw Error('只能编辑自己的名字和心情');
-  if(change.rooms?.some((r,i)=>i!==currentRoom()&&(r.title!==previous.rooms[i].title||r.note!==previous.rooms[i].note||r.framePhotos.some((p,slot)=>p?.src!==previous.rooms[i].framePhotos[slot]?.src))))throw Error('只能上传自己房间的相框');
+  if(change.rooms?.some((r,i)=>(r.sharedPhotos?.length??0)>6))throw Error('共用相册最多六张照片');
+  if(change.rooms?.some((r,i)=>i!==currentRoom()&&(r.title!==previous.rooms[i].title||r.note!==previous.rooms[i].note||r.framePhotos.some((p,slot)=>p?.src!==previous.rooms[i].framePhotos[slot]?.src)||(r.sharedPhotos??[]).some((p,slot)=>p?.src!==previous.rooms[i].sharedPhotos?.[slot]?.src))))throw Error('只能上传自己房间的相框');
   if(change.notes&&previous.notes.some(n=>n.creator!==member.user_id&&!change.notes.some(next=>next.id===n.id)))throw Error('只能删除自己的留言');
   if(change.photos&&previous.photos.some(p=>p.creator!==member.user_id&&!change.photos.some(next=>next.id===p.id)))throw Error('只能移除自己上传的合照');
   if(change.people){
@@ -75,8 +78,8 @@ export async function saveCloud(previous,change){
      if(room!==currentRoom())throw Error('只能编辑自己的房间');
      checked(await client.from('vt_rooms').update({title:r.title,note:r.note}).eq('id',room).select().single());
     }
-    for(let slot=0;slot<3;slot++){
-     const photo=r.framePhotos[slot],before=old.framePhotos[slot];
+    for(let slot=0;slot<(room===2?9:3);slot++){
+     const photo=slot<3?r.framePhotos[slot]:r.sharedPhotos?.[slot-3],before=slot<3?old.framePhotos[slot]:old.sharedPhotos?.[slot-3];
      if(photo===before||photo?.src===before?.src)continue;
      if(room!==currentRoom())throw Error('只能上传自己房间的相框');
      if(!photo){checked(await client.from('vt_frames').delete().eq('room_id',room).eq('slot',slot).select());await removeFile(before?.path);continue}

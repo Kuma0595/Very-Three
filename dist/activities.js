@@ -1,5 +1,5 @@
-import {loadPlay,playAction} from './play-cloud.js?v=2';
-import {currentMember,currentRoom} from './cloud.js?v=2';
+import {loadPlay,playAction} from './play-cloud.js?v=3';
+import {currentMember,currentRoom} from './cloud.js?v=3';
 import {createArcade} from './arcade-engine.js?v=1';
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const MEMBERS=['Piggy','4010','Joey','Zakery'];

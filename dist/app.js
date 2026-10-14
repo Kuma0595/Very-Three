@@ -1,14 +1,14 @@
 import {setupPhotoViewer} from './photo-viewer.js?v=1';
-import {setupActivities} from './activities.js?v=3';
-import {setupDecoration} from './decoration.js?v=9';
-import {loadGarden,gardenAction,growthStage,SPECIES,STAGES} from './garden.js?v=2';
-import {loadCloud,saveCloud,currentMember,currentRoom,cloudError,startCloudSync} from './cloud.js?v=2';
-import { createHome } from './scene.js?v=22-photo-albums';
+import {setupActivities} from './activities.js?v=4';
+import {setupDecoration} from './decoration.js?v=10';
+import {loadGarden,gardenAction,growthStage,SPECIES,STAGES} from './garden.js?v=3';
+import {loadCloud,saveCloud,currentMember,currentRoom,cloudError,startCloudSync} from './cloud.js?v=3';
+import { createHome } from './scene.js?v=23-family-routine';
 import { createRoomMusic } from './room-music.js?v=2-cat';
-import { watchSystemTheme } from './time-theme.js?v=2-system';
+import { watchHomeTime } from './time-theme.js?v=3-time';
 const $=s=>document.querySelector(s);
 const KEY='three-at-home-v1';
-const initial={people:[{name:'Piggy',status:'摇滚与电玩',emoji:'🐷'},{name:'4010',status:'黑胶与欧美音乐',emoji:'◎'},{name:'Joey',status:'亚文化与 K-pop',emoji:'✦'},{name:'Zakery',status:'Joey 的男朋友',emoji:'♡'}],notes:[],plans:[],photos:[],rooms:[{title:'摇滚开场，下一局见',note:'吉他有点响，游戏刚开场。'},{title:'让唱针慢慢落下',note:'把喜欢的欧美音乐，放进黑胶里。'},{title:'今天也要有自己的风格',note:'亚文化、K-pop，和一点不一样的自己。'}],themeMode:'manual',night:true,lit:false};
+const initial={people:[{name:'Piggy',status:'摇滚与电玩',emoji:'🐷'},{name:'4010',status:'黑胶与欧美音乐',emoji:'◎'},{name:'Joey',status:'亚文化与 K-pop',emoji:'✦'},{name:'Zakery',status:'Joey 的男朋友',emoji:'♡'}],notes:[],plans:[],photos:[],rooms:[{title:'摇滚开场，下一局见',note:'吉他有点响，游戏刚开场。'},{title:'让唱针慢慢落下',note:'把喜欢的欧美音乐，放进黑胶里。'},{title:'今天也要有自己的风格',note:'亚文化、K-pop，和一点不一样的自己。'}],themeMode:'auto',night:true,lit:false};
 let data=structuredClone(initial),home=null;
 try {const saved=JSON.parse(localStorage.getItem(KEY));if(saved&&Array.isArray(saved.people)&&saved.people.length===3)data={...data,lit:Boolean(saved.lit)};}catch{}
 if(!Array.isArray(data.rooms)||data.rooms.length!==3)data.rooms=structuredClone(initial.rooms);
@@ -17,7 +17,7 @@ const oldNames=['Piggy','朋友 A','朋友 B'],oldStatuses=['回来坐坐','今�
 data.people=data.people.map((p,i)=>({...p,name:p.name===oldNames[i]?initial.people[i].name:p.name,status:p.status===oldStatuses[i]?initial.people[i].status:p.status,emoji:initial.people[i].emoji}));
 const oldTitles=['灵感慢慢来','下一局，一起','把日子过慢一点'];
 data.rooms=data.rooms.map((r,i)=>r.title===oldTitles[i]?structuredClone(initial.rooms[i]):r);
-data.rooms=data.rooms.map(r=>({...r,framePhotos:Array.from({length:3},(_,i)=>r.framePhotos?.[i]??null)}));
+data.rooms=data.rooms.map(r=>({...r,framePhotos:Array.from({length:3},(_,i)=>r.framePhotos?.[i]??null),sharedPhotos:Array(6).fill(null)}));
 if(!['auto','manual'].includes(data.themeMode))data.themeMode='manual';
 let activeRoom=-2;
 let gardenData={ready:false,plants:[]},gardenLoading=false,gardenSaving=false;
@@ -42,9 +42,11 @@ function commitPreferences(change){
  try{const saved=JSON.parse(localStorage.getItem(KEY)||'{}');localStorage.setItem(KEY,JSON.stringify({...saved,themeMode:data.themeMode,night:data.night,lit:data.lit}))}catch{}
  return true;
 }
-const displayedPhotos=Array.from({length:4},(_,i)=>Array(i===3?4:3).fill(undefined));
-const pendingPhotos=Array.from({length:4},(_,i)=>Array(i===3?4:3).fill(null));
+const displayedPhotos=Array.from({length:5},(_,i)=>Array(i>=3?4:3).fill(undefined));
+const pendingPhotos=Array.from({length:5},(_,i)=>Array(i>=3?4:3).fill(null));
 const livingPhotos=()=>data.photos.slice(-4);
+const couplePhotos=()=>data.rooms[2].sharedPhotos??Array(6).fill(null);
+const coupleWallPhotos=()=>couplePhotos().map((p,slot)=>p?({...p,slot}):null).filter(Boolean).slice(-4);
 let lastPhotoError=0;
 function syncRoomPhotos(){
  if(!home)return;
@@ -129,16 +131,16 @@ document.querySelectorAll('[data-walk]').forEach(button=>{
 function members(){ $('#members').innerHTML=data.people.map((p,i)=>`<button data-person="${i}" title="${esc(p.status)}"><span class="avatar">${esc(p.emoji)}</span><span class="member-name">${esc(p.name)}</span></button>`).join('');$('#members').querySelectorAll('button').forEach(b=>b.onclick=()=>switchRoom(Math.min(Number(b.dataset.person),2)));}
 const panel=$('#panel');let lastFocus,currentPanelId;
 const photoViewer=setupPhotoViewer();
-function openPhotoAlbum(kind,room,slot){cancelMovement();const items=kind==='living'?data.photos.map((p,i)=>({...p,slot:i})):data.rooms[room].framePhotos.map((p,i)=>p?({...p,slot:i}):null);return photoViewer.open({title:kind==='living'?'我们的回忆':roomName(room)+'的相册',items,slot});}
+function openPhotoAlbum(kind,room,slot){cancelMovement();const items=kind==='living'?data.photos.map((p,i)=>({...p,slot:i})):kind==='couple'?couplePhotos().map((p,i)=>p?({...p,slot:i}):null):data.rooms[room].framePhotos.map((p,i)=>p?({...p,slot:i}):null);return photoViewer.open({title:kind==='living'?'我们的回忆':kind==='couple'?'Joey & Zakery · 我们的相册':roomName(room)+'的相册',items,slot});}
 
-function openPanel(id){const livingPhoto=/^photo:living:([0-3])$/.exec(id),roomPhoto=/^photo:room:([0-2]):([0-2])$/.exec(id);if(livingPhoto){const slot=Number(livingPhoto[1]),photos=livingPhotos();if(photos[slot]&&openPhotoAlbum('living',null,Math.max(0,data.photos.length-4)+slot))return;id='memories'}if(roomPhoto){const room=Number(roomPhoto[1]),slot=Number(roomPhoto[2]);if(data.rooms[room].framePhotos[slot]&&openPhotoAlbum('room',room,slot))return;id='frames'+room}const activity=/^activity:(arcade|aquarium|telescope):([0-3])$/.exec(id);if(activity){cancelMovement();void activityController?.open(activity[1],Number(activity[2]));return}if(id==='dog-pet'){toast('小狗摇了摇尾巴，贴过来让你摸摸');return}if(id==='cat-pet'){void roomMusic.meow();toast('喵～ 小猫蹭了蹭你的手');return}const focus=/^focus(-3|-1|[0-2])$/.exec(id);if(focus){switchRoom(Number(focus[1]));return}const frameMatch=/^frame([0-2])-([0-2])$/.exec(id);if(frameMatch){const room=Number(frameMatch[1]),slot=Number(frameMatch[2]);if(data.rooms[room].framePhotos[slot]&&openPhotoAlbum('room',room,slot))return;id='frames'+room;}if(id==='lamp'){toggleLamp();return}cancelMovement();lastFocus=document.activeElement;renderPanel(id);if(!panel.open)panel.showModal();}
-function renderPanel(id){currentPanelId=id;const content=$('#panel-content');
+function openPanel(id){const couplePhoto=/^photo:couple:([0-3])$/.exec(id);if(couplePhoto){const p=coupleWallPhotos()[Number(couplePhoto[1])];if(p&&openPhotoAlbum('couple',2,p.slot))return;id='couple-album'}const livingPhoto=/^photo:living:([0-3])$/.exec(id),roomPhoto=/^photo:room:([0-2]):([0-2])$/.exec(id);if(livingPhoto){const slot=Number(livingPhoto[1]),photos=livingPhotos();if(photos[slot]&&openPhotoAlbum('living',null,Math.max(0,data.photos.length-4)+slot))return;id='memories'}if(roomPhoto){const room=Number(roomPhoto[1]),slot=Number(roomPhoto[2]);if(data.rooms[room].framePhotos[slot]&&openPhotoAlbum('room',room,slot))return;id='frames'+room}const activity=/^activity:(arcade|aquarium|telescope):([0-3])$/.exec(id);if(activity){cancelMovement();void activityController?.open(activity[1],Number(activity[2]));return}if(id==='dog-pet'){toast('小狗摇了摇尾巴，贴过来让你摸摸');return}if(id==='cat-pet'){void roomMusic.meow();toast('喵～ 小猫蹭了蹭你的手');return}const focus=/^focus(-3|-1|[0-2])$/.exec(id);if(focus){switchRoom(Number(focus[1]));return}const frameMatch=/^frame([0-2])-([0-2])$/.exec(id);if(frameMatch){const room=Number(frameMatch[1]),slot=Number(frameMatch[2]);if(data.rooms[room].framePhotos[slot]&&openPhotoAlbum('room',room,slot))return;id='frames'+room;}if(id==='lamp'){toggleLamp();return}cancelMovement();lastFocus=document.activeElement;renderPanel(id);if(!panel.open)panel.showModal();}
+function renderPanel(id){currentPanelId=id;const content=$('#panel-content');if(id==='couple-album'){renderCoupleAlbum(content);return;}
  if(/^garden[0-2]?$/.test(id)){renderGarden(id);return}
  if(/^room[0-2]$/.test(id)){
  const i=Number(id.slice(-1)),r=data.rooms[i];
  content.innerHTML=`<h2>${esc(roomName(i))}的小房间。</h2><p class="panel-desc">${['演出海报、游戏收藏、懒人沙发与电吉他；圆润的 Piggy 坐在电脑前拿着手柄打游戏。','胡桃木唱片架、阅读角和暖光落地灯；4010 戴耳机坐在听音椅上翻唱片，黑胶缓缓旋转。','金属拼贴板、镜边灯、专辑、杂志与鞋盒；Joey 是短寸男生，站在镜前整理宽松外套。'][i]}<br>点上方相框入口，把你们自己的照片挂进来。</p><form id="room-form"><label class="room-label" for="room-title">房间名</label><input id="room-title" name="title" value="${esc(r.title)}" ${ownRoom(i)?'':'readonly'} maxlength="20" required style="width:100%;margin-bottom:16px"><label class="room-label" for="room-note">房间的小心情</label><textarea id="room-note" name="note" ${ownRoom(i)?'':'readonly'} maxlength="120" placeholder="最近喜欢什么，或者想留下一句什么？">${esc(r.note)}</textarea>${ownRoom(i)?'<button class="primary" style="margin-top:15px">留在房间里</button>':'<p class="read-only">这间房由主人编辑，你可以看看他的照片和心情。</p>'}</form><button class="primary room-photos-entry" id="room-photos-entry">${ownRoom(i)?'给三个相框放照片':'看看他的相框'}</button><button class="back-home" id="back-home">回客厅，和大家坐坐</button>`;
  $('#room-form').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target),title=f.get('title').trim(),note=f.get('note').trim();if(!title){toast('给房间起个名字吧');return}const rooms=data.rooms.map((r,j)=>j===i?{...r,title,note}:r);if(await update({rooms})){refreshRoomUI();toast('房间记下你的小心情啦');panel.close()}};
- $('#room-photos-entry').onclick=()=>renderPanel('frames'+i);
+ $('#room-photos-entry').onclick=()=>renderPanel('frames'+i);if(i===2){const b=document.createElement('button');b.className='primary room-photos-entry';b.textContent='Joey & Zakery · 共用相册';b.onclick=()=>renderPanel('couple-album');content.append(b);}
  $('#back-home').onclick=()=>{panel.close();switchRoom(-1)};
  }
  if(/^frames[0-2]$/.test(id)){
@@ -187,9 +189,16 @@ function renderPanel(id){currentPanelId=id;const content=$('#panel-content');
  content.querySelectorAll('[data-photo]').forEach(b=>b.onclick=async()=>{if(await update({photos:data.photos.filter((_,i)=>i!==Number(b.dataset.photo))}))renderPanel(id)});
  $('#photo-upload').onchange=async e=>{const file=e.target.files[0];if(!file)return;if(data.photos.length>=8){toast('先移除一张，再留下新的回忆吧');return}if(!file.type.startsWith('image/')){toast('请选择一张图片');return}const caption=$('#caption').value.trim()||'一起的日子';const url=URL.createObjectURL(file);try{const img=new Image();await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;img.src=url});const c=document.createElement('canvas');const scale=Math.min(1,900/Math.max(img.width,img.height));c.width=Math.round(img.width*scale);c.height=Math.round(img.height*scale);c.getContext('2d').drawImage(img,0,0,c.width,c.height);const src=c.toDataURL('image/jpeg',.78);if(await update({photos:[...data.photos,{src,caption}]})){renderPanel(id);toast('回忆已经留下来了')}}catch{toast('这张照片暂时无法读取，试试 JPG 或 PNG')}finally{URL.revokeObjectURL(url)}};
  }
- if(id==='help')content.innerHTML=`<h2>在小家里转一转。</h2><p class="panel-desc">电脑：按住鼠标拖动旋转，滚轮缩放。<br>手机：一根手指旋转，两根手指缩放。<br><br>点击门牌、上方的房间入口或头像，镜头会靠近个人房间。<br>点击房间上的小标签或底部按钮，打开对应内容。<br>每次打开默认是黑夜；点击“天亮”可以切到白天。<br>自动模式跟随系统外观：深色为黑夜，浅色为白天。<br>右上角可手动切换；点击“自动”恢复跟随系统外观。<br>点击“留盏灯”，为今天的小家留一点温暖。<br><br>点击“去串门”，控制当前账号的玩偶：电脑用 WASD / 方向键，也能点击地面自动走过去；手机直接点地面移动。三间卧室直接开门进入客厅，从客厅前侧门洞可以进入庭院，也可点击上方“庭院”。点击花圃照顾植物。走进另一间房时镜头和音乐随房间切换；“找到我”回到人物所在房间，“结束串门”让玩偶回到日常位置。<br><br>客厅的小狗会休息和散步，点击它或“摸摸小狗”，它会抬头摇尾巴。<br>小猫会睡觉和散步。点击它或“摸摸小猫”可以摸头，串门时它还会跟着你走一会儿；右上角静音同时控制喵叫与音乐。<br><br>转迷路了？点“全景”或右侧的 ⌂ 看整个家。</p>`;
+ if(id==='help')content.innerHTML=`<h2>在小家里转一转。</h2><p class="panel-desc">电脑：按住鼠标拖动旋转，滚轮缩放。<br>手机：一根手指旋转，两根手指缩放。<br><br>点击门牌、上方的房间入口或头像，镜头会靠近个人房间。<br>点击房间上的小标签或底部按钮，打开对应内容。<br>自动模式按设备本地时间切换昼夜；点击“天亮”可以切到白天。<br>07:00–20:00 为白天，其他时间为夜晚。<br>右上角可手动切换；点击“自动”恢复按时间切换。<br>点击“留盏灯”，为今天的小家留一点温暖。<br><br>点击“去串门”，控制当前账号的玩偶：电脑用 WASD / 方向键，也能点击地面自动走过去；手机直接点地面移动。三间卧室直接开门进入客厅，从客厅前侧门洞可以进入庭院，也可点击上方“庭院”。点击花圃照顾植物。走进另一间房时镜头和音乐随房间切换；“找到我”回到人物所在房间，“结束串门”让玩偶回到日常位置。<br><br>客厅的小狗会休息和散步，点击它或“摸摸小狗”，它会抬头摇尾巴。<br>小猫会睡觉和散步。点击它或“摸摸小猫”可以摸头，串门时它还会跟着你走一会儿；右上角静音同时控制喵叫与音乐。<br><br>转迷路了？点“全景”或右侧的 ⌂ 看整个家。</p>`;
  if(id==='about')content.innerHTML=`<h2>Very Three，刚好家人们。</h2><p class="panel-desc">我们想把群聊里的陪伴，变成一间能走进来的小家。<br><br>彩虹是墙上的旗，是沙发上的抱枕，也是这里的一点骄傲。在这里，可以自在做自己。<br><br>现在是一套完整的小家：共享客厅连着三个卧室。点击门牌、上方入口或头像，镜头会靠近房间；点击“全景”看整个家。Piggy 喜欢摇滚与电玩，4010 喜欢黑胶与欧美音乐，Joey 喜欢亚文化与 K-pop。人物穿搭是原创的第一版想象，可以继续调整。</p><p class="panel-desc">照片、留言、计划和房间心情保存在小家云端，只有绑定的家人账号可访问。房间由主人编辑，共享计划由大家维护；内容每十秒同步一次，音乐和外观偏好保留在当前设备。</p>`;
 }
+function renderCoupleAlbum(content){
+ const photos=couplePhotos(),own=ownRoom(2);content.innerHTML=`<h2>Joey & Zakery · 我们的相册。</h2><p class="panel-desc">左墙展示四张照片，这个共用相册最多六张。点击照片查看大图。${own?'你们都可以上传、替换和移除照片。':'这里记录他们的日常。'}</p><div class="photo-grid">${photos.map((p,i)=>`<article class="polaroid">${p?`<button class="photo-thumbnail" type="button" data-couple-view="${i}" aria-label="查看第${i+1}张照片"><img src="${esc(p.src)}" alt="${esc(p.name||'我们的照片')}"></button>`:'<div class="empty-photo">♡<small>相框 '+(i+1)+'</small></div>'}<span>相框 ${i+1}</span>${own?`<label class="primary upload-label">${p?'换一张':'上传照片'}<input type="file" data-couple-upload="${i}" accept="image/*"></label>${p?`<button class="remove" data-couple-remove="${i}" aria-label="移除第${i+1}张照片">×</button>`:''}`:''}</article>`).join('')}</div>${own?'<p class="panel-desc">首次启用共享保存需执行 couple-album.sql。</p>':''}`;
+ content.querySelectorAll('[data-couple-view]').forEach(b=>b.onclick=()=>openPhotoAlbum('couple',2,Number(b.dataset.coupleView)));
+ content.querySelectorAll('[data-couple-remove]').forEach(b=>b.onclick=async()=>{const slot=Number(b.dataset.coupleRemove),rooms=data.rooms.map((r,i)=>i===2?{...r,sharedPhotos:couplePhotos().map((p,j)=>j===slot?null:p)}:r);if(await update({rooms}))renderPanel('couple-album')});
+ content.querySelectorAll('[data-couple-upload]').forEach(input=>input.onchange=async e=>{const file=e.target.files[0],slot=Number(input.dataset.coupleUpload);if(!file)return;if(!file.type.startsWith('image/')){toast('请选择图片');return}input.disabled=true;const url=URL.createObjectURL(file);try{const img=new Image();await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;img.src=url});const scale=Math.min(1,1200/Math.max(img.width,img.height)),c=document.createElement('canvas');c.width=Math.max(1,Math.round(img.width*scale));c.height=Math.max(1,Math.round(img.height*scale));c.getContext('2d').drawImage(img,0,0,c.width,c.height);const photo={src:c.toDataURL('image/jpeg',.82),name:file.name},rooms=data.rooms.map((r,i)=>i===2?{...r,sharedPhotos:couplePhotos().map((p,j)=>j===slot?photo:p)}:r);if(await update({rooms})){renderPanel('couple-album');toast('照片已放进你们的相册')}}catch{toast('照片读取失败，请试试 JPG 或 PNG')}finally{URL.revokeObjectURL(url);input.disabled=false;input.value=''}});
+}
+
 function closePanel(){panel.close()}
 $('#close').onclick=closePanel;panel.addEventListener('click',e=>{if(e.target===panel){const r=panel.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)closePanel()}});panel.addEventListener('close',()=>lastFocus?.focus());
 document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openPanel(b.dataset.open));$('#help').onclick=()=>openPanel('help');$('#about').onclick=()=>openPanel('about');
@@ -215,14 +224,14 @@ function renderGarden(id){
  content.querySelectorAll('[data-plant]').forEach(b=>b.onclick=()=>act(Number(b.dataset.plant),'plant',$('#seed-'+b.dataset.plant).value));
  content.querySelectorAll('[data-water]').forEach(b=>b.onclick=()=>act(Number(b.dataset.water),'water'));
 }
-function applyTheme(){$('#theme-auto').setAttribute('aria-pressed',String(data.themeMode==='auto'));$('#theme-auto').title=data.themeMode==='auto'?'跟随系统深色／浅色外观':'点击恢复跟随系统外观';document.body.classList.toggle('night',data.night);$('#theme').innerHTML=data.night?'☀ <span>天亮</span>':'☾ <span>入夜</span>';$('#theme').setAttribute('aria-label',data.night?'切换到白天':'切换到夜晚');$('#scene-caption').textContent=data.night?'夜晚的小家 · 不管多晚，都有你的位置':'晴天的小家 · 灯一直为你留着';home?.setNight(data.night);$('#lamp-label').textContent=data.lit?'灯已留着':'留盏灯';$('#lamp').classList.toggle('active',data.lit);home?.setLamp(data.lit);refreshRoomUI()}
-$('#theme').onclick=async()=>{if(await update({themeMode:'manual',night:!data.night})){applyTheme();toast('已手动切换，点击“自动”恢复跟随系统外观')}};
-$('#theme-auto').onclick=async()=>{if(await update({themeMode:'auto'})){syncSystemTheme(true);toast('已恢复跟随系统外观：深色为黑夜，浅色为白天')}};
+function applyTheme(){$('#theme-auto').setAttribute('aria-pressed',String(data.themeMode==='auto'));$('#theme-auto').title=data.themeMode==='auto'?'按本地时间自动切换昼夜':'点击恢复按时间切换昼夜';document.body.classList.toggle('night',data.night);$('#theme').innerHTML=data.night?'☀ <span>天亮</span>':'☾ <span>入夜</span>';$('#theme').setAttribute('aria-label',data.night?'切换到白天':'切换到夜晚');$('#scene-caption').textContent=data.night?'夜晚的小家 · 不管多晚，都有你的位置':'晴天的小家 · 灯一直为你留着';home?.setNight(data.night);$('#lamp-label').textContent=data.lit?'灯已留着':'留盏灯';$('#lamp').classList.toggle('active',data.lit);home?.setLamp(data.lit);refreshRoomUI()}
+$('#theme').onclick=async()=>{if(await update({themeMode:'manual',night:!data.night})){applyTheme();toast('已手动切换，点击“自动”恢复按时间切换')}};
+$('#theme-auto').onclick=async()=>{if(await update({themeMode:'auto'})){syncSystemTheme(true);toast('已恢复按时间切换：07:00–20:00 为白天')}};
 function syncSystemTheme(force=false){
  if(data.themeMode==='auto'){const night=systemTheme.isDark();if(force||night!==data.night){data.night=night;applyTheme()}}
  else if(force)applyTheme();
 }
-const systemTheme=watchSystemTheme(()=>syncSystemTheme());
+const systemTheme=watchHomeTime(()=>syncSystemTheme());
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncSystemTheme()});
 window.addEventListener('focus',()=>syncSystemTheme());
 window.addEventListener('pageshow',()=>syncSystemTheme());

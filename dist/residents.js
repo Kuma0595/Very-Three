@@ -1,7 +1,7 @@
 import * as THREE from './vendor/three.module.js';
 // 四个人共享地面寻路；动作是当前浏览器的日常模拟，不写入云端位置。
 export function createResidents({scene,sources,models,rooms,seats,getNavigator,getControlled,getCat,getDog,onPet}){
- const occupants=new Map();let paused=false;
+ const occupants=new Map();let paused=false,routineNight=false;
  const residents=models.map(({actor},index)=>{
   actor.name='resident-npc-'+index;actor.userData.memberIndex=index;scene.add(actor);sources[index].visible=false;
   const room=Math.min(index,2),spawn=[[-.9,3.7],[1.1,2.8],[-1.2,2.3],[.7,5.9]][index],p=rooms[room].position;
@@ -24,7 +24,7 @@ export function createResidents({scene,sources,models,rooms,seats,getNavigator,g
   ];
   // 多试几条路线；不能到达就短暂停留，不穿越家具。
   for(let i=0;i<choices.length;i++){
-   const target=choices[(Math.floor(Math.random()*choices.length)+i)%choices.length];if(target.key&&occupants.has(target.key))continue;
+   const target=choices[(Math.floor(Math.random()*choices.length)+i)%choices.length];if(target.mode==='bed'||(target.key&&occupants.has(target.key)))continue;
    let destination=target.point;if(target.mode==='cat'||target.mode==='dog'){const angle=npc.index*1.7;destination={x:destination.x+Math.cos(angle)*1.05,z:destination.z+Math.sin(angle)*1.05}}
    const path=nav.findPath(npc.actor.position,destination);if(!path?.length)continue;
    if(target.key)occupants.set(target.key,npc.index);npc.target=target;npc.path=path;npc.mode='walk';npc.timer=Math.max(30,path.reduce((sum,p,i)=>sum+(i?Math.hypot(p.x-path[i-1].x,p.z-path[i-1].z):0),0)/1.35+10);npc.blocked=0;return;
@@ -38,6 +38,8 @@ export function createResidents({scene,sources,models,rooms,seats,getNavigator,g
   if(npc.mode==='sit'){for(const side of ['left','right']){const x=side==='left'?-.13:.13;a.getObjectByName(side+'-leg').rotation.x=-Math.PI/2;a.getObjectByName(side+'-shoe').position.set(x,-.13,.42)}}
   if(npc.mode==='cat'||npc.mode==='dog'){const pet=npc.mode==='cat'?getCat():getDog();a.rotation.y=Math.atan2(pet.x-a.position.x,pet.z-a.position.z);onPet(npc.mode);npc.timer=6}
  }
+ function sleep(npc){release(npc);standing(npc);const room=rooms[npc.room],x=npc.room===2?(npc.index===3?2.3:1.1):1.7;npc.actor.position.set(room.position.x+x,1.19,room.position.z-1.55);npc.actor.rotation.set(-Math.PI/2,0,0);npc.path=[];npc.yieldPath=[];npc.mode='bed';npc.timer=Infinity;npc.blocked=0;npc.ready=true;}
+ function setNight(value){const next=Boolean(value);if(next===routineNight)return;routineNight=next;for(const npc of residents){if(getControlled()?.index===npc.index)continue;if(routineNight)sleep(npc);else{standing(npc);release(npc);npc.mode='idle';npc.timer=1+npc.index;npc.path=[];npc.yieldPath=[];const safe=safePosition(npc.actor.position,npc.index);if(safe){npc.actor.position.x=safe.x;npc.actor.position.z=safe.z}}}}
  function blockers(exclude){return residents.filter(n=>n.index!==exclude&&n.actor.visible&&!['bed','sit'].includes(n.mode)).map(n=>({minX:n.actor.position.x-.23,maxX:n.actor.position.x+.23,minZ:n.actor.position.z-.23,maxZ:n.actor.position.z+.23}))}
  function clear(p,index){const controlled=getControlled();return !residents.some(n=>n.index!==index&&n.actor.visible&&!['bed','sit'].includes(n.mode)&&Math.hypot(n.actor.position.x-p.x,n.actor.position.z-p.z)<.66)&&!(controlled&&controlled.index!==index&&Math.hypot(controlled.actor.position.x-p.x,controlled.actor.position.z-p.z)<.68)}
  function safePosition(point,index){const nav=getNavigator(),nearest=nav.canStand(point)?{x:point.x,z:point.z}:nav.nearest(point);if(nearest&&clear(nearest,index))return nearest;
@@ -56,6 +58,7 @@ export function createResidents({scene,sources,models,rooms,seats,getNavigator,g
   const controlled=getControlled(),nav=getNavigator();
   for(const npc of residents){const a=npc.actor;sources[npc.index].visible=false;a.visible=controlled?.index!==npc.index;
    if(!a.visible){release(npc);npc.path=[];npc.yieldPath=[];npc.mode='idle';npc.timer=3;continue}
+   if(routineNight){if(npc.mode!=='bed')sleep(npc);continue}
    if(!npc.ready){const p=safePosition(a.position,npc.index);if(p){a.position.x=p.x;a.position.z=p.z}npc.ready=true}
    if(!['bed','sit'].includes(npc.mode)&&!nav.canStand(a.position)){const safe=safePosition(a.position,npc.index);if(safe){a.position.x=safe.x;a.position.z=safe.z;npc.path=[];npc.mode='idle';npc.timer=4}}
    if(paused)continue;
@@ -79,7 +82,7 @@ export function createResidents({scene,sources,models,rooms,seats,getNavigator,g
    if(npc.mode==='cat'||npc.mode==='dog'){a.getObjectByName('right-arm').rotation.x=-.7+Math.sin(time*.006)*.13;a.getObjectByName('right-hand').rotation.x=.2}
   }
  }
- function resume(index,point){const npc=residents[index];if(!npc)return;standing(npc);npc.actor.position.x=point.x;npc.actor.position.z=point.z;npc.mode='idle';npc.timer=4;npc.ready=true}
+ function resume(index,point){const npc=residents[index];if(!npc)return;if(routineNight){sleep(npc);return;}standing(npc);npc.actor.position.x=point.x;npc.actor.position.z=point.z;npc.mode='idle';npc.timer=4;npc.ready=true}
  function hit(ray){const h=ray.intersectObjects(residents.filter(n=>n.actor.visible).map(n=>n.actor),true)[0];if(!h)return null;let a=h.object;while(a.userData.memberIndex===undefined&&a.parent)a=a.parent;return {distance:h.distance,room:Math.min(a.userData.memberIndex,2)}}
- return {update,resume,hit,resolveMove,blockers,safePosition,setPaused(value){paused=value},getPosition(index){return residents[index]?.actor.position.clone()},getStates(){return residents.map(n=>({index:n.index,mode:n.mode,position:n.actor.position.clone(),visible:n.actor.visible}))}};
+ return {update,resume,hit,setNight,resolveMove,blockers,safePosition,setPaused(value){paused=value},getPosition(index){return residents[index]?.actor.position.clone()},getStates(){return residents.map(n=>({index:n.index,mode:n.mode,position:n.actor.position.clone(),visible:n.actor.visible}))}};
 }

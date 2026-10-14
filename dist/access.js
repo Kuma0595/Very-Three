@@ -1,4 +1,4 @@
-import {client,getMember,cloudError} from './cloud.js?v=2';
+import {client,getMember,cloudError} from './cloud.js?v=3';
 const gate=document.querySelector('#access-gate');
 const shell=document.querySelector('#home-shell');
 const form=document.querySelector('#access-form');
@@ -13,7 +13,7 @@ async function enterHome(){
  try{
   await getMember();
   shell.hidden=false;gate.hidden=true;
-  await import('./app.js?v=29-photo-albums');
+  await import('./app.js?v=30-family-routine');
   opened=true;input.value='';
   document.querySelector('#lock-home').textContent='退出登录';
   document.querySelector('#lock-home').onclick=async()=>{
