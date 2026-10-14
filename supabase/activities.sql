@@ -9,7 +9,7 @@ create table if not exists public.vt_play(
  fed_by uuid references auth.users(id)
 );
 alter table public.vt_play add column if not exists fish_colors jsonb not null default '["#dfad69","#d99eae"]';
-insert into public.vt_play(room_id) select id from public.vt_members on conflict do nothing;
+insert into public.vt_play(room_id) select id from public.vt_rooms on conflict do nothing;
 create table if not exists public.vt_wishes(
  id uuid primary key default gen_random_uuid(),
  room_id smallint not null references public.vt_members(id),
@@ -30,7 +30,7 @@ returns public.vt_play language plpgsql security definer set search_path='' as $
 declare r public.vt_play; member_id smallint; amount integer; stamp timestamptz:=now(); content text;
 begin
  if not public.vt_is_member() then raise exception '仅家人可互动'; end if;
- member_id:=public.vt_my_room();
+ select id into member_id from public.vt_members where user_id=auth.uid();
  select * into r from public.vt_play where room_id=p_room for update;
  if not found then raise exception '互动家具尚未初始化'; end if;
  if p_action='score' then
@@ -42,7 +42,7 @@ begin
   if r.fed_at is not null and stamp-r.fed_at<interval '10 minutes' then raise exception '小鱼刚吃过，十分钟后再来'; end if;
   update public.vt_play set fed_at=stamp,fed_by=auth.uid() where room_id=p_room returning * into r;
  elsif p_action='name' then
-  if member_id<>p_room then raise exception '只有房间主人可以给小鱼改名'; end if;
+  if public.vt_my_room()<>p_room then raise exception '只有房间主人可以给小鱼改名'; end if;
   if jsonb_typeof(p_value->'names') is distinct from 'array' or jsonb_array_length(p_value->'names')<>2 then raise exception '请给两条小鱼起名字'; end if;
   if jsonb_typeof(p_value->'names'->0) is distinct from 'string' or jsonb_typeof(p_value->'names'->1) is distinct from 'string' or char_length(btrim(p_value->'names'->>0)) not between 1 and 12 or char_length(btrim(p_value->'names'->>1)) not between 1 and 12 then raise exception '鱼名需为一至十二个字'; end if;
   if p_value ? 'colors' then

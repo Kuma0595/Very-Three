@@ -46,3 +46,15 @@ Supabase JS SDK 2.117.3 已打包到 `dist/vendor/supabase.js`，网页不依赖
 
 ## 启用互动家具
 执行 `activities.sql` 后，摆放街机、鱼缸或望远镜并保存，退出布置，再点击物件即可互动。街机每局六十秒，按房间保存三人的个人最高分；鱼缸主人改名，三人均可投喂，十分钟冷却；星空为原创示意，愿望仅三位成员可读，每人一分钟最多提交一次。未执行 SQL 时，小游戏和观星可试玩，不把本次成绩报告为云端已保存。
+
+## Zakery 加入并与 Joey 共用房间
+已有项目先执行 `zakery.sql`。它扩展成员到四位、给成员添加 room_id，Zakery 的成员 id=3、room_id=2。Joey 与 Zakery 共同编辑房间 2 的心情、照片、装饰、鱼缸和花圃，各自只能编辑自己的名字与状态，街机最高分仍分别记录。迁移不删除已有数据。不要重新执行旧版 setup.sql。
+
+到 Authentication → Users → Add user 创建 Zakery 的邮箱/密码，确认账号；复制 UID，然后在 SQL Editor 执行：
+
+```sql
+update public.vt_members set user_id = '替换为 Zakery 的 User UID' where id = 3;
+select id, name, room_id, user_id from public.vt_members order by id;
+```
+
+不要把账号密码或管理密钥提交到仓库。四个人的自主日常是当前浏览器模拟，位置不上传云端；手动控制时对应人物停止自主动作，退出后恢复。家具布置期间暂停日常；系统减少动画设置会停止自主移动。

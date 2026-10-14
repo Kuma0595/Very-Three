@@ -1,4 +1,4 @@
-import {client,currentMember} from './cloud.js?v=1';
+import {client,currentMember,currentRoom} from './cloud.js?v=2';
 import {DECOR_ITEMS,DECOR_COLORS,DECOR_PAGES} from './decoration-scene.js?v=4';
 export function setupDecoration({home,focus,notify}){
  const button=document.createElement('button');button.id='decorate-room';button.textContent='布置我的房间';button.type='button';document.querySelector('.focus-summary').append(button);
@@ -6,7 +6,7 @@ export function setupDecoration({home,focus,notify}){
  const catalog=document.createElement('dialog');catalog.className='decor-dialog';catalog.setAttribute('aria-labelledby','decor-dialog-title');document.body.append(catalog);
  catalog.addEventListener('click',event=>{if(event.target===catalog){const r=catalog.getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)catalog.close()}});
  let records=[],ready=false,editing=false,draft=null,history=[],selected=null,valid=false,busy=false,version=0,catalogPage=0;
- const empty=()=>({colors:{},items:[]}),room=()=>currentMember().id;
+ const empty=()=>({colors:{},items:[]}),room=()=>currentRoom();
  async function sync(){if(busy)return;try{const {data,error}=await client.from('vt_decor').select('*');if(error){ready=false;return}ready=true;records=data;for(const row of data)if(!editing||row.room_id!==room())home()?.setDecorRoom(row.room_id,row.config)}catch{} }
  function push(){history.push(structuredClone(draft));if(history.length>30)history.shift()}
  function preview(){home()?.setDecorRoom(room(),draft);home()?.setDecorationEditor(room(),selected,change=>{

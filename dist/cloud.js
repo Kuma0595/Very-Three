@@ -18,6 +18,7 @@ export async function getMember(){
  return member;
 }
 export function currentMember(){return member}
+export function currentRoom(){return member?.room_id??Math.min(member?.id??0,2)}
 async function signed(path){
  const cached=signedCache.get(path);if(cached&&cached.expires>Date.now())return cached.url;
  const result=checked(await client.storage.from(BUCKET).createSignedUrl(path,3600));
@@ -31,12 +32,13 @@ export function loadCloud(){
    client.from('vt_frames').select('*'),client.from('vt_notes').select('*').order('created_at'),
    client.from('vt_plans').select('*').order('created_at'),client.from('vt_photos').select('*').order('created_at')
   ]).then(results=>results.map(checked));
-  if(people.length!==3||rooms.length!==3)throw Error('小家数据尚未准备好');
+  if(![3,4].includes(people.length)||rooms.length!==3)throw Error('小家数据尚未准备好');
+  if(people.length===3)people.push({id:3,room_id:2,user_id:null,name:'Zakery',status:'Joey 的男朋友'});
   const lookup=Object.fromEntries(people.map(p=>[p.user_id,p.name]));
   const mappedRooms=rooms.map(r=>({...r,framePhotos:[null,null,null]}));
   await Promise.all(frames.map(async f=>{mappedRooms[f.room_id].framePhotos[f.slot]={path:f.path,name:f.name,src:await signed(f.path)}}));
   const mappedPhotos=await Promise.all(photos.map(async p=>({...p,src:await signed(p.path)})));
-  return {people:people.map((p,i)=>({...p,emoji:['🐷','◎','✦'][i]})),rooms:mappedRooms,
+  return {people:people.map((p,i)=>({...p,room_id:p.room_id??Math.min(i,2),emoji:['🐷','◎','✦','♡'][i]})),rooms:mappedRooms,
    notes:notes.map(n=>({...n,author:lookup[n.creator]??'家人',date:new Date(n.created_at).toLocaleDateString('zh-CN')})),plans,photos:mappedPhotos};
  })().finally(()=>{loading=null});return loading;
 }
@@ -57,11 +59,11 @@ export async function saveCloud(previous,change){
   if(!member)await getMember();
   // 先检查整次操作，避免在遇到越权字段前已经保存部分内容。
   if(change.people?.some((p,i)=>i!==member.id&&(p.name!==previous.people[i].name||p.status!==previous.people[i].status)))throw Error('只能编辑自己的名字和心情');
-  if(change.rooms?.some((r,i)=>i!==member.id&&(r.title!==previous.rooms[i].title||r.note!==previous.rooms[i].note||r.framePhotos.some((p,slot)=>p?.src!==previous.rooms[i].framePhotos[slot]?.src))))throw Error('只能上传自己房间的相框');
+  if(change.rooms?.some((r,i)=>i!==currentRoom()&&(r.title!==previous.rooms[i].title||r.note!==previous.rooms[i].note||r.framePhotos.some((p,slot)=>p?.src!==previous.rooms[i].framePhotos[slot]?.src))))throw Error('只能上传自己房间的相框');
   if(change.notes&&previous.notes.some(n=>n.creator!==member.user_id&&!change.notes.some(next=>next.id===n.id)))throw Error('只能删除自己的留言');
   if(change.photos&&previous.photos.some(p=>p.creator!==member.user_id&&!change.photos.some(next=>next.id===p.id)))throw Error('只能移除自己上传的合照');
   if(change.people){
-   for(let i=0;i<3;i++){const p=change.people[i],old=previous.people[i];if(p.name===old.name&&p.status===old.status)continue;
+   for(let i=0;i<change.people.length;i++){const p=change.people[i],old=previous.people[i];if(p.name===old.name&&p.status===old.status)continue;
     if(i!==member.id)throw Error('只能编辑自己的名字和心情');
     checked(await client.from('vt_members').update({name:p.name,status:p.status}).eq('id',i).select().single());
    }
@@ -70,13 +72,13 @@ export async function saveCloud(previous,change){
    for(let room=0;room<3;room++){
     const r=change.rooms[room],old=previous.rooms[room];
     if(r.title!==old.title||r.note!==old.note){
-     if(room!==member.id)throw Error('只能编辑自己的房间');
+     if(room!==currentRoom())throw Error('只能编辑自己的房间');
      checked(await client.from('vt_rooms').update({title:r.title,note:r.note}).eq('id',room).select().single());
     }
     for(let slot=0;slot<3;slot++){
      const photo=r.framePhotos[slot],before=old.framePhotos[slot];
      if(photo===before||photo?.src===before?.src)continue;
-     if(room!==member.id)throw Error('只能上传自己房间的相框');
+     if(room!==currentRoom())throw Error('只能上传自己房间的相框');
      if(!photo){checked(await client.from('vt_frames').delete().eq('room_id',room).eq('slot',slot).select());await removeFile(before?.path);continue}
      const path=`frames/${room}/${slot}/${crypto.randomUUID()}.jpg`;
      await upload(photo.src,path);

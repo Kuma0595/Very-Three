@@ -11,7 +11,7 @@ create table if not exists public.vt_garden(
  primary key(room_id,slot),
  check((species is null and planted_at is null) or (species is not null and planted_at is not null))
 );
-insert into public.vt_garden(room_id,slot) select r.id,s from public.vt_members r cross join generate_series(0,2) s on conflict do nothing;
+insert into public.vt_garden(room_id,slot) select r.id,s from public.vt_rooms r cross join generate_series(0,2) s on conflict do nothing;
 alter table public.vt_garden enable row level security;
 revoke all on public.vt_garden from public,anon,authenticated;
 grant select on public.vt_garden to authenticated;

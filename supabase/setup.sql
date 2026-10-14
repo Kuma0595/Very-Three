@@ -1,13 +1,19 @@
 -- 在 Supabase SQL Editor 执行。只创建 Very Three 的表和策略，不删除已有数据。
 begin;
 create table if not exists public.vt_members (
- id smallint primary key check (id between 0 and 2),
+ id smallint primary key check (id between 0 and 3),
  user_id uuid unique references auth.users(id) on delete set null,
  name text not null check (char_length(name) between 1 and 12),
+ room_id smallint not null check(room_id between 0 and 2),
  status text not null default '' check (char_length(status)<=30)
 );
-insert into public.vt_members(id,name,status) values
- (0,'Piggy','摇滚与电玩'),(1,'4010','黑胶与欧美音乐'),(2,'Joey','亚文化与 K-pop') on conflict(id) do nothing;
+alter table public.vt_members add column if not exists room_id smallint;
+update public.vt_members set room_id=least(id,2) where room_id is null;
+alter table public.vt_members alter column room_id set not null;
+alter table public.vt_members drop constraint if exists vt_members_id_check;
+alter table public.vt_members add constraint vt_members_id_check check(id between 0 and 3);
+insert into public.vt_members(id,name,status,room_id) values
+ (0,'Piggy','摇滚与电玩',0),(1,'4010','黑胶与欧美音乐',1),(2,'Joey','亚文化与 K-pop',2),(3,'Zakery','Joey 的男朋友',2) on conflict(id) do nothing;
 create table if not exists public.vt_rooms (
  id smallint primary key references public.vt_members(id),
  title text not null check(char_length(title) between 1 and 20),
@@ -54,10 +60,13 @@ create or replace function public.vt_is_member() returns boolean
 $$;
 create or replace function public.vt_my_room() returns smallint
  language sql stable security definer set search_path='' as $$
- select id from public.vt_members where user_id=(select auth.uid())
+ select room_id from public.vt_members where user_id=(select auth.uid())
 $$;
 revoke all on function public.vt_is_member(),public.vt_my_room() from public,anon;
 grant execute on function public.vt_is_member(),public.vt_my_room() to authenticated;
+create or replace function public.vt_my_member() returns smallint language sql stable security definer set search_path='' as $$ select id from public.vt_members where user_id=(select auth.uid()) $$;
+revoke all on function public.vt_my_member() from public,anon;
+grant execute on function public.vt_my_member() to authenticated;
 -- 禁止前端绑定身份、更改记录所有者；只授予需要写入的列。
 revoke all on public.vt_members,public.vt_rooms,public.vt_frames,public.vt_notes,public.vt_plans,public.vt_photos from anon,authenticated;
 grant select on public.vt_members,public.vt_rooms,public.vt_frames,public.vt_notes,public.vt_plans,public.vt_photos to authenticated;
@@ -79,7 +88,7 @@ do $$ declare t text; begin
  end loop;
 end $$;
 drop policy if exists vt_member_edit on public.vt_members;
-create policy vt_member_edit on public.vt_members for update to authenticated using(id=(select public.vt_my_room())) with check(id=(select public.vt_my_room()));
+create policy vt_member_edit on public.vt_members for update to authenticated using(id=(select public.vt_my_member())) with check(id=(select public.vt_my_member()));
 drop policy if exists vt_room_edit on public.vt_rooms;
 create policy vt_room_edit on public.vt_rooms for update to authenticated using(id=(select public.vt_my_room())) with check(id=(select public.vt_my_room()));
 drop policy if exists vt_frame_add on public.vt_frames;

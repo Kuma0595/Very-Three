@@ -1,4 +1,4 @@
-import {client} from './cloud.js?v=1';
+import {client} from './cloud.js?v=2';
 export const SPECIES={sunflower:{name:'向日葵',color:'#efbd51'},hydrangea:{name:'绣球',color:'#b69bd8'},mint:{name:'薄荷',color:'#86b69c'}};
 export const STAGES=['刚播种','发芽了','长叶中','开花了'];
 export function growthStage(plant,now=Date.now()){
