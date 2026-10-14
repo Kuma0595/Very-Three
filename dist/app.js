@@ -1,8 +1,9 @@
+import {setupPhotoViewer} from './photo-viewer.js?v=1';
 import {setupActivities} from './activities.js?v=3';
-import {setupDecoration} from './decoration.js?v=8';
+import {setupDecoration} from './decoration.js?v=9';
 import {loadGarden,gardenAction,growthStage,SPECIES,STAGES} from './garden.js?v=2';
 import {loadCloud,saveCloud,currentMember,currentRoom,cloudError,startCloudSync} from './cloud.js?v=2';
-import { createHome } from './scene.js?v=21-memory-board';
+import { createHome } from './scene.js?v=22-photo-albums';
 import { createRoomMusic } from './room-music.js?v=2-cat';
 import { watchSystemTheme } from './time-theme.js?v=2-system';
 const $=s=>document.querySelector(s);
@@ -127,7 +128,10 @@ document.querySelectorAll('[data-walk]').forEach(button=>{
 });
 function members(){ $('#members').innerHTML=data.people.map((p,i)=>`<button data-person="${i}" title="${esc(p.status)}"><span class="avatar">${esc(p.emoji)}</span><span class="member-name">${esc(p.name)}</span></button>`).join('');$('#members').querySelectorAll('button').forEach(b=>b.onclick=()=>switchRoom(Math.min(Number(b.dataset.person),2)));}
 const panel=$('#panel');let lastFocus,currentPanelId;
-function openPanel(id){const activity=/^activity:(arcade|aquarium|telescope):([0-2])$/.exec(id);if(activity){cancelMovement();void activityController?.open(activity[1],Number(activity[2]));return}if(id==='dog-pet'){toast('小狗摇了摇尾巴，贴过来让你摸摸');return}if(id==='cat-pet'){void roomMusic.meow();toast('喵～ 小猫蹭了蹭你的手');return}const focus=/^focus(-3|-1|[0-2])$/.exec(id);if(focus){switchRoom(Number(focus[1]));return}const frameMatch=/^frame([0-2])-([0-2])$/.exec(id);if(frameMatch)id='frames'+frameMatch[1];if(id==='lamp'){toggleLamp();return}cancelMovement();lastFocus=document.activeElement;renderPanel(id);if(!panel.open)panel.showModal();}
+const photoViewer=setupPhotoViewer();
+function openPhotoAlbum(kind,room,slot){cancelMovement();const items=kind==='living'?data.photos.map((p,i)=>({...p,slot:i})):data.rooms[room].framePhotos.map((p,i)=>p?({...p,slot:i}):null);return photoViewer.open({title:kind==='living'?'我们的回忆':roomName(room)+'的相册',items,slot});}
+
+function openPanel(id){const livingPhoto=/^photo:living:([0-3])$/.exec(id),roomPhoto=/^photo:room:([0-2]):([0-2])$/.exec(id);if(livingPhoto){const slot=Number(livingPhoto[1]),photos=livingPhotos();if(photos[slot]&&openPhotoAlbum('living',null,Math.max(0,data.photos.length-4)+slot))return;id='memories'}if(roomPhoto){const room=Number(roomPhoto[1]),slot=Number(roomPhoto[2]);if(data.rooms[room].framePhotos[slot]&&openPhotoAlbum('room',room,slot))return;id='frames'+room}const activity=/^activity:(arcade|aquarium|telescope):([0-3])$/.exec(id);if(activity){cancelMovement();void activityController?.open(activity[1],Number(activity[2]));return}if(id==='dog-pet'){toast('小狗摇了摇尾巴，贴过来让你摸摸');return}if(id==='cat-pet'){void roomMusic.meow();toast('喵～ 小猫蹭了蹭你的手');return}const focus=/^focus(-3|-1|[0-2])$/.exec(id);if(focus){switchRoom(Number(focus[1]));return}const frameMatch=/^frame([0-2])-([0-2])$/.exec(id);if(frameMatch){const room=Number(frameMatch[1]),slot=Number(frameMatch[2]);if(data.rooms[room].framePhotos[slot]&&openPhotoAlbum('room',room,slot))return;id='frames'+room;}if(id==='lamp'){toggleLamp();return}cancelMovement();lastFocus=document.activeElement;renderPanel(id);if(!panel.open)panel.showModal();}
 function renderPanel(id){currentPanelId=id;const content=$('#panel-content');
  if(/^garden[0-2]?$/.test(id)){renderGarden(id);return}
  if(/^room[0-2]$/.test(id)){
@@ -139,16 +143,17 @@ function renderPanel(id){currentPanelId=id;const content=$('#panel-content');
  }
  if(/^frames[0-2]$/.test(id)){
  const room=Number(id.slice(-1));
- content.innerHTML=`<h2>${esc(roomName(room))}的三个相框。</h2><p class="panel-desc">选择图片后，照片会直接挂到房间墙上。<br>相框使用居中方形裁切；保存到小家云端，四位家人都能看到。</p><div class="frame-upload-grid">${data.rooms[room].framePhotos.map((photo,slot)=>`<article class="frame-upload-card"><div class="frame-preview">${photo?`<img src="${esc(photo.src)}" alt="${esc(roomName(room))}的第${slot+1}张相框照片">`:'<span>＋<small>把喜欢的瞬间放进来</small></span>'}</div><h3>相框 ${slot+1}</h3>${ownRoom(room)?`<label class="primary upload-label">${photo?'换一张照片':'选择照片'}<input type="file" data-frame-upload="${slot}" accept="image/*"></label>`:''}${photo&&ownRoom(room)?`<button class="frame-clear" data-frame-clear="${slot}">移除照片</button>`:''}</article>`).join('')}</div><button class="back-home" id="view-photo-room">回房间看看</button>`;
+ content.innerHTML=`<h2>${esc(roomName(room))}的三个相框。</h2><p class="panel-desc">选择图片后，照片会直接挂到房间墙上。<br>相框使用居中方形裁切；保存到小家云端，四位家人都能看到。</p><div class="frame-upload-grid">${data.rooms[room].framePhotos.map((photo,slot)=>`<article class="frame-upload-card"><div class="frame-preview">${photo?`<button class="photo-thumbnail" type="button" data-view-frame="${slot}" aria-label="查看第${slot+1}张照片大图"><img src="${esc(photo.src)}" alt="${esc(roomName(room))}的第${slot+1}张相框照片"></button>`:'<span>＋<small>把喜欢的瞬间放进来</small></span>'}</div><h3>相框 ${slot+1}</h3>${ownRoom(room)?`<label class="primary upload-label">${photo?'换一张照片':'选择照片'}<input type="file" data-frame-upload="${slot}" accept="image/*"></label>`:''}${photo&&ownRoom(room)?`<button class="frame-clear" data-frame-clear="${slot}">移除照片</button>`:''}</article>`).join('')}</div><button class="back-home" id="view-photo-room">回房间看看</button>`;
+ content.querySelectorAll('[data-view-frame]').forEach(b=>b.onclick=()=>openPhotoAlbum('room',room,Number(b.dataset.viewFrame)));
  content.querySelectorAll('[data-frame-upload]').forEach(input=>input.onchange=async e=>{
   const file=e.target.files[0],slot=Number(input.dataset.frameUpload);if(!file)return;
   if(!file.type.startsWith('image/')){toast('请选择一张图片');return}
   input.disabled=true;const url=URL.createObjectURL(file);
   try{
    const img=new Image();await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;img.src=url});
-   // 压成方形，弹窗预览与墙上相框保持一致，并限制浏览器占用。
-   const canvas=document.createElement('canvas');canvas.width=640;canvas.height=640;
-   const side=Math.min(img.width,img.height);const ctx=canvas.getContext('2d');ctx.fillStyle='#fff4e4';ctx.fillRect(0,0,640,640);ctx.drawImage(img,(img.width-side)/2,(img.height-side)/2,side,side,0,0,640,640);
+   // 保存完整比例的大图；方形裁切只发生在墙上相框和缩略图。
+   const canvas=document.createElement('canvas'),scale=Math.min(1,1200/Math.max(img.width,img.height));canvas.width=Math.max(1,Math.round(img.width*scale));canvas.height=Math.max(1,Math.round(img.height*scale));
+   const ctx=canvas.getContext('2d');ctx.fillStyle='#fff4e4';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(img,0,0,canvas.width,canvas.height);
    const photo={src:canvas.toDataURL('image/jpeg',.82),name:file.name};
    const rooms=data.rooms.map((r,i)=>i===room?{...r,framePhotos:r.framePhotos.map((p,j)=>j===slot?photo:p)}:r);
    if(await update({rooms})){if(panel.open&&currentPanelId===id)renderPanel(id);toast('照片已经挂到房间里啦')}
@@ -177,7 +182,8 @@ function renderPanel(id){currentPanelId=id;const content=$('#panel-content');
  $('#plan-form').onsubmit=async e=>{e.preventDefault();const text=new FormData(e.target).get('text').trim();if(text&&await update({plans:[...data.plans,{text,done:false}]})){renderPanel(id);toast('约好了，下一次一起')}};
  }
  if(id==='memories'){
- content.innerHTML=`<h2>把一起的日子挂起来。</h2><p class="panel-desc">这里是共享回忆相册，客厅墙上会显示最近四张；个人房间的三个相框可以单独上传。<br>在这里也可以放你们自己的照片，<br>再给回忆起个名字。</p><div class="photo-grid">${data.photos.length?data.photos.map((p,i)=>`<div class="polaroid"><img src="${esc(p.src)}" alt="${esc(p.caption)}"><span>${esc(p.caption)}</span>${ownRecord(p)?`<button class="remove" data-photo="${i}" aria-label="删除照片">×</button>`:''}</div>`).join(''):'<div class="polaroid"><div class="empty-photo">♡<small>第一张合照</small></div><span>这个位置留给我们</span></div><div class="polaroid"><div class="empty-photo" style="background:#deeadf">☀<small>某个好天气</small></div><span>等下一次出门</span></div>'}</div><form id="photo-form" style="margin-top:25px"><input id="caption" maxlength="40" placeholder="给这张回忆起个名字" aria-label="照片标题" style="width:100%;margin-bottom:12px"><label class="primary upload-label">放一张照片<input id="photo-upload" type="file" accept="image/*"></label><p class="panel-desc" style="margin-top:12px;margin-bottom:0">墙上展示最近 4 张，旧照片保留在相册。<br>相册最多 8 张；只能删除自己上传的照片。</p></form>`;
+ content.innerHTML=`<h2>把一起的日子挂起来。</h2><p class="panel-desc">这里是共享回忆相册，客厅墙上会显示最近四张；个人房间的三个相框可以单独上传。<br>在这里也可以放你们自己的照片，<br>再给回忆起个名字。</p><div class="photo-grid">${data.photos.length?data.photos.map((p,i)=>`<div class="polaroid"><button class="photo-thumbnail" type="button" data-view-memory="${i}" aria-label="查看${esc(p.caption)}大图"><img src="${esc(p.src)}" alt="${esc(p.caption)}"></button><span>${esc(p.caption)}</span>${ownRecord(p)?`<button class="remove" data-photo="${i}" aria-label="删除照片">×</button>`:''}</div>`).join(''):'<div class="polaroid"><div class="empty-photo">♡<small>第一张合照</small></div><span>这个位置留给我们</span></div><div class="polaroid"><div class="empty-photo" style="background:#deeadf">☀<small>某个好天气</small></div><span>等下一次出门</span></div>'}</div><form id="photo-form" style="margin-top:25px"><input id="caption" maxlength="40" placeholder="给这张回忆起个名字" aria-label="照片标题" style="width:100%;margin-bottom:12px"><label class="primary upload-label">放一张照片<input id="photo-upload" type="file" accept="image/*"></label><p class="panel-desc" style="margin-top:12px;margin-bottom:0">墙上展示最近 4 张，旧照片保留在相册。<br>相册最多 8 张；只能删除自己上传的照片。</p></form>`;
+ content.querySelectorAll('[data-view-memory]').forEach(b=>b.onclick=()=>openPhotoAlbum('living',null,Number(b.dataset.viewMemory)));
  content.querySelectorAll('[data-photo]').forEach(b=>b.onclick=async()=>{if(await update({photos:data.photos.filter((_,i)=>i!==Number(b.dataset.photo))}))renderPanel(id)});
  $('#photo-upload').onchange=async e=>{const file=e.target.files[0];if(!file)return;if(data.photos.length>=8){toast('先移除一张，再留下新的回忆吧');return}if(!file.type.startsWith('image/')){toast('请选择一张图片');return}const caption=$('#caption').value.trim()||'一起的日子';const url=URL.createObjectURL(file);try{const img=new Image();await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;img.src=url});const c=document.createElement('canvas');const scale=Math.min(1,900/Math.max(img.width,img.height));c.width=Math.round(img.width*scale);c.height=Math.round(img.height*scale);c.getContext('2d').drawImage(img,0,0,c.width,c.height);const src=c.toDataURL('image/jpeg',.78);if(await update({photos:[...data.photos,{src,caption}]})){renderPanel(id);toast('回忆已经留下来了')}}catch{toast('这张照片暂时无法读取，试试 JPG 或 PNG')}finally{URL.revokeObjectURL(url)}};
  }

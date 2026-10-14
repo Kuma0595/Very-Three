@@ -1,5 +1,5 @@
 import {createResidents} from './residents.js?v=2';
-import {createDecorationSystem,DECOR_ITEMS} from './decoration-scene.js?v=7';
+import {createDecorationSystem,DECOR_ITEMS} from './decoration-scene.js?v=8';
 import * as THREE from 'three';
 import { OrbitControls } from './vendor/OrbitControls.js';
 import { createNavigator } from './navigation.js?v=2';
@@ -120,11 +120,11 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
   for(let i=0;i<3;i++){const n=box(.43,.45,.025,['#ffe6a0','#cddfca','#d7bce8'][i],1.25+i*.57,2.89,-3.27);n.rotation.z=[.12,-.08,.15][i];ball(.025,'#d47e7b',1.25+i*.57,3.065,-3.244)}
   const album=new THREE.Group();album.position.set(-3.91,2.45,3.9);album.rotation.y=Math.PI/2;house.add(album);
   box(2.65,2.3,.08,'#b08769',0,0,0,album).name='living-memory-board';
-  const livingFrames=[];
+  const livingFrames=[],photoHits=[];
   for(let i=0;i<4;i++){
     const frame=new THREE.Group();frame.position.set((i%2-.5)*1.23,i<2?.55:-.55,.075);frame.rotation.z=[.02,-.02][i%2];album.add(frame);
     box(1.08,1.08,.028,'#fff7e6',0,0,0,frame);
-    const photo=art(.90,.90,0,.035,.018,()=>{},frame);photo.name='living-photo-'+i;
+    const photo=art(.90,.90,0,.035,.018,()=>{},frame);photo.name='living-photo-'+i;photo.userData.photoId='photo:living:'+i;photoHits.push(photo);
     const ctx=photo.material.map.image.getContext('2d');
     function placeholder(){ctx.fillStyle=['#b2c8c5','#d0b8d2','#edc6a8'][i%3];ctx.fillRect(0,0,512,512);ctx.fillStyle='#fff3df';ctx.font='140px sans-serif';ctx.textAlign='center';ctx.fillText('♡',256,310);photo.material.map.needsUpdate=true}
     placeholder();livingFrames.push({photo,ctx,placeholder,revision:0});
@@ -335,7 +335,7 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
       const x=.43+slot*1.34,y=2.78,z=-3.36;
       round(1.12,1.18,.10,['#a88f7b','#ad906a','#a47bb5'][i],x,y,z,.025);
       box(1.02,1.08,.025,'#fff4e4',x,y,z+.059);
-      const photo=art(.87,.87,x,y+.045,z+.08,()=>{});photo.name=`room-photo-${i}-${slot}`;
+      const photo=art(.87,.87,x,y+.045,z+.08,()=>{});photo.name=`room-photo-${i}-${slot}`;photo.userData.photoId=`photo:room:${i}:${slot}`;photoHits.push(photo);
       const canvas=photo.material.map.image,ctx=canvas.getContext('2d');
       function placeholder(){ctx.fillStyle=['#d6c4c6','#dfcdb3','#d3badf'][i];ctx.fillRect(0,0,512,512);ctx.fillStyle=['#8c727c','#947a58','#9773a4'][i];ctx.textAlign='center';ctx.font='130px sans-serif';ctx.fillText('＋',256,250);ctx.font='36px sans-serif';ctx.fillText('放一张自己的照片',256,350);photo.material.map.needsUpdate=true}
       placeholder();roomFrames[i].push({photo,ctx,placeholder,revision:0});
@@ -659,6 +659,9 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
     if(!valid||Math.hypot(e.clientX-tap.x,e.clientY-tap.y)>8||performance.now()-tap.t>650)return;
     const r=renderer.domElement.getBoundingClientRect();pointer.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(pointer,camera);if(decoration.tap(ray))return;
     const h=ray.intersectObjects(hits.filter(m=>m.userData.room.visible&&(!walker||m.userData.id!=='room'+walker.index)))[0];
+    // 大图入口只响应照片表面；实体墙和前方家具会挡住点击。
+    const photograph=ray.intersectObjects(photoHits)[0];
+    if(photograph){const visible=o=>{for(let p=o;p;p=p.parent)if(!p.visible)return false;return o.material?.visible!==false};const front=ray.intersectObjects([livingRoom,...rooms],true).find(h=>visible(h.object));if(!front||photograph.distance<=front.distance+.008){onOpen(photograph.object.userData.photoId);return}}
     const furniture=decoration.interaction(ray);if(furniture&&(!h||furniture.distance<h.distance)){onOpen(`activity:${furniture.type}:${furniture.room}`);return}
     const personHit=residents.hit(ray);if(personHit&&(!h||personHit.distance<h.distance)){onOpen('room'+personHit.room);return}
     if(h?.object===catHit)petCat();else if(h?.object===dogHit)petDog();else if(h)onOpen(h.object.userData.id);else if(walker){const floor=ray.intersectObjects(floorMeshes)[0];if(floor&&!walkTo(floor.point))onWalkState({...walkState(),blocked:true})}
