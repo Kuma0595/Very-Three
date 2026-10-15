@@ -235,10 +235,11 @@ function syncSystemTheme(force=false){
 }
 const systemTheme=watchHomeTime(()=>syncSystemTheme(),{hours:()=>homeSettings});
 let settingsLoading=false;async function refreshHomeSettings(){if(settingsLoading)return;settingsLoading=true;try{const next=await loadHomeSettings();if(JSON.stringify(next)!==JSON.stringify(homeSettings)){homeSettings=next;syncSystemTheme(true);refreshRoomUI()}}catch(error){console.warn('小屋设置暂未同步',error)}finally{settingsLoading=false}}
-const settingsTimer=setInterval(refreshHomeSettings,30000);window.addEventListener('pagehide',()=>clearInterval(settingsTimer));
+// 浏览器返回缓存页面时会恢复定时器，不在 pagehide 时提前清除。
+setInterval(refreshHomeSettings,30000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){syncSystemTheme();void refreshHomeSettings()}});
-window.addEventListener('focus',()=>syncSystemTheme());
-window.addEventListener('pageshow',()=>syncSystemTheme());
+window.addEventListener('focus',()=>{syncSystemTheme();void refreshHomeSettings()});
+window.addEventListener('pageshow',()=>{syncSystemTheme();void refreshHomeSettings()});
 async function toggleLamp(){if(await update({lit:!data.lit})){applyTheme();toast(data.lit?'灯留着了，等你们回来 ♡':'灯关好了，下次回来再亮起来')}}
 $('#lamp').onclick=toggleLamp;$('#zoom-in').onclick=()=>home?.zoom(.85);$('#zoom-out').onclick=()=>home?.zoom(1.15);$('#reset').onclick=()=>switchRoom(-2);
 applyCloud(await loadCloud());await refreshHomeSettings();
