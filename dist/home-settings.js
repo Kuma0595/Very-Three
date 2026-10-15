@@ -1,0 +1,3 @@
+import {client} from './cloud.js?v=4';
+export const DEFAULT_HOME_SETTINGS={welcomeTitle:'世界很大，\n我们有个小家。',welcomeNote:'四个人，各有可爱。\n在这里，可以自在做自己。',dayStart:7,dayEnd:20};
+export async function loadHomeSettings(){const {data,error}=await client.from('vt_settings').select('config').eq('id',1).maybeSingle();if(error){if(['42P01','PGRST205'].includes(error.code))return {...DEFAULT_HOME_SETTINGS};throw error}const c=data?.config;if(!c||typeof c.welcomeTitle!=='string'||typeof c.welcomeNote!=='string'||!Number.isInteger(c.dayStart)||!Number.isInteger(c.dayEnd)||c.dayStart<0||c.dayEnd>23||c.dayStart>=c.dayEnd)return {...DEFAULT_HOME_SETTINGS};return {welcomeTitle:c.welcomeTitle.slice(0,80),welcomeNote:c.welcomeNote.slice(0,160),dayStart:c.dayStart,dayEnd:c.dayEnd}}

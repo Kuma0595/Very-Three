@@ -1,4 +1,4 @@
-import {client} from './cloud.js?v=3';
+import {client} from './cloud.js?v=4';
 export async function loadPlay(){
  const {data,error}=await client.from('vt_play').select('*');
  if(error){if(['42P01','PGRST205'].includes(error.code))return {ready:false,rows:[],wishes:[]};throw error}

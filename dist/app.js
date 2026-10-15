@@ -1,15 +1,16 @@
-import {setupPhotoViewer} from './photo-viewer.js?v=1';
-import {setupActivities} from './activities.js?v=4';
-import {setupDecoration} from './decoration.js?v=10';
-import {loadGarden,gardenAction,growthStage,SPECIES,STAGES} from './garden.js?v=3';
-import {loadCloud,saveCloud,currentMember,currentRoom,cloudError,startCloudSync} from './cloud.js?v=3';
+import {DEFAULT_HOME_SETTINGS,loadHomeSettings} from './home-settings.js?v=1';
+import {setupPhotoViewer} from './photo-viewer.js?v=2';
+import {setupActivities} from './activities.js?v=5';
+import {setupDecoration} from './decoration.js?v=11';
+import {loadGarden,gardenAction,growthStage,SPECIES,STAGES} from './garden.js?v=4';
+import {loadCloud,saveCloud,currentMember,currentRoom,cloudError,startCloudSync} from './cloud.js?v=4';
 import { createHome } from './scene.js?v=25-clock-and-bed-exit';
 import { createRoomMusic } from './room-music.js?v=2-cat';
-import { watchHomeTime } from './time-theme.js?v=3-time';
+import { watchHomeTime } from './time-theme.js?v=4-settings';
 const $=s=>document.querySelector(s);
 const KEY='three-at-home-v1';
 const initial={people:[{name:'Piggy',status:'摇滚与电玩',emoji:'🐷'},{name:'4010',status:'黑胶与欧美音乐',emoji:'◎'},{name:'Joey',status:'亚文化与 K-pop',emoji:'✦'},{name:'Zakery',status:'Joey 的男朋友',emoji:'♡'}],notes:[],plans:[],photos:[],rooms:[{title:'摇滚开场，下一局见',note:'吉他有点响，游戏刚开场。'},{title:'让唱针慢慢落下',note:'把喜欢的欧美音乐，放进黑胶里。'},{title:'今天也要有自己的风格',note:'亚文化、K-pop，和一点不一样的自己。'}],themeMode:'auto',night:true,lit:false};
-let data=structuredClone(initial),home=null;
+let data=structuredClone(initial),home=null,homeSettings={...DEFAULT_HOME_SETTINGS};
 try {const saved=JSON.parse(localStorage.getItem(KEY));if(saved&&Array.isArray(saved.people)&&saved.people.length===3)data={...data,lit:Boolean(saved.lit)};}catch{}
 if(!Array.isArray(data.rooms)||data.rooms.length!==3)data.rooms=structuredClone(initial.rooms);
 // 把旧版占位人物更新为真实昵称，保留用户已经编辑的留言和照片。
@@ -84,8 +85,8 @@ function refreshRoomUI(){
  $('#focus-info').textContent=activeRoom===-3?'照顾花园':activeRoom>=0?'房间手记':'小家手记';
  const nav=$('#room-nav');nav.innerHTML=`<button data-room="-2" aria-pressed="${activeRoom===-2}">⌂ 全景</button><button data-room="-1" aria-pressed="${activeRoom===-1}">客厅</button><button data-room="-3" aria-pressed="${activeRoom===-3}">庭院</button>${data.people.slice(0,3).map((p,i)=>`<button data-room="${i}" aria-pressed="${activeRoom===i}"><span class="room-color color-${i}"></span>${esc(roomName(i))}</button>`).join('')}`;
  nav.querySelectorAll('button').forEach(b=>b.onclick=()=>switchRoom(Number(b.dataset.room)));
- $('#home-heading').innerHTML=activeRoom<0?'世界很大，<br>我们有个小家。':`${esc(roomName(activeRoom))}的房间<br><span class="room-subtitle">${esc(data.rooms[activeRoom].title)}</span>`;
- $('#home-description').innerHTML=activeRoom<0?'四个人，各有可爱。<br>在这里，可以自在做自己。':`${esc(data.rooms[activeRoom].note)}<br><button id="edit-room" class="edit-room">写下房间的小心情</button>`;
+ $('#home-heading').innerHTML=activeRoom<0?esc(homeSettings.welcomeTitle).replace(/\n/g,'<br>'):`${esc(roomName(activeRoom))}的房间<br><span class="room-subtitle">${esc(data.rooms[activeRoom].title)}</span>`;
+ $('#home-description').innerHTML=activeRoom<0?esc(homeSettings.welcomeNote).replace(/\n/g,'<br>'):`${esc(data.rooms[activeRoom].note)}<br><button id="edit-room" class="edit-room">写下房间的小心情</button>`;
  if($('#edit-room'))$('#edit-room').onclick=()=>openPanel('room'+activeRoom);
  $('#scene-caption').textContent=activeRoom===-3?'我们的庭院 · 一起等花开':activeRoom<0?(data.night?'夜晚的小家 · 不管多晚，都有你的位置':'晴天的小家 · 灯一直为你留着'):`${roomName(activeRoom)}的${['摇滚电玩房','黑胶聆听室','亚文化小天地'][activeRoom]} · ${data.night?'晚安，也爱自己':'今天也自在做自己'}`;
 }
@@ -189,7 +190,7 @@ function renderPanel(id){currentPanelId=id;const content=$('#panel-content');if(
  content.querySelectorAll('[data-photo]').forEach(b=>b.onclick=async()=>{if(await update({photos:data.photos.filter((_,i)=>i!==Number(b.dataset.photo))}))renderPanel(id)});
  $('#photo-upload').onchange=async e=>{const file=e.target.files[0];if(!file)return;if(data.photos.length>=8){toast('先移除一张，再留下新的回忆吧');return}if(!file.type.startsWith('image/')){toast('请选择一张图片');return}const caption=$('#caption').value.trim()||'一起的日子';const url=URL.createObjectURL(file);try{const img=new Image();await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;img.src=url});const c=document.createElement('canvas');const scale=Math.min(1,900/Math.max(img.width,img.height));c.width=Math.round(img.width*scale);c.height=Math.round(img.height*scale);c.getContext('2d').drawImage(img,0,0,c.width,c.height);const src=c.toDataURL('image/jpeg',.78);if(await update({photos:[...data.photos,{src,caption}]})){renderPanel(id);toast('回忆已经留下来了')}}catch{toast('这张照片暂时无法读取，试试 JPG 或 PNG')}finally{URL.revokeObjectURL(url)}};
  }
- if(id==='help')content.innerHTML=`<h2>在小家里转一转。</h2><p class="panel-desc">电脑：按住鼠标拖动旋转，滚轮缩放。<br>手机：一根手指旋转，两根手指缩放。<br><br>点击门牌、上方的房间入口或头像，镜头会靠近个人房间。<br>点击房间上的小标签或底部按钮，打开对应内容。<br>自动模式按设备本地时间切换昼夜；点击“天亮”可以切到白天。<br>07:00–20:00 为白天，其他时间为夜晚。<br>右上角可手动切换；点击“自动”恢复按时间切换。人物作息始终按实际时间判断，手动切换外观不影响睡觉。<br>点击“留盏灯”，为今天的小家留一点温暖。<br><br>点击“去串门”，控制当前账号的玩偶：电脑用 WASD / 方向键，也能点击地面自动走过去；手机直接点地面移动。三间卧室直接开门进入客厅，从客厅前侧门洞可以进入庭院，也可点击上方“庭院”。点击花圃照顾植物。走进另一间房时镜头和音乐随房间切换；“找到我”回到人物所在房间，“结束串门”让玩偶回到日常位置。<br><br>客厅的小狗会休息和散步，点击它或“摸摸小狗”，它会抬头摇尾巴。<br>小猫会睡觉和散步。点击它或“摸摸小猫”可以摸头，串门时它还会跟着你走一会儿；右上角静音同时控制喵叫与音乐。<br><br>转迷路了？点“全景”或右侧的 ⌂ 看整个家。</p>`;
+ if(id==='help')content.innerHTML=`<h2>在小家里转一转。</h2><p class="panel-desc">电脑：按住鼠标拖动旋转，滚轮缩放。<br>手机：一根手指旋转，两根手指缩放。<br><br>点击门牌、上方的房间入口或头像，镜头会靠近个人房间。<br>点击房间上的小标签或底部按钮，打开对应内容。<br>自动模式按设备本地时间切换昼夜；点击“天亮”可以切到白天。<br>白天与夜晚时间由小屋设置决定。<br>右上角可手动切换；点击“自动”恢复按时间切换。人物作息始终按实际时间判断，手动切换外观不影响睡觉。<br>点击“留盏灯”，为今天的小家留一点温暖。<br><br>点击“去串门”，控制当前账号的玩偶：电脑用 WASD / 方向键，也能点击地面自动走过去；手机直接点地面移动。三间卧室直接开门进入客厅，从客厅前侧门洞可以进入庭院，也可点击上方“庭院”。点击花圃照顾植物。走进另一间房时镜头和音乐随房间切换；“找到我”回到人物所在房间，“结束串门”让玩偶回到日常位置。<br><br>客厅的小狗会休息和散步，点击它或“摸摸小狗”，它会抬头摇尾巴。<br>小猫会睡觉和散步。点击它或“摸摸小猫”可以摸头，串门时它还会跟着你走一会儿；右上角静音同时控制喵叫与音乐。<br><br>转迷路了？点“全景”或右侧的 ⌂ 看整个家。</p>`;
  if(id==='about')content.innerHTML=`<h2>Very Three，刚好家人们。</h2><p class="panel-desc">我们想把群聊里的陪伴，变成一间能走进来的小家。<br><br>彩虹是墙上的旗，是沙发上的抱枕，也是这里的一点骄傲。在这里，可以自在做自己。<br><br>现在是一套完整的小家：共享客厅连着三个卧室。点击门牌、上方入口或头像，镜头会靠近房间；点击“全景”看整个家。Piggy 喜欢摇滚与电玩，4010 喜欢黑胶与欧美音乐，Joey 喜欢亚文化与 K-pop。人物穿搭是原创的第一版想象，可以继续调整。</p><p class="panel-desc">照片、留言、计划和房间心情保存在小家云端，只有绑定的家人账号可访问。房间由主人编辑，共享计划由大家维护；内容每十秒同步一次，音乐和外观偏好保留在当前设备。</p>`;
 }
 function renderCoupleAlbum(content){
@@ -226,19 +227,21 @@ function renderGarden(id){
 }
 function applyTheme(){$('#theme-auto').setAttribute('aria-pressed',String(data.themeMode==='auto'));$('#theme-auto').title=data.themeMode==='auto'?'按本地时间自动切换昼夜':'点击恢复按时间切换昼夜';document.body.classList.toggle('night',data.night);$('#theme').innerHTML=data.night?'☀ <span>天亮</span>':'☾ <span>入夜</span>';$('#theme').setAttribute('aria-label',data.night?'切换到白天':'切换到夜晚');$('#scene-caption').textContent=data.night?'夜晚的小家 · 不管多晚，都有你的位置':'晴天的小家 · 灯一直为你留着';home?.setNight(data.night);$('#lamp-label').textContent=data.lit?'灯已留着':'留盏灯';$('#lamp').classList.toggle('active',data.lit);home?.setLamp(data.lit);refreshRoomUI()}
 $('#theme').onclick=async()=>{if(await update({themeMode:'manual',night:!data.night})){applyTheme();toast('已手动切换，点击“自动”恢复按时间切换')}};
-$('#theme-auto').onclick=async()=>{if(await update({themeMode:'auto'})){syncSystemTheme(true);toast('已恢复按时间切换：07:00–20:00 为白天')}};
+$('#theme-auto').onclick=async()=>{if(await update({themeMode:'auto'})){syncSystemTheme(true);toast('已恢复按小屋设置的时间切换')}};
 function syncSystemTheme(force=false){
  home?.setResidentNight(systemTheme.isDark());
  if(data.themeMode==='auto'){const night=systemTheme.isDark();if(force||night!==data.night){data.night=night;applyTheme()}}
  else if(force)applyTheme();
 }
-const systemTheme=watchHomeTime(()=>syncSystemTheme());
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncSystemTheme()});
+const systemTheme=watchHomeTime(()=>syncSystemTheme(),{hours:()=>homeSettings});
+let settingsLoading=false;async function refreshHomeSettings(){if(settingsLoading)return;settingsLoading=true;try{const next=await loadHomeSettings();if(JSON.stringify(next)!==JSON.stringify(homeSettings)){homeSettings=next;syncSystemTheme(true);refreshRoomUI()}}catch(error){console.warn('小屋设置暂未同步',error)}finally{settingsLoading=false}}
+const settingsTimer=setInterval(refreshHomeSettings,30000);window.addEventListener('pagehide',()=>clearInterval(settingsTimer));
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){syncSystemTheme();void refreshHomeSettings()}});
 window.addEventListener('focus',()=>syncSystemTheme());
 window.addEventListener('pageshow',()=>syncSystemTheme());
 async function toggleLamp(){if(await update({lit:!data.lit})){applyTheme();toast(data.lit?'灯留着了，等你们回来 ♡':'灯关好了，下次回来再亮起来')}}
 $('#lamp').onclick=toggleLamp;$('#zoom-in').onclick=()=>home?.zoom(.85);$('#zoom-out').onclick=()=>home?.zoom(1.15);$('#reset').onclick=()=>switchRoom(-2);
-applyCloud(await loadCloud());
+applyCloud(await loadCloud());await refreshHomeSettings();
 try{home=createHome($('#stage'),openPanel,onWalkState);$('#loading').remove();syncRoomPhotos()}catch(error){console.error(error);$('#loading').innerHTML='这个浏览器暂时无法显示 3D 小屋<small>试试 Safari / Chrome；下方留言与相册仍可使用。</small>'}
 syncSystemTheme(true);void syncGarden();decorController=setupDecoration({home:()=>home,focus:switchRoom,notify:toast});activityController=setupActivities({home:()=>home,notify:toast});
 

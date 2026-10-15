@@ -16,11 +16,11 @@ export function createDevServer(directory=root){
   if(pathname==='/__reload'){
    res.writeHead(200,{'Content-Type':'text/event-stream','Cache-Control':'no-cache','Connection':'keep-alive'});res.write(': connected\n\n');clients.add(res);req.on('close',()=>clients.delete(res));return;
   }
-  const filename=resolve(directory,'.'+(pathname==='/'?'/index.html':pathname));
+  let filename=resolve(directory,'.'+(pathname==='/'?'/index.html':pathname));
   const rel=relative(directory,filename);
   if(pathname.includes('\0')||rel==='..'||rel.startsWith('..'+sep)){res.writeHead(403);res.end('Forbidden');return}
   try{
-   const info=await stat(filename);if(!info.isFile()){res.writeHead(404);res.end('Not found');return}
+   let info=await stat(filename);if(info.isDirectory()){filename=resolve(filename,'index.html');info=await stat(filename)}if(!info.isFile()){res.writeHead(404);res.end('Not found');return}
    let bytes=await readFile(filename);if(extname(filename)==='.html')bytes=Buffer.from(bytes.toString().replace('</body>',reload+'</body>'));
    res.writeHead(200,{'Content-Type':types[extname(filename)]||'application/octet-stream','Cache-Control':'no-store','Content-Length':bytes.length});res.end(req.method==='HEAD'?undefined:bytes);
   }catch{res.writeHead(404);res.end('Not found')}

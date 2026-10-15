@@ -39,6 +39,7 @@ export function loadCloud(){
   const lookup=Object.fromEntries(people.map(p=>[p.user_id,p.name]));
   const mappedRooms=rooms.map((r,i)=>({...r,framePhotos:[null,null,null],sharedPhotos:Array(i===2?6:0).fill(null)}));
   await Promise.all(frames.map(async f=>{const photo={path:f.path,name:f.name,src:await signed(f.path)};if(f.slot<3)mappedRooms[f.room_id].framePhotos[f.slot]=photo;else if(f.room_id===2&&f.slot<9)mappedRooms[2].sharedPhotos[f.slot-3]=photo}));
+  photos.sort((a,b)=>(a.sort_order??0)-(b.sort_order??0)||Date.parse(a.created_at)-Date.parse(b.created_at));
   const mappedPhotos=await Promise.all(photos.map(async p=>({...p,src:await signed(p.path)})));
   return {people:people.map((p,i)=>({...p,room_id:p.room_id??Math.min(i,2),emoji:['🐷','◎','✦','♡'][i]})),rooms:mappedRooms,
    notes:notes.map(n=>({...n,author:lookup[n.creator]??'家人',date:new Date(n.created_at).toLocaleDateString('zh-CN')})),plans,photos:mappedPhotos};
