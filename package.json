@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "start": "node scripts/dev.mjs",
-    "test:admin": "node scripts/check-admin.mjs"
+    "test:admin": "node scripts/check-admin.mjs",
+    "test:models:browser": "node scripts/check-models-browser.mjs"
   },
   "engines": {
     "node": ">=18"

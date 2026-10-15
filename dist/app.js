@@ -1,10 +1,10 @@
 import {DEFAULT_HOME_SETTINGS,loadHomeSettings} from './home-settings.js?v=1';
 import {setupPhotoViewer} from './photo-viewer.js?v=2';
 import {setupActivities} from './activities.js?v=5';
-import {setupDecoration} from './decoration.js?v=11';
+import {setupDecoration} from './decoration.js?v=12-models';
 import {loadGarden,gardenAction,growthStage,SPECIES,STAGES} from './garden.js?v=4';
 import {loadCloud,saveCloud,currentMember,currentRoom,cloudError,startCloudSync} from './cloud.js?v=4';
-import { createHome } from './scene.js?v=25-clock-and-bed-exit';
+import { createHome } from './scene.js?v=26-models';
 import { createRoomMusic } from './room-music.js?v=2-cat';
 import { watchHomeTime } from './time-theme.js?v=4-settings';
 const $=s=>document.querySelector(s);

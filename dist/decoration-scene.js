@@ -10,9 +10,12 @@ export const DECOR_ITEMS={
 };
 export const DECOR_PAGES=['日常小物','兴趣收藏','慢生活角落','客厅家具','趣味角落','墙面装饰'];
 export const DECOR_COLORS=['#dfc2bd','#c6d7c5','#c8bfdc','#e6d2aa','#a6becd','#9e806a'];
+// 同款家具共享默认属性，单件家具保留独立的尺寸与配色。
+export function modelSpec(type,catalog={}){return {...DECOR_ITEMS[type],...catalog[type]};}
+export function modelScale(item,catalog={}){return item.scale??catalog[item.type]?.scale??1;}
 export function createDecorationSystem({rooms,scene,box,ball,cylinder,round,invalidate,stopWalking}){
  const groups=rooms.map(room=>{const g=new THREE.Group();g.name='custom-decoration';room.add(g);return g}),keys=['','',''];
- let editor=-1,callback=()=>{},preview=null;
+ let editor=-1,callback=()=>{},preview=null,catalog={};
  const defaults=rooms.map(room=>{
   const surfaces={wall:[],floor:[],rug:[]};room.children.forEach(o=>{if(!o.isMesh)return;
    if(o.name.startsWith('floor-'))surfaces.floor.push(o);
@@ -23,7 +26,7 @@ export function createDecorationSystem({rooms,scene,box,ball,cylinder,round,inva
  });
  function model(item,parent){
   const g=new THREE.Group();g.userData.decorId=item.id;g.userData.decorType=item.type;parent.add(g);g.position.set(item.x??0,DECOR_ITEMS[item.type]?.wall?2.85:.20,item.z??0);g.rotation.y=(item.rotation??0)*Math.PI/2;
-  const color=item.color??'#b6c7a0';
+  const color=item.color??catalog[item.type]?.color??'#b6c7a0';g.scale.setScalar(modelScale(item,catalog));g.userData.noCollision=(item.collision??catalog[item.type]?.collision)===false;
   function shape(geometry,material,x,y,z){const o=new THREE.Mesh(geometry,material);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;g.add(o);o.userData.ownedMaterial=true;return o}
   function hoop(radius,tube,c,x,y,z){return shape(new THREE.TorusGeometry(radius,tube,8,24),new THREE.MeshStandardMaterial({color:c,roughness:.65}),x,y,z)}
   function rod(a,b,r,c){const av=new THREE.Vector3(...a),bv=new THREE.Vector3(...b),delta=bv.clone().sub(av);const o=cylinder(r,r,delta.length(),c,...av.clone().add(bv).multiplyScalar(.5).toArray(),g);o.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),delta.normalize());return o}
@@ -112,20 +115,20 @@ export function createDecorationSystem({rooms,scene,box,ball,cylinder,round,inva
  }
  function dispose(g){g.traverse(o=>{if(o.isMesh){o.geometry.dispose();if(o.userData.previewMaterial||o.userData.ownedMaterial){o.material.map?.dispose();o.material.dispose()}}});g.clear()}
  function setRoom(room,config={}){
-  if(!rooms[room])return;const key=JSON.stringify(config);if(keys[room]===key)return;keys[room]=key;
+  if(!rooms[room])return;const key=JSON.stringify([config,catalog]);if(keys[room]===key)return;keys[room]=key;
   for(const [surface,objects] of Object.entries(defaults[room]))for(const o of objects)o.material.color.set(config.colors?.[surface]??'#'+o.userData.defaultColor);
   dispose(groups[room]);for(const item of config.items??[])if(DECOR_ITEMS[item.type])model(item,groups[room]);invalidate();
  }
  function obstacles(room,exclude){const result=[],root=rooms[room];scene.updateMatrixWorld(true);root.traverse(o=>{
   if(!o.isMesh||o.name.startsWith('floor-')||o.material.visible===false)return;
-  for(let p=o;p&&p!==root;p=p.parent)if(p.name==='decor-preview'||p.name.startsWith('resident-')||p.userData.decorId===exclude)return;
+  for(let p=o;p&&p!==root;p=p.parent)if(p.userData.noCollision||p.name==='decor-preview'||p.name.startsWith('resident-')||p.userData.decorId===exclude)return;
   const b=new THREE.Box3().setFromObject(o);if(b.max.y<.35||b.min.y>1.55)return;
   result.push({minX:b.min.x-root.position.x,maxX:b.max.x-root.position.x,minZ:b.min.z-root.position.z,maxZ:b.max.z-root.position.z});
  });return result}
  function canPlace(room,item){
-  const spec=DECOR_ITEMS[item.type];if(!spec||!Number.isFinite(item.x)||!Number.isFinite(item.z))return false;
+  const base=DECOR_ITEMS[item.type],scale=modelScale(item,catalog),spec=base&&{...base,w:base.w*scale,d:base.d*scale};if(!spec||!Number.isFinite(scale)||scale<.5||scale>1.8||!Number.isFinite(item.x)||!Number.isFinite(item.z))return false;
   if(!rooms[room])return false;
-  if(spec.wall){if(room!==3||item.rotation!==0||Math.abs(item.z-2.08)>.01||item.x-spec.w/2<-15.95||item.x+spec.w/2>14.05)return false;const doors=[-11.1,.5,9.25];if(rooms[3].children.some(o=>o.isMesh&&o.material.visible!==false&&o.position.y>2.2&&o.position.z>1.9&&o.position.z<2.4&&Math.abs(o.position.x-item.x)<(o.geometry.parameters?.width??.4)/2+spec.w/2+.12))return false;if(doors.some(x=>Math.abs(x-item.x)<1.2+spec.w/2))return false;const root=groups[room];return !root.children.some(o=>o.userData.decorId!==item.id&&DECOR_ITEMS[o.userData.decorType]?.wall&&Math.abs(o.position.x-item.x)<(DECOR_ITEMS[o.userData.decorType].w+spec.w)/2+.1)}
+  if(spec.wall){if(room!==3||item.rotation!==0||Math.abs(item.z-2.08)>.01||item.x-spec.w/2<-15.95||item.x+spec.w/2>14.05)return false;const doors=[-11.1,.5,9.25];if(rooms[3].children.some(o=>o.isMesh&&o.material.visible!==false&&o.position.y>2.2&&o.position.z>1.9&&o.position.z<2.4&&Math.abs(o.position.x-item.x)<(o.geometry.parameters?.width??.4)/2+spec.w/2+.12))return false;if(doors.some(x=>Math.abs(x-item.x)<1.2+spec.w/2))return false;const root=groups[room];return !root.children.some(o=>o.userData.decorId!==item.id&&DECOR_ITEMS[o.userData.decorType]?.wall&&Math.abs(o.position.x-item.x)<(DECOR_ITEMS[o.userData.decorType].w*o.scale.x+spec.w)/2+.1)}
   const p=rooms[room].userData.floorPlan,w=(item.rotation%2?spec.d:spec.w)/2+.08,d=(item.rotation%2?spec.w:spec.d)/2+.08;
   const regions=[p,...(p.wing?[p.wing]:[])];if(!regions.some(r=>item.x-w>=r.minX+.25&&item.x+w<=r.maxX-.25&&item.z-d>=r.minZ+.25&&item.z+d<=r.maxZ-.25))return false;
   // 始终给门洞和日常人物起点留出空间。
@@ -135,7 +138,7 @@ export function createDecorationSystem({rooms,scene,box,ball,cylinder,round,inva
   const obs=obstacles(room,item.id),rect={minX:item.x-w,maxX:item.x+w,minZ:item.z-d,maxZ:item.z+d};
   if(obs.some(r=>rect.minX<r.maxX&&rect.maxX>r.minX&&rect.minZ<r.maxZ&&rect.maxZ>r.minZ))return false;
   if(item.type==='rug')return true;
-  const nav=createNavigator(regions,obs.concat(rect));return access.every(q=>Boolean(nav.findPath(q,exit)));
+  const nav=createNavigator(regions,(item.collision??catalog[item.type]?.collision)===false?obs:obs.concat(rect));return access.every(q=>Boolean(nav.findPath(q,exit)));
  }
  function clearPreview(){if(preview){dispose(preview);preview.parent.remove(preview);preview=null}}
  function setEditor(room,item,onChange=()=>{}){clearPreview();editor=room;callback=onChange;stopWalking();if(room<0)return;
@@ -163,5 +166,5 @@ export function createDecorationSystem({rooms,scene,box,ball,cylinder,round,inva
   }
  }
  function animate(time,reduced){if(reduced||editor>=0)return;for(const group of groups)group.traverse(o=>{if(o.userData.fishIndex!==undefined){const phase=o.userData.fishIndex*2.6;o.position.x=Math.sin(time*.001+phase)*.035;o.position.y=Math.sin(time*.0013+phase)*.012}})}
- return {interaction,animate,setAquariumColors,createPreviewModel:item=>model(item,new THREE.Group()),setRoom,setEditor,canPlace,tap,get editing(){return editor>=0}};
+ return {setCatalog(value={}){catalog=value;},interaction,animate,setAquariumColors,createPreviewModel:item=>model(item,new THREE.Group()),setRoom,setEditor,canPlace,tap,get editing(){return editor>=0}};
 }
