@@ -26,12 +26,13 @@ export function createResidents({scene,sources,models,rooms,seats,getNavigator,g
   for(let i=0;i<choices.length;i++){
    const target=choices[(Math.floor(Math.random()*choices.length)+i)%choices.length];if(target.mode==='bed'||(target.key&&occupants.has(target.key)))continue;
    let destination=target.point;if(target.mode==='cat'||target.mode==='dog'){const angle=npc.index*1.7;destination={x:destination.x+Math.cos(angle)*1.05,z:destination.z+Math.sin(angle)*1.05}}
+   const controlled=getControlled();if(target.dock&&controlled?.pose!=='stand'&&controlled?.rest&&Math.hypot(target.dock.x-controlled.actor.position.x,target.dock.z-controlled.actor.position.z)<.8)continue;
    const path=nav.findPath(npc.actor.position,destination);if(!path?.length)continue;
    if(target.key)occupants.set(target.key,npc.index);npc.target=target;npc.path=path;npc.mode='walk';npc.timer=Math.max(30,path.reduce((sum,p,i)=>sum+(i?Math.hypot(p.x-path[i-1].x,p.z-path[i-1].z):0),0)/1.35+10);npc.blocked=0;return;
   }
   npc.mode='idle';npc.timer=5;
  }
- function arrive(npc){npc.path=[];npc.mode=npc.target.mode;npc.timer=12+Math.random()*15;
+ function arrive(npc){const controlled=getControlled();if(npc.target?.dock&&controlled?.rest&&Math.hypot(npc.target.dock.x-controlled.actor.position.x,npc.target.dock.z-controlled.actor.position.z)<.8){release(npc);npc.path=[];npc.mode='idle';npc.timer=3;return;}npc.path=[];npc.mode=npc.target.mode;npc.timer=12+Math.random()*15;
   const a=npc.actor,target=npc.target;
   if(target.dock){a.position.set(target.dock.x,target.dock.y,target.dock.z);a.rotation.y=target.rotation??0}
   if(npc.mode==='bed'){a.rotation.x=-Math.PI/2;npc.timer=22+Math.random()*18}

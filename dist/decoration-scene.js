@@ -166,5 +166,5 @@ export function createDecorationSystem({rooms,scene,box,ball,cylinder,round,inva
   }
  }
  function animate(time,reduced){if(reduced||editor>=0)return;for(const group of groups)group.traverse(o=>{if(o.userData.fishIndex!==undefined){const phase=o.userData.fishIndex*2.6;o.position.x=Math.sin(time*.001+phase)*.035;o.position.y=Math.sin(time*.0013+phase)*.012}})}
- return {setCatalog(value={}){catalog=value;},interaction,animate,setAquariumColors,createPreviewModel:item=>model(item,new THREE.Group()),setRoom,setEditor,canPlace,tap,get editing(){return editor>=0}};
+ return {getFurnitureTargets(){const heights={stool:.705,cushion:.285,sofa:.65,armchair:.65,bench:.685};return groups.flatMap(g=>g.children.filter(o=>['stool','cushion','sofa','armchair','bench'].includes(o.userData.decorType)).map(root=>({root,mode:'sit',owner:null,slots:(root.userData.decorType==='sofa'?[-.48,.48]:[0]).map(x=>({dock:[x,heights[root.userData.decorType],root.userData.decorType==='sofa'||root.userData.decorType==='armchair'?.10:0],rotation:0}))})));},setCatalog(value={}){catalog=value;},interaction,animate,setAquariumColors,createPreviewModel:item=>model(item,new THREE.Group()),setRoom,setEditor,canPlace,tap,get editing(){return editor>=0}};
 }
