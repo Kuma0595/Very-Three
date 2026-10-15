@@ -1,4 +1,4 @@
-import {createResidents} from './residents.js?v=3';
+import {createResidents} from './residents.js?v=4';
 import {createDecorationSystem,DECOR_ITEMS} from './decoration-scene.js?v=8';
 import * as THREE from 'three';
 import { OrbitControls } from './vendor/OrbitControls.js';
@@ -234,7 +234,7 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
     for(let n=0;n<14;n++)box(.075,1.55,.04,t.base,.24+n*.235,1.12,-3.43);
     // 床边软垫小凳与置物层，右侧留出通过房门的空间。
     for(const x of [1.15,2.35])for(const z of [.05,.48])box(.055,.35,.055,t.base,x,.39,z);
-    round(1.45,.18,.65,t.quilt,1.75,.66,.28,.06);
+    round(i===0?1.25:1.45,.18,.65,t.quilt,1.75,.66,.28,.06);
     magazine(1.98,.79,.25,['#665969','#9a805e','#74729a'][i],['PLAY','SIDE A','MOOD'][i]);
     if(i===0){
       resident.position.set(-1.6,1.0,-1.27);resident.rotation.y=Math.PI;
@@ -251,10 +251,12 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
       const gamingLed=glow('#ba82e2',-1.64,1.315,-2.48);gamingLed.name='gaming-desk-led';gamingLed.rotation.y=Math.PI/2;gamingLed.scale.z=1.6/2.45;
       });
       // 前侧懒人沙发与零食篮，不堵北侧通向客厅的门。
+      captureZone('piggy-lounge-zone',[.12,0,2.25],[-1.2,0,4.5],0,()=>{
       const bean=ball(.66,'#59606c',.12,.64,2.25);bean.scale.set(1.25,.70,1.05);
       round(.55,.10,.55,'#d4a18c',.06,.99,2.35,.04);
       box(.60,.34,.45,'#bc9870',1.43,.39,2.70);for(let n=0;n<3;n++)round(.14,.31,.12,palette[n],1.24+n*.17,.62,2.70,.015);
       magazine(-.54,.25,1.20,'#7b5968','LIVE');
+      });
       // 线材用曲线收束在音箱边，作为生活细节。
       const cable=new THREE.CatmullRomCurve3([new THREE.Vector3(-2.6,.24,1.4),new THREE.Vector3(-2.5,.24,2.2),new THREE.Vector3(-1.7,.24,2.2),new THREE.Vector3(-1.5,.24,1.8)]);
       mesh(new THREE.TubeGeometry(cable,24,.012,5,false),'#473e4b');
@@ -729,9 +731,9 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
     }
     frame.photo.material.map.needsUpdate=true;
   }
-  return {getResidentStates:residents.getStates,setResidentsPaused:residents.setPaused,setAquariumColors:decoration.setAquariumColors,getDecorPreviews,setDecorRoom:decoration.setRoom,setDecorationEditor:decoration.setEditor,canPlaceDecor:decoration.canPlace,setGardenPlants,petDog,getDogState:()=>({mode:dogMode,position:dog.position.clone()}),petCat,getCatState:()=>({mode:catMode,position:cat.position.clone()}),startWalking,stopWalking,walkTo,cancelWalk,getWalkState:walkState,setWalkInput(x,y){if(!walker)return;walkInput.set(x,y);walkPath=[];walkGoal=null;destination.visible=false},setRoomPhoto(room,slot,src){return updatePhotoFrame(roomFrames[room]?.[slot],src)},setCouplePhoto(slot,src){return updatePhotoFrame(coupleFrames[slot],src)},setLivingPhoto(slot,src){return updatePhotoFrame(livingFrames[slot],src)},setRoom(index){
+  return {getResidentStates:residents.getStates,setResidentsPaused:residents.setPaused,setResidentNight:residents.setNight,setAquariumColors:decoration.setAquariumColors,getDecorPreviews,setDecorRoom:decoration.setRoom,setDecorationEditor:decoration.setEditor,canPlaceDecor:decoration.canPlace,setGardenPlants,petDog,getDogState:()=>({mode:dogMode,position:dog.position.clone()}),petCat,getCatState:()=>({mode:catMode,position:cat.position.clone()}),startWalking,stopWalking,walkTo,cancelWalk,getWalkState:walkState,setWalkInput(x,y){if(!walker)return;walkInput.set(x,y);walkPath=[];walkGoal=null;destination.visible=false},setRoomPhoto(room,slot,src){return updatePhotoFrame(roomFrames[room]?.[slot],src)},setCouplePhoto(slot,src){return updatePhotoFrame(coupleFrames[slot],src)},setLivingPhoto(slot,src){return updatePhotoFrame(livingFrames[slot],src)},setRoom(index){
     if(![-3,-2,-1,0,1,2].includes(index))return;
     currentView=index;hotDefs=index===-3?gardenHotDefs:index===-2?overviewHotDefs:index===-1?livingHotDefs:roomHotDefs[index];mountHotspots();down=null;
     const view=viewFor(index);move(view.position,view.target);
-  },setNight(value){night=value;residents.setNight(value);ambient.intensity=night?.9:2.7;sun.intensity=night?.55:4.3;fill.intensity=night?1.7:1.5;fill.color.set(night?'#9783ef':'#bfb8ed');renderer.toneMappingExposure=night?1.1:1.35;homeLights.forEach(light=>light.intensity=night||lit?6:0);decorLights.forEach(light=>light.intensity=night?1.6:.35);lampMat.emissiveIntensity=night||lit?1:.35;sky.material.color.set(night?'#9d90c4':'#ffffff')},setLamp(value){lit=value;homeLights.forEach(light=>light.intensity=night||lit?6:0);decorLights.forEach(light=>light.intensity=night?1.6:.35);lampMat.emissiveIntensity=night||lit?1:.35},zoom(factor){const delta=camera.position.clone().sub(controls.target);delta.setLength(THREE.MathUtils.clamp(delta.length()*factor,9,85));move(controls.target.clone().add(delta),controls.target.clone())},reset(){currentView=-2;hotDefs=overviewHotDefs;mountHotspots();const view=viewFor(-2);move(view.position,view.target)},renderer};
+  },setNight(value){night=value;ambient.intensity=night?.9:2.7;sun.intensity=night?.55:4.3;fill.intensity=night?1.7:1.5;fill.color.set(night?'#9783ef':'#bfb8ed');renderer.toneMappingExposure=night?1.1:1.35;homeLights.forEach(light=>light.intensity=night||lit?6:0);decorLights.forEach(light=>light.intensity=night?1.6:.35);lampMat.emissiveIntensity=night||lit?1:.35;sky.material.color.set(night?'#9d90c4':'#ffffff')},setLamp(value){lit=value;homeLights.forEach(light=>light.intensity=night||lit?6:0);decorLights.forEach(light=>light.intensity=night?1.6:.35);lampMat.emissiveIntensity=night||lit?1:.35},zoom(factor){const delta=camera.position.clone().sub(controls.target);delta.setLength(THREE.MathUtils.clamp(delta.length()*factor,9,85));move(controls.target.clone().add(delta),controls.target.clone())},reset(){currentView=-2;hotDefs=overviewHotDefs;mountHotspots();const view=viewFor(-2);move(view.position,view.target)},renderer};
 }
