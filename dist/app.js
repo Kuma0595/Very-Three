@@ -1,10 +1,10 @@
 import {DEFAULT_HOME_SETTINGS,loadHomeSettings} from './home-settings.js?v=1';
 import {setupPhotoViewer} from './photo-viewer.js?v=2';
 import {setupActivities} from './activities.js?v=5';
-import {setupDecoration} from './decoration.js?v=13-living-30';
+import {setupDecoration} from './decoration.js?v=14-click-move';
 import {loadGarden,gardenAction,growthStage,SPECIES,STAGES} from './garden.js?v=4';
 import {loadCloud,saveCloud,currentMember,currentRoom,cloudError,startCloudSync} from './cloud.js?v=4';
-import { createHome } from './scene.js?v=27-models';
+import { createHome } from './scene.js?v=29-click-move';
 import { createRoomMusic } from './room-music.js?v=2-cat';
 import { watchHomeTime } from './time-theme.js?v=4-settings';
 const $=s=>document.querySelector(s);
@@ -96,39 +96,31 @@ $('#focus-info').onclick=()=>openPanel(activeRoom===-3?'garden':activeRoom>=0?'r
 const walkKeys=new Set();
 function setWalkKeys(){
  const down=key=>walkKeys.has(key);
- const x=Number(down('right')||down('KeyD')||down('ArrowRight'))-Number(down('left')||down('KeyA')||down('ArrowLeft'));
- const y=Number(down('down')||down('KeyS')||down('ArrowDown'))-Number(down('up')||down('KeyW')||down('ArrowUp'));
+ const x=Number(down('KeyD')||down('ArrowRight'))-Number(down('KeyA')||down('ArrowLeft'));
+ const y=Number(down('KeyS')||down('ArrowDown'))-Number(down('KeyW')||down('ArrowUp'));
  home?.setWalkInput(x,y);
 }
 function cancelMovement(){walkKeys.clear();home?.cancelWalk()}
 function onWalkState(state){
+ if(state.interactionError)toast(state.interactionError);
  if(state.blocked)toast('这个位置暂时走不过去，试着点旁边的空地');
  walking=state.active;
- $('#walk-toggle').textContent=walking?'结束串门':'去串门';
- $('#walk-toggle').setAttribute('aria-pressed',String(walking));
- $('#walk-pad').hidden=!walking;$('#walk-find').hidden=!walking;$('#walk-hint').hidden=!walking;
+ $('#walk-stand').hidden=!['sit','bed'].includes(state.pose);
+ $('#walk-hint').textContent=state.pose==='sit'?'坐着歇一会儿 · 点空地起身':state.pose==='bed'?'躺一会儿 · 点空地下床':'点地面移动 · 点椅子坐下 · 点自己的床躺下';
  if(!walking){lastWalkerRoom=null;walkKeys.clear()}
  else if(state.room!==lastWalkerRoom){lastWalkerRoom=state.room;switchRoom(state.room)}
  refreshRoomUI();
 }
-$('#walk-toggle').onclick=()=>{if(decorController?.editing)return;
- if(!home){toast('当前浏览器未能显示模型，请换 Safari 或 Chrome');return}
- if(walking)home.stopWalking();else if(!home.startWalking(currentMember().id))toast('暂时没有找到可通行的位置，请刷新重试');
-};
-$('#walk-find').onclick=()=>{const state=home?.getWalkState();if(state?.active)switchRoom(state.room)};
+$('#walk-stand').onclick=()=>home?.standUp();
+$('#walk-find').onclick=()=>{const state=home?.getWalkState();if(state)switchRoom(state.room)};
 const movementKeys=['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowLeft','ArrowDown','ArrowRight'];
 window.addEventListener('keydown',event=>{
- if(!walking||event.metaKey||event.ctrlKey||event.altKey||!movementKeys.includes(event.code)||panel.open||event.target?.closest?.('input,textarea,select,[contenteditable=true]'))return;
- event.preventDefault();walkKeys.add(event.code);setWalkKeys();
+ if(decorController?.editing||event.metaKey||event.ctrlKey||event.altKey||!movementKeys.includes(event.code)||document.querySelector('dialog[open]')||event.target?.closest?.('input,textarea,select,[contenteditable=true]'))return;
+ if(!home?.ensurePlayer())return;event.preventDefault();walkKeys.add(event.code);setWalkKeys();
 });
 window.addEventListener('keyup',event=>{if(!walkKeys.has(event.code))return;walkKeys.delete(event.code);setWalkKeys()});
 window.addEventListener('blur',cancelMovement);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)cancelMovement()});
-document.querySelectorAll('[data-walk]').forEach(button=>{
- const release=()=>{walkKeys.delete(button.dataset.walk);setWalkKeys()};
- button.addEventListener('pointerdown',event=>{event.preventDefault();walkKeys.add(button.dataset.walk);button.setPointerCapture(event.pointerId);setWalkKeys()});
- button.addEventListener('pointerup',release);button.addEventListener('pointercancel',release);button.addEventListener('lostpointercapture',release);
-});
 function members(){ $('#members').innerHTML=data.people.map((p,i)=>`<button data-person="${i}" title="${esc(p.status)}"><span class="avatar">${esc(p.emoji)}</span><span class="member-name">${esc(p.name)}</span></button>`).join('');$('#members').querySelectorAll('button').forEach(b=>b.onclick=()=>switchRoom(Math.min(Number(b.dataset.person),2)));}
 const panel=$('#panel');let lastFocus,currentPanelId;
 const photoViewer=setupPhotoViewer();
@@ -190,7 +182,7 @@ function renderPanel(id){currentPanelId=id;const content=$('#panel-content');if(
  content.querySelectorAll('[data-photo]').forEach(b=>b.onclick=async()=>{if(await update({photos:data.photos.filter((_,i)=>i!==Number(b.dataset.photo))}))renderPanel(id)});
  $('#photo-upload').onchange=async e=>{const file=e.target.files[0];if(!file)return;if(data.photos.length>=8){toast('先移除一张，再留下新的回忆吧');return}if(!file.type.startsWith('image/')){toast('请选择一张图片');return}const caption=$('#caption').value.trim()||'一起的日子';const url=URL.createObjectURL(file);try{const img=new Image();await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;img.src=url});const c=document.createElement('canvas');const scale=Math.min(1,900/Math.max(img.width,img.height));c.width=Math.round(img.width*scale);c.height=Math.round(img.height*scale);c.getContext('2d').drawImage(img,0,0,c.width,c.height);const src=c.toDataURL('image/jpeg',.78);if(await update({photos:[...data.photos,{src,caption}]})){renderPanel(id);toast('回忆已经留下来了')}}catch{toast('这张照片暂时无法读取，试试 JPG 或 PNG')}finally{URL.revokeObjectURL(url)}};
  }
- if(id==='help')content.innerHTML=`<h2>在小家里转一转。</h2><p class="panel-desc">电脑：按住鼠标拖动旋转，滚轮缩放。<br>手机：一根手指旋转，两根手指缩放。<br><br>点击门牌、上方的房间入口或头像，镜头会靠近个人房间。<br>点击房间上的小标签或底部按钮，打开对应内容。<br>自动模式按设备本地时间切换昼夜；点击“天亮”可以切到白天。<br>白天与夜晚时间由小屋设置决定。<br>右上角可手动切换；点击“自动”恢复按时间切换。人物作息始终按实际时间判断，手动切换外观不影响睡觉。<br>点击“留盏灯”，为今天的小家留一点温暖。<br><br>点击“去串门”，控制当前账号的玩偶：电脑用 WASD / 方向键，也能点击地面自动走过去；手机直接点地面移动。三间卧室直接开门进入客厅，从客厅前侧门洞可以进入庭院，也可点击上方“庭院”。点击花圃照顾植物。走进另一间房时镜头和音乐随房间切换；“找到我”回到人物所在房间，“结束串门”让玩偶回到日常位置。<br><br>客厅的小狗会休息和散步，点击它或“摸摸小狗”，它会抬头摇尾巴。<br>小猫会睡觉和散步。点击它或“摸摸小猫”可以摸头，串门时它还会跟着你走一会儿；右上角静音同时控制喵叫与音乐。<br><br>转迷路了？点“全景”或右侧的 ⌂ 看整个家。</p>`;
+ if(id==='help')content.innerHTML=`<h2>在小家里转一转。</h2><p class="panel-desc">电脑：按住鼠标拖动旋转，滚轮缩放。<br>手机：一根手指旋转，两根手指缩放。<br><br>点击门牌、上方的房间入口或头像，镜头会靠近个人房间。<br>点击房间上的小标签或底部按钮，打开对应内容。<br>自动模式按设备本地时间切换昼夜；点击“天亮”可以切到白天。<br>白天与夜晚时间由小屋设置决定。<br>右上角可手动切换；点击“自动”恢复按时间切换。人物作息始终按实际时间判断，手动切换外观不影响睡觉。<br>点击“留盏灯”，为今天的小家留一点温暖。<br><br>点击地面，当前账号的玩偶就会走过去，无需开启模式。电脑也可用 WASD / 方向键移动；拖动旋转视角，双指或滚轮缩放。点椅子、沙发或坐垫会先走近再坐下，点自己的床会躺下；再点空地或“起身”即可离开。有人占用或通道被挡住时会提示。三间卧室直接通往客厅，客厅前方连着庭院；“找到我”回到角色所在房间。停止操作一会儿后，站立角色会恢复日常活动或按实际时间睡觉。<br><br>客厅的小狗会休息和散步，点击它或“摸摸小狗”，它会抬头摇尾巴。<br>小猫会睡觉和散步。点击它或“摸摸小猫”可以摸头，你移动时它还会跟着走一会儿；右上角静音同时控制喵叫与音乐。<br><br>转迷路了？点“全景”或右侧的 ⌂ 看整个家。</p>`;
  if(id==='about')content.innerHTML=`<h2>Very Three，刚好家人们。</h2><p class="panel-desc">我们想把群聊里的陪伴，变成一间能走进来的小家。<br><br>彩虹是墙上的旗，是沙发上的抱枕，也是这里的一点骄傲。在这里，可以自在做自己。<br><br>现在是一套完整的小家：共享客厅连着三个卧室。点击门牌、上方入口或头像，镜头会靠近房间；点击“全景”看整个家。Piggy 喜欢摇滚与电玩，4010 喜欢黑胶与欧美音乐，Joey 喜欢亚文化与 K-pop。人物穿搭是原创的第一版想象，可以继续调整。</p><p class="panel-desc">照片、留言、计划和房间心情保存在小家云端，只有绑定的家人账号可访问。房间由主人编辑，共享计划由大家维护；内容每十秒同步一次，音乐和外观偏好保留在当前设备。</p>`;
 }
 function renderCoupleAlbum(content){
@@ -244,7 +236,7 @@ async function toggleLamp(){if(await update({lit:!data.lit})){applyTheme();toast
 $('#lamp').onclick=toggleLamp;$('#zoom-in').onclick=()=>home?.zoom(.85);$('#zoom-out').onclick=()=>home?.zoom(1.15);$('#reset').onclick=()=>switchRoom(-2);
 applyCloud(await loadCloud());await refreshHomeSettings();
 try{home=createHome($('#stage'),openPanel,onWalkState);$('#loading').remove();syncRoomPhotos()}catch(error){console.error(error);$('#loading').innerHTML='这个浏览器暂时无法显示 3D 小屋<small>试试 Safari / Chrome；下方留言与相册仍可使用。</small>'}
-syncSystemTheme(true);void syncGarden();decorController=setupDecoration({home:()=>home,focus:switchRoom,notify:toast});activityController=setupActivities({home:()=>home,notify:toast});
+home?.setPlayer(currentMember().id);syncSystemTheme(true);void syncGarden();decorController=setupDecoration({home:()=>home,focus:switchRoom,notify:toast});activityController=setupActivities({home:()=>home,notify:toast});
 
 
 let lastSyncError=0;
