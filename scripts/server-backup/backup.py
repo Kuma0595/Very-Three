@@ -72,7 +72,7 @@ def snapshot(folder):
                  '-czf', str(folder / 'backend-config.tar.gz'), '-C', str(BACKEND), '.'])
         with (folder / 'db-config-volume.tar.gz').open('wb') as stream:
             compose('exec', '-T', 'db', 'tar', '-czf', '-', '-C', '/etc', 'postgresql-custom', output=stream)
-        command(['tar', '-czf', str(folder / 'website.tar.gz'), '-C', '/www/wwwroot/very-three', 'dist'])
+        command(['tar', '-h', '-czf', str(folder / 'website.tar.gz'), '-C', '/www/wwwroot/very-three', 'dist'])
         command(['tar', '-czf', str(folder / 'web-config-certificates.tar.gz'), '-C', '/',
                  'www/server/panel/vhost/nginx/very-three.conf',
                  'www/server/panel/vhost/cert/very-three', 'root/.acme.sh'])
