@@ -1,7 +1,7 @@
 import {DEFAULT_HOME_SETTINGS,loadHomeSettings} from './home-settings.js?v=1';
 import {setupPhotoViewer} from './photo-viewer.js?v=2';
 import {setupActivities} from './activities.js?v=5';
-import {setupDecoration} from './decoration.js?v=12-models';
+import {setupDecoration} from './decoration.js?v=13-living-30';
 import {loadGarden,gardenAction,growthStage,SPECIES,STAGES} from './garden.js?v=4';
 import {loadCloud,saveCloud,currentMember,currentRoom,cloudError,startCloudSync} from './cloud.js?v=4';
 import { createHome } from './scene.js?v=27-models';

@@ -17,7 +17,7 @@ returns void language plpgsql set search_path='' as $$
 declare item jsonb;c text;ids text[]:=array[]::text[];
 begin
  if p_config is null or jsonb_typeof(p_config)<>'object' or jsonb_typeof(p_config->'items') is distinct from 'array' or jsonb_typeof(p_config->'colors') is distinct from 'object' then raise exception '无效的布置'; end if;
- if octet_length(p_config::text)>12000 or jsonb_array_length(p_config->'items')>12 then raise exception '最多摆放十二件装饰'; end if;
+ if octet_length(p_config::text)>12000 or jsonb_array_length(p_config->'items')>(case when p_common then 30 else 12 end) then raise exception '当前空间最多摆放 % 件装饰',case when p_common then 30 else 12 end; end if;
  for c in select jsonb_object_keys(p_config->'colors') loop
   if c not in ('wall','floor','rug') or not ((p_config->'colors'->>c) = any(array['#dfc2bd','#c6d7c5','#c8bfdc','#e6d2aa','#a6becd','#9e806a'])) then raise exception '无效的配色'; end if;
  end loop;

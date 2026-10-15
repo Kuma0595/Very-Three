@@ -69,3 +69,5 @@
 `npm run test:admin` 和 `node scripts/check-navigation.mjs` 不需要额外依赖。真实 WebGL 浏览器回归使用 Playwright：安装后运行 `npm run test:models:browser`，也可以通过 `VT_PLAYWRIGHT_MODULE` 指定模块路径、`VT_CHROME` 指定 Chromium 可执行文件。可选 `VT_SCREENSHOTS` 输出截图目录。浏览器回归使用模拟账号与接口，不写真实小屋；数据库草稿、发布、恢复、版本冲突、RLS 权限已另外在回滚事务内验证。
 
 安全检查提示这些管理 RPC 使用 `SECURITY DEFINER`：这是为了在完整管理员校验后原子发布多个房间；匿名角色没有执行权限。两个 RPC 均在入口调用 `vt_is_admin()`，并固定空 search_path。请保留这些校验，不能直接向网页开放高权限密钥。
+
+数量上限：客厅最多 30 件（含墙饰），三个卧室各 12 件。已有项目可执行 `supabase/living-decor-limit.sql` 更新校验，不清空现有布置。
