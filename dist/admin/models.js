@@ -1,8 +1,8 @@
 import {decorLimit} from '../decor-limits.js?v=1';
 import {modelApi} from './model-api.js?v=1';
 import {adminApi,adminError} from './admin-api.js?v=1';
-import {createHome} from '../scene.js?v=29-click-move';
-import {DECOR_ITEMS,DECOR_PAGES,DECOR_COLORS,modelSpec} from '../decoration-scene.js?v=10';
+import {createHome} from '../scene.js?v=31-whole-home';
+import {DECOR_ITEMS,DECOR_PAGES,DECOR_COLORS,modelSpec} from '../decoration-scene.js?v=11-layout';
 const root=document.querySelector('#workbench'),names=['Piggy','4010','Joey & Zakery','我们的客厅'];
 const clone=x=>JSON.parse(JSON.stringify(x)),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let currentUserId=null;
@@ -48,3 +48,4 @@ async function discard(){if(busy||!window.confirm('丢弃服务器草稿和当�
 adminApi.onAuth((event,session)=>{if(event==='SIGNED_OUT'||session?.user?.id&&session.user.id!==currentUserId){epoch++;dirty=false;home?.dispose();home=null;root.innerHTML='<p class="loading">登录已退出，请返回管理台重新登录。</p>';}});
 async function boot(){try{const current=await adminApi.currentUser();currentUserId=current?.id;if(!current||!(await adminApi.status()).is_admin){root.innerHTML='<p class="loading">请使用 Piggy 的管理员账号登录后打开工作台。</p>';return;}layout();try{home=createHome(document.querySelector('#model-stage'),()=>{});home.setResidentsPaused(true);images=home.getDecorPreviews(DECOR_COLORS[3]);}catch(e){home?.dispose();root.innerHTML='<p class="loading">3D 预览未能启动，请确认浏览器支持 WebGL 后刷新。</p>';console.error(e);return;}await reload();}catch(e){root.innerHTML=`<p class="loading">${esc(adminError(e))}</p>`;}}
 window.addEventListener('pagehide',()=>{home?.dispose();home=null;});window.addEventListener('pageshow',event=>{if(event.persisted)location.reload();});void boot();
+

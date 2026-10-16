@@ -1,5 +1,6 @@
-import {createResidents} from './residents.js?v=5';
-import {createDecorationSystem,DECOR_ITEMS} from './decoration-scene.js?v=10';
+import {createBuiltinFurniture} from './builtin-furniture.js?v=1';
+import {createResidents} from './residents.js?v=6-layout';
+import {createDecorationSystem,DECOR_ITEMS} from './decoration-scene.js?v=11-layout';
 import * as THREE from 'three';
 import { OrbitControls } from './vendor/OrbitControls.js';
 import { createNavigator } from './navigation.js?v=2';
@@ -27,7 +28,11 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
   const sun=new THREE.DirectionalLight('#fff0d0',4.3);sun.position.set(10,20,15);sun.castShadow=true;
   sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-22,right:22,top:22,bottom:-22,near:.5,far:65});sun.shadow.bias=-.0005;sun.shadow.normalBias=.03;scene.add(sun);
   const fill=new THREE.DirectionalLight('#bfb8ed',1.5);fill.position.set(-5,4,-2);scene.add(fill);
-  const fixedFurniture=[],furnitureParts=new WeakMap();
+  const fixedFurniture=[],furnitureParts=new WeakMap(),builtinDefinitions=[];
+  function remember(id,name,parts,room=house){builtinDefinitions.push({id,name,parts:[...parts],room});}
+  function mark(){return new Set(house.children)}
+  function rememberSince(id,name,before){remember(id,name,house.children.filter(o=>!before.has(o)))}
+
   function registerFurniture(root,mode,slots,parts=[root],owner=null){const target={root,mode,slots,owner};fixedFurniture.push(target);for(const part of parts)part.traverse(o=>{if(o.isMesh)furnitureParts.set(o,target)});return root;}
   function seat(root,rotation=0,parts=[root]){root.geometry.computeBoundingBox();return registerFurniture(root,'sit',[{dock:[0,root.geometry.boundingBox.max.y+.075,0],rotation}],parts);}
   let house=new THREE.Group();scene.add(house);const livingRoom=house;
@@ -73,13 +78,16 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
   const pillow=round(.57,.54,.24,'#f6e0bd',1.68,1.42,-2.55,.10);pillow.rotation.z=-.25;
   palette.forEach((c,i)=>{const m=box(.08,.40,.02,c,1.46+i*.08,1.42,-2.408);m.rotation.z=-.25});
   registerFurniture(livingSofa,'sit',[-1.25,0,1.25].map(x=>({dock:[x,.525,.15],rotation:0})),house.children.filter(o=>!sofaParts.has(o)));
+  rememberSince('living-sofa','原配三人沙发',sofaParts);const livingRugParts=mark();
   // 地毯织纹与彩虹色边缘。
   round(4.75,.035,3.2,'#f4dfc3',.1,.225,.25,.012);
   for(let i=0;i<6;i++){const stripe=box(4.55,.008,.065,palette[i],.1,.258,-1.19+i*.074);stripe.castShadow=false;stripe.receiveShadow=false;}
   for(let i=0;i<6;i++){const stripe=box(4.55,.008,.065,palette[i],.1,.258,1.38+i*.074);stripe.castShadow=false;stripe.receiveShadow=false;}
   for(let i=0;i<28;i++)for(const z of [-1.4,1.89])box(.023,.02,.16,'#f7e5c7',-2.18+i*.17,.23,z);
+  rememberSince('living-rug','彩虹地毯',livingRugParts);
   // 椭圆茶几、三只杯子，以及一张手写便签。
   const table=new THREE.Group();table.position.set(0,0,.65);house.add(table);
+  remember('living-table','茶几与茶杯',[table]);
   for(const x of [-.8,.8])for(const z of [-.33,.33])cylinder(.06,.08,.55,'#987054',x,.53,z,table);
   const top=cylinder(1.23,1.23,.15,'#e3b887',0,.86,0,table);top.scale.z=.64;
   function cup(x,z,color){cylinder(.115,.085,.18,color,x,1.04,z,table);cylinder(.092,.09,.008,'#7d513d',x,1.134,z,table);const h=mesh(new THREE.TorusGeometry(.075,.022,8,18),color,x+.11,1.04,z,table);h.rotation.y=0;}
@@ -111,6 +119,7 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
     return g;
   }
   person(-1.24,'#383540','#e5b196','#49374a',0);person(0,'#bda77e','#b98365','#433a35',1);person(1.24,'#745277','#efc5a8','#665046',2);
+  const livingDeskParts=mark();
   // 靠右的小书桌，电脑屏幕与Very Three的小物件。
   for(const x of [2.75,3.65])for(const z of [-2.7,-1.15])box(.075,1.18,.075,'#a98061',x,.82,z);
   round(1.25,.15,1.85,'#dfb58d',3.19,1.47,-1.98,.04);
@@ -119,6 +128,7 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
   art(.69,.46,0,.21,.053,(ctx,w,h)=>{ctx.fillStyle='#c6bedf';ctx.fillRect(0,0,w,h);ctx.fillStyle='#eee2f1';ctx.beginPath();ctx.arc(w/2,h/2,120,0,7);ctx.fill();ctx.fillStyle='#89659c';ctx.font='100px sans-serif';ctx.textAlign='center';ctx.fillText('♡',w/2,295)},monitor);
   box(.6,.027,.27,'#eee5e8',3.20,1.57,-1.95);
   cylinder(.15,.17,.16,'#b49acb',3.65,1.62,-1.37);for(let i=0;i<4;i++){const pen=cylinder(.018,.018,.29,palette[i],3.59+i*.04,1.82,-1.37);pen.rotation.z=(i-2)*.1}
+  rememberSince('living-desk','电脑书桌',livingDeskParts);
   // 留言板、照片墙：都是可点击的实物。
   box(1.9,1.18,.12,'#aa805c',1.83,2.87,-3.38);
   box(1.74,1.02,.02,'#d9b58f',1.83,2.87,-3.30);
@@ -134,18 +144,22 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
     function placeholder(){ctx.fillStyle=['#b2c8c5','#d0b8d2','#edc6a8'][i%3];ctx.fillRect(0,0,512,512);ctx.fillStyle='#fff3df';ctx.font='140px sans-serif';ctx.textAlign='center';ctx.fillText('♡',256,310);photo.material.map.needsUpdate=true}
     placeholder();livingFrames.push({photo,ctx,placeholder,revision:0});
   }
+  const livingCabinetParts=mark();
   // 矮柜、唱片、书与小植物。
   round(1.25,1.0,1.1,'#deb48e',-3.23,.73,2.35,.06);
   for(const x of [-3.52,-2.93])round(.5,.7,.08,'#eac49e',x,.75,2.94,.025);
   for(const x of [-3.50,-2.94])ball(.045,'#a57a59',x,.9,3.01);
   cylinder(.3,.3,.05,'#504653',-3.23,1.30,2.32);cylinder(.09,.09,.057,'#dca1b1',-3.23,1.308,2.32);
   for(let i=0;i<3;i++)box(.45,.055,.6,palette[i+2],-2.99,1.3+i*.06,2.7);
-  function plant(x,y,z,size=1){const g=new THREE.Group();g.position.set(x,y,z);g.scale.setScalar(size);house.add(g);cylinder(.22,.16,.35,'#ddab8b',0,.175,0,g);cylinder(.19,.19,.015,'#685345',0,.36,0,g);cylinder(.025,.025,.75,'#6a977b',0,.69,0,g);for(let i=0;i<7;i++){const a=i*2.4;const leaf=ball(.16,i%2?'#91b29a':'#6f9a81',Math.cos(a)*.19,.49+i*.08,Math.sin(a)*.19,g);leaf.scale.set(.7,1.65,.65);leaf.rotation.z=Math.cos(a)*.8}return g}
-  plant(-1.7,.21,.32,1.4);plant(2.3,.21,2.8,1.7);plant(3.57,1.55,-2.71,.52);
+  rememberSince('living-record-cabinet','唱片矮柜',livingCabinetParts);
+  function plant(x,y,z,size=1,id='plant-right'){const g=new THREE.Group();g.position.set(x,y,z);g.scale.setScalar(size);house.add(g);remember(id,id==='plant-left'?'左侧绿植':'右侧绿植',[g]);cylinder(.22,.16,.35,'#ddab8b',0,.175,0,g);cylinder(.19,.19,.015,'#685345',0,.36,0,g);cylinder(.025,.025,.75,'#6a977b',0,.69,0,g);for(let i=0;i<7;i++){const a=i*2.4;const leaf=ball(.16,i%2?'#91b29a':'#6f9a81',Math.cos(a)*.19,.49+i*.08,Math.sin(a)*.19,g);leaf.scale.set(.7,1.65,.65);leaf.rotation.z=Math.cos(a)*.8}return g}
+  plant(-1.7,.21,.32,1.4,'plant-left');plant(2.3,.21,2.8,1.7,'plant-right');plant(3.57,1.55,-2.71,.52,'desk-plant');
+  builtinDefinitions.find(d=>d.id==='living-desk').parts.push(...builtinDefinitions.pop().parts);const livingLampParts=mark();
   // 落地灯与窗边的小猫。
   cylinder(.32,.32,.07,'#937b69',-2.45,.25,-2.08);cylinder(.035,.035,2.30,'#a58a70',-2.45,1.38,-2.08);
   const lampMat=new THREE.MeshStandardMaterial({color:'#ffe4a7',emissive:'#ffcc80',emissiveIntensity:.35,roughness:.9});cylinder(.31,.54,.58,lampMat,-2.45,2.7,-2.08);
   const lampLight=new THREE.PointLight('#ffbf7b',0,8,1.6);lampLight.position.set(-2.45,2.4,-1.9);scene.add(lampLight);
+  rememberSince('living-lamp','暖光落地灯',livingLampParts);
   // 小猫与猫窝使用同一场景；四只脚、头和尾巴可独立活动。
   const cat=new THREE.Object3D();cat.name='home-cat';cat.scale.setScalar(.85);cat.position.set(-2.5,.22,4.8);scene.add(cat);
   const body=ball(.24,'#ead4b4',0,.23,0,cat);body.scale.set(1.55,.85,.9);
@@ -164,6 +178,7 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
   const cushion=cylinder(.58,.61,.09,'#c0b0cd',0,.045,0,bed);cushion.scale.z=.8;
   const rim=mesh(new THREE.TorusGeometry(.51,.09,10,32),'#d9c9de',0,.09,0,bed);rim.rotation.x=Math.PI/2;rim.scale.y=.8;
   const toy=ball(.10,'#a1bfb2',-1.45,.32,4.3);toy.name='cat-toy';
+  remember('cat-bed','小猫窝',[bed]);remember('cat-toy','猫咪玩球',[toy]);
   const heart=art(.34,.34,0,.95,0,ctx=>{ctx.fillStyle='#d28fa7';ctx.font='bold 360px sans-serif';ctx.textAlign='center';ctx.fillText('♥',256,390)},cat);heart.name='cat-heart';heart.material.transparent=true;heart.material.depthWrite=false;heart.visible=false;
   // 短腿小狗：奶油色胸口、垂耳和独立尾巴，与小猫共用地面寻路。
   const dog=new THREE.Object3D();dog.name='home-dog';dog.position.set(1.25,.22,5.5);dog.scale.setScalar(.85);scene.add(dog);
@@ -184,6 +199,7 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
   const dogBed=new THREE.Group();dogBed.name='dog-bed';dogBed.position.set(1.25,.21,5.5);house.add(dogBed);
   const dogCushion=cylinder(.62,.65,.08,'#8eaaa1',0,.04,0,dogBed);dogCushion.scale.z=.8;
   const dogRim=mesh(new THREE.TorusGeometry(.55,.075,10,32),'#bdd1c4',0,.075,0,dogBed);dogRim.rotation.x=Math.PI/2;dogRim.scale.y=.8;
+  remember('dog-bed','小狗窝',[dogBed]);
   // 不遮挡模型的底部软阴影。
   const ground=new THREE.Mesh(new THREE.PlaneGeometry(200,200),new THREE.ShadowMaterial({opacity:.10}));ground.rotation.x=-Math.PI/2;ground.name='shadow-ground';ground.position.y=-.52;ground.receiveShadow=true;scene.add(ground);
   const livingHotDefs=[{id:'dog-pet',text:'摸摸小狗',p:new THREE.Vector3(0,1.2,0)},{id:'cat-pet',text:'摸摸小猫',p:new THREE.Vector3(0,1.15,0)},{id:'memories',text:'我们的回忆',p:new THREE.Vector3(-3.5,3.85,3.9)},{id:'notes',text:'留一句话',p:new THREE.Vector3(2.0,3.75,-3.0)},{id:'people',text:'我们家',p:new THREE.Vector3(.0,2.40,-1.8)},{id:'plans',text:'下一次见面',p:new THREE.Vector3(.35,1.3,1.3)}];
@@ -218,7 +234,7 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
     {wall:'#b5a6c8',side:'#929dbb',base:'#6c6088',quilt:'#8c73ac',wood:'#b7a1b9'}];
   function poster(w,h,x,y,z,index){box(w+.10,h+.10,.06,'#f2e6d5',x,y,z);art(w,h,x,y,z+.04,(ctx,W,H)=>{ctx.fillStyle=['#514352','#e4ccaa','#785590'][index];ctx.fillRect(0,0,W,H);ctx.textAlign='center';ctx.fillStyle=['#f4d19a','#806147','#f6c0df'][index];ctx.font='bold 72px sans-serif';ctx.fillText(['ROCK / PLAY','VINYL DAYS','K-POP / MOOD'][index],W/2,130);ctx.font='170px sans-serif';ctx.fillText(['ϟ','◎','✦'][index],W/2,350)})}
   function smallDesk(x,z,color){for(const dx of [-.83,.83])for(const dz of [-.35,.35])box(.075,1.15,.075,'#927b67',x+dx,.79,z+dz);round(2.1,.14,1.05,color,x,1.41,z,.04)}
-  function chair(x,z,color){const before=new Set(house.children);cylinder(.30,.3,.10,'#8c8092',x,.33,z);cylinder(.05,.05,.53,'#8c8092',x,.6,z);const top=round(.72,.15,.66,color,x,.91,z,.05);round(.72,.7,.15,color,x,1.31,z+.29,.05);seat(top,Math.PI,house.children.filter(o=>!before.has(o)))}
+  function chair(x,z,color){const before=new Set(house.children);cylinder(.30,.3,.10,'#8c8092',x,.33,z);cylinder(.05,.05,.53,'#8c8092',x,.6,z);const top=round(.72,.15,.66,color,x,.91,z,.05);round(.72,.7,.15,color,x,1.31,z+.29,.05);seat(top,Math.PI,house.children.filter(o=>!before.has(o)));rememberSince('desk-chair','书桌椅',before)}
   function screen(x,y,z,color,width=1.0){round(width,.68,.09,'#554c68',x,y,z,.04);art(width-.10,.56,x,y,z+.052,(ctx,W,H)=>{ctx.fillStyle=color;ctx.fillRect(0,0,W,H);ctx.fillStyle='#f8e7ff';for(let r=0;r<5;r++){ctx.fillRect(50,70+r*65,180+(r%2)*100,13)}ctx.fillStyle='#bfddcd';ctx.fillRect(360,60,90,330)});box(.07,.22,.08,'#75697f',x,y-.44,z);box(.44,.04,.25,'#75697f',x,y-.53,z)}
   function glow(color,x,y,z,parent=house){
     const material=new THREE.MeshStandardMaterial({color,emissive:color,emissiveIntensity:.65,roughness:.45});
@@ -233,14 +249,18 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
   function dressRoom(i,resident){
     const t=themes[i];
     // 窗边织物与床尾毯，增加柔软材质和高低层次。
+    const blanketParts=mark();
     round(1.2,.09,.95,['#ca9b83','#d7c4a4','#ada4c9'][i],2.45,1.145,-.50,.025);
     for(let n=0;n<7;n++)box(.012,.011,.85,t.base,1.94+n*.16,1.195,-.50);
+    builtinDefinitions.find(d=>d.room===house&&d.id==='bed').parts.push(...house.children.filter(o=>!blanketParts.has(o)));
     // 床头竖向饰板保留上方相框，不遮挡照片上传入口。
     for(let n=0;n<14;n++)box(.075,1.55,.04,t.base,.24+n*.235,1.12,-3.43);
+    const bedroomBenchParts=mark();
     // 床边软垫小凳与置物层，右侧留出通过房门的空间。
     for(const x of [1.15,2.35])for(const z of [.05,.48])box(.055,.35,.055,t.base,x,.39,z);
     seat(round(i===0?1.25:1.45,.18,.65,t.quilt,1.75,.66,.28,.06));
     magazine(1.98,.79,.25,['#665969','#9a805e','#74729a'][i],['PLAY','SIDE A','MOOD'][i]);
+    rememberSince('bed-bench','床尾软凳与杂志',bedroomBenchParts);
     if(i===0){
       resident.position.set(-1.6,1.0,-1.27);resident.rotation.y=Math.PI;
       const controller=new THREE.Group();controller.name='piggy-controller';controller.position.set(0,.20,.25);resident.add(controller);
@@ -265,6 +285,7 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
       // 线材用曲线收束在音箱边，作为生活细节。
       const cable=new THREE.CatmullRomCurve3([new THREE.Vector3(-2.6,.24,1.4),new THREE.Vector3(-2.5,.24,2.2),new THREE.Vector3(-1.7,.24,2.2),new THREE.Vector3(-1.5,.24,1.8)]);
       mesh(new THREE.TubeGeometry(cable,24,.012,5,false),'#473e4b');
+      builtinDefinitions.find(d=>d.room===house&&d.id==='guitar-amp').parts.push(house.children.at(-1));
     }else if(i===1){
       resident.position.set(-1.78,.83,1.11);resident.rotation.y=Math.PI+.20;for(const side of [-1,1]){resident.getObjectByName(side<0?'left-hand':'right-hand').position.set(side*.23,.24,.29);const arm=resident.getObjectByName(side<0?'left-arm':'right-arm');arm.position.set(side*.27,.31,.16);arm.rotation.x=-1.05;}
       const sleeve=new THREE.Group();sleeve.name='resident-record-sleeve';sleeve.position.set(0,.22,.29);resident.add(sleeve);
@@ -275,12 +296,16 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
       for(let n=0;n<9;n++)box(.14,.26,.22,['#7d6d58','#bda782','#7b9080'][n%3],-2.73+n*.24,3.83,-3.30);
       
       });
+      const readingLampParts=mark();
       cylinder(.30,.30,.05,'#836445',-2.97,.25,.96);cylinder(.027,.027,2.43,'#836445',-2.97,1.46,.96);cylinder(.28,.49,.55,lampMat,-2.97,2.67,.96);
+      rememberSince('reading-lamp','阅读落地灯',readingLampParts);
       // 曲线阅读地毯与书堆，留住慢节奏的听音氛围。
       const rug=cylinder(1.15,1.15,.022,'#d4c5a5',-1.47,.26,1.18);rug.scale.z=1.22;
+      remember('reading-rug','阅读地毯',[rug]);const readingBooksParts=mark();
       for(let n=0;n<4;n++)box(.44,.055,.58,['#b9a181','#738b7e','#cfb591','#8c7867'][n],.52,.27+n*.055,2.36);
       magazine(-.27,.86,1.30,'#8c785f','ANALOG');
       cylinder(.12,.10,.17,'#efe0c7',.03,.91,1.35);cylinder(.09,.09,.01,'#78593d',.03,1.0,1.35);
+      builtinDefinitions.find(d=>d.room===house&&d.id==='reading-table').parts.push(...house.children.filter(o=>!readingBooksParts.has(o)&&o.position.y>.7));remember('reading-books','阅读书堆',house.children.filter(o=>!readingBooksParts.has(o)&&o.position.y<.7));
       extendZone('listening-zone',()=>{const cabinetLed=glow('#efc17d',-1.60,1.23,-2.315);cabinetLed.name='listening-cabinet-led';cabinetLed.rotation.y=Math.PI/2;cabinetLed.scale.z=1.8/2.45;});
     }else{
       resident.position.set(2.64,.62,1.03);resident.rotation.y=Math.PI/2;
@@ -298,7 +323,7 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
       // 镜边圆灯、首饰托盘、杂志与鞋盒组成换装空间。
       extendZone('dressing-zone',()=>{
       for(const y of [.72,1.25,1.78,2.31,2.84])ball(.043,lampMat,3.35,y,.15);
-      round(.62,.05,.38,'#a490ba',1.32,.53,1.40,.015);mesh(new THREE.TorusGeometry(.08,.014,8,16),'#d6be82',1.24,.58,1.4).rotation.x=Math.PI/2;
+      const dressingTrayParts=mark();round(.62,.05,.38,'#a490ba',1.32,.53,1.40,.015);mesh(new THREE.TorusGeometry(.08,.014,8,16),'#d6be82',1.24,.58,1.4).rotation.x=Math.PI/2;builtinDefinitions.find(d=>d.room===house&&d.id==='dressing-stool').parts.push(...house.children.filter(o=>!dressingTrayParts.has(o)));
       for(let n=0;n<2;n++){box(.67,.28,.42,['#817494','#c3a8bd'][n],-.70,.38+n*.29,2.68);box(.70,.045,.44,'#ece0de',-.70,.54+n*.29,2.68)}
       magazine(.34,.27,2.0,'#907b9f','ZINE');magazine(.68,.32,2.12,'#7286aa','SEOUL');
       });
@@ -336,9 +361,12 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
     for(const x of [1.04,2.30])round(1.12,.20,.62,'#fff1dc',x,1.10,-2.7,.075);
     for(let n=0;n<6;n++)box(.10,.012,1.9,palette[n],.42+n*.12,1.14,-1.22);
     registerFurniture(mattress,'bed',(i===2?[-.6,.6]:[0]).map(x=>({dock:[x,.28,.17],rotation:0})),house.children.filter(o=>!bedParts.has(o)),i);
+    rememberSince('bed','原配床与枕头',bedParts);const bedsideParts=mark();
     round(.75,.66,.68,t.wood,3.48,.56,-2.72,.05);box(.61,.025,.50,'#f3dfc8',3.48,.91,-2.72);ball(.035,'#a58268',3.48,.64,-2.36);
     cylinder(.13,.13,.04,'#a78267',3.48,.95,-2.72);cylinder(.025,.025,.34,'#a78267',3.48,1.12,-2.72);cylinder(.15,.26,.28,lampMat,3.48,1.40,-2.72);
+    rememberSince('bedside','床头柜与灯',bedsideParts);const roomRugParts=mark();
     round(3.5,.025,2.6,i===1?'#aba2c5':'#ead8bd',.3,.23,1.08,.008);
+    rememberSince('room-rug','卧室地毯',roomRugParts);
     // 每个房间三个真实相框，每格各自持有可更新的 CanvasTexture。
     for(let slot=0;slot<3;slot++){
       const x=.43+slot*1.34,y=2.78,z=-3.36;
@@ -361,6 +389,7 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
       round(.43,.85,.48,'#413a4b',-2.85,.70,-2.45,.05);for(let n=0;n<2;n++)mesh(new THREE.TorusGeometry(.12,.018,8,18),palette[n+3],-2.85,.53+n*.31,-2.20);
       round(.44,.10,.24,'#ece1de',-1.00,1.54,-2.18,.03);ball(.038,'#64536f',-1.12,1.61,-2.18);ball(.025,'#64536f',-.88,1.61,-2.18);
       });
+      const guitarParts=mark();
       // 电吉他由双圆琴身、琴颈、琴头和琴弦构成。
       const guitar=new THREE.Group();guitar.position.set(-2.70,.24,1.45);guitar.rotation.z=-.12;house.add(guitar);
       const lower=ball(.32,'#a55263',0,.45,0,guitar);lower.scale.set(1.0,1.04,.3);const upper=ball(.24,'#a55263',0,.86,0,guitar);upper.scale.set(1,1,.3);
@@ -369,6 +398,7 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
       for(let n=0;n<4;n++){box(.007,1.32,.012,'#c8c2bb',-.046+n*.03,1.16,.064,guitar);ball(.025,'#c9c4bb',n%2?-.13:.15,1.89+Math.floor(n/2)*.11,0,guitar)}
       round(.86,.76,.54,'#494149',-1.52,.60,1.66,.04);box(.74,.53,.02,'#786a69',-1.52,.58,1.94);for(let n=0;n<7;n++)box(.71,.012,.026,'#574d55',-1.52,.35+n*.066,1.96);
       box(.48,.04,.03,'#ddc5a3',-1.52,.91,1.955);for(const x of [-1.65,-1.4])ball(.025,'#d1b89a',x,.91,1.99);
+      rememberSince('guitar-amp','电吉他与音箱',guitarParts);
       plant(3.20,.21,2.45,1.05);
     }else if(i===1){
       // 4010：黑胶柜、唱片机、左右音箱，房间是温暖的聆听空间。
@@ -383,8 +413,10 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
       });
       const readingParts=new Set(house.children),readingSeat=round(1.13,.33,1.1,'#c2ad8d',-1.78,.62,1.11,.10);round(1.13,.87,.22,'#b5a17f',-1.78,1.08,1.58,.09);for(const x of [-2.38,-1.18])round(.17,.48,1.06,'#b5a17f',x,.85,1.11,.04);
       seat(readingSeat,Math.PI,house.children.filter(o=>!readingParts.has(o)));
+      rememberSince('reading-chair','阅读扶手椅',readingParts);const readingTableParts=mark();
       cylinder(.43,.43,.09,t.wood,-.25,.78,1.30);cylinder(.055,.08,.50,'#92745b',-.25,.49,1.30);box(.30,.035,.37,'#dfc4a3',-.25,.85,1.30);
-      plant(-3.12,.21,2.57,1.35);plant(3.10,.21,2.47,1.05);
+      rememberSince('reading-table','阅读边桌',readingTableParts);
+      plant(-3.12,.21,2.57,1.35,'plant-left');plant(3.10,.21,2.47,1.05);
     }else{
       // Joey：亚文化拼贴、专辑陈列和穿衣镜，粉紫也可以很有锋芒。
       captureZone('album-zone',[-1.94,0,-3.03],[-5.65,0,-.8],Math.PI/2,()=>{
@@ -394,18 +426,20 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
       });
       // 穿衣镜用柔和图案材质表达，不使用高成本实时反射。
       captureZone('dressing-zone',[-1.07,0,1.52],[-3.3,0,4.5],0,()=>{
-      const mirror=new THREE.Group();mirror.position.set(3.45,1.78,.7);mirror.rotation.y=-Math.PI/2;house.add(mirror);
+      const mirror=new THREE.Group();remember('dressing-mirror','穿衣镜',[mirror]);mirror.position.set(3.45,1.78,.7);mirror.rotation.y=-Math.PI/2;house.add(mirror);
       for(const x of [-.45,.45]){box(.06,.35,.06,'#897394',x,-1.43,0,mirror);box(.09,.06,.55,'#897394',x,-1.57,0,mirror)}
       round(1.18,2.61,.1,'#a582b5',0,0,0,.08,mirror);art(1.04,2.43,0,0,.065,(ctx,W,H)=>{const grad=ctx.createLinearGradient(0,0,W,H);grad.addColorStop(0,'#d3dce4');grad.addColorStop(1,'#b8bdd9');ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);ctx.strokeStyle='#efedf8';ctx.lineWidth=20;ctx.beginPath();ctx.moveTo(90,330);ctx.lineTo(330,100);ctx.moveTo(180,430);ctx.lineTo(415,210);ctx.stroke()},mirror);
       // 衣架上的宽松外套和随身小包。
       for(const x of [-1.85,-.3])cylinder(.035,.035,1.8,'#897394',x,1.14,1.52);const rack=cylinder(.035,.035,1.62,'#897394',-1.07,2.02,1.52);rack.rotation.z=Math.PI/2;
       for(let n=0;n<2;n++){const x=-1.46+n*.64;round(.48,.72,.18,['#59536d','#d69bbd'][n],x,1.48,1.52,.035);for(const dx of [-.3,.3]){const sleeve=round(.18,.49,.17,['#59536d','#d69bbd'][n],x+dx,1.57,1.52,.03);sleeve.rotation.z=dx>0?.3:-.3}}
       round(.33,.35,.16,'#755c87',-.22,1.16,1.76,.05);mesh(new THREE.TorusGeometry(.12,.012,6,18,Math.PI),'#ba9cc6',-.22,1.4,1.76);
-      seat(round(.65,.12,.62,'#ae8ebd',1.32,.44,1.40,.05));for(let n=0;n<4;n++)box(.035,.30,.035,'#836b91',1.05+(n%2)*.54,.24,1.14+Math.floor(n/2)*.52);
+      const dressingStoolParts=mark();seat(round(.65,.12,.62,'#ae8ebd',1.32,.44,1.40,.05));for(let n=0;n<4;n++)box(.035,.30,.035,'#836b91',1.05+(n%2)*.54,.24,1.14+Math.floor(n/2)*.52);rememberSince('dressing-stool','换衣小凳',dressingStoolParts);
       plant(3.12,.21,2.45,1.2);
       });
     }
     dressRoom(i,resident);
+    for(const [name,label] of [['gaming-zone','电玩书桌与收藏'],['listening-zone','黑胶听音柜'],['album-zone','专辑展示架'],['dressing-zone','衣架与收藏'],['piggy-lounge-zone','懒人沙发与零食篮']]){const zone=house.getObjectByName(name);if(zone)remember(name,label,[zone]);}
+
     redistributeRoom(i);
     hit('room'+i,resident.position.x,resident.position.y+.45,resident.position.z,.85,1.15,.85);
     roomHotDefs.push([{id:'room'+i,text:['Piggy · 摇滚与电玩','4010 · 黑胶聆听室','Joey · 亚文化与 K-pop'][i],p:resident.position.clone().add(new THREE.Vector3(0,1.30,.2))},{id:'frames'+i,text:'相框 · 上传照片',p:new THREE.Vector3(1.78,3.67,-3.10)},{id:'notes',text:'给家里留句话',p:new THREE.Vector3(.3,.95,1.75)}]);
@@ -418,15 +452,19 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
   // 三个人共同生活的痕迹：外套、杂志和一盘零食。
   house=livingRoom;
   // 客厅前侧只铺一块活动毯，保留放游戏桌、礼物柜与行走的空间。
+  const livingActivityRug=mark();
   round(5.0,.025,1.7,'#c2ccbb',0,.23,4.7,.008);
+  rememberSince('activity-rug','活动地毯',livingActivityRug);const sofaThrowParts=mark();
   round(.72,.035,.68,'#847291',1.20,1.47,-2.72,.015);
   for(let n=0;n<3;n++)box(.045,.02,.50,'#c1aacf',.95+n*.12,1.50,-2.70);
+  builtinDefinitions.find(d=>d.id==='living-sofa').parts.push(...house.children.filter(o=>!sofaThrowParts.has(o)));
   magazine(-.22,.99,.76,'#927482','OUR DAYS',table);
   cylinder(.23,.23,.035,'#ead7b5',-.67,.98,.35,table);for(let n=0;n<5;n++)ball(.045,'#c69262',-.82+(n%3)*.12,1.02,.27+Math.floor(n/3)*.13,table);
   house=rooms[2];const zakery=person(0,'#608c8e','#ddb799','#3b393d',1);zakery.name='resident-3';zakery.position.set(.7,.83,6.8);zakery.rotation.y=Math.PI;
   const zakeryChairParts=new Set(house.children),zakeryChair=round(.88,.14,.85,'#94b0a5',.7,.49,6.8,.04,house);round(.88,.57,.16,'#aac3b6',.7,.85,7.15,.04,house);for(const x of [.37,1.03])for(const z of [6.5,7.08])box(.055,.4,.055,'#967a63',x,.25,z,house);
   residentPoses.push({resident:zakery,room:2,position:zakery.position.clone(),rotation:zakery.rotation.y});
   seat(zakeryChair,Math.PI,house.children.filter(o=>!zakeryChairParts.has(o)));
+  rememberSince('zakery-chair','Zakery 的椅子',zakeryChairParts);
   // A 户型：三间等面积卧室在北侧，直接开门进入客厅，客厅直通南侧庭院。
   const layout=[new THREE.Vector3(-10.2,0,-6.9),new THREE.Vector3(0,0,-6.9),new THREE.Vector3(10.2,0,-6.9)];
   livingRoom.name='living-room';livingRoom.userData.floorPlan={minX:-16.25,maxX:14.35,minZ:2.05,maxZ:12.15};
@@ -441,18 +479,23 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
   // 窗景、窗框与窗帘完整位于侧墙内侧面之前，避免天空面被墙遮住。
   window.name='living-window';sky.name='window-sky';window.position.x=-16.025;album.name='living-memory-wall';album.position.x=-16.00;
   livingHotDefs.forEach(h=>{if(!['cat-pet','dog-pet'].includes(h.id)){h.p.x-=5.5;h.p.z+=5.7;if(h.id==='memories')h.p.x=-15.7}});
-  cat.position.copy(bed.position);cat.position.y=.22;dog.position.copy(dogBed.position);dog.position.y=.22;
+  cat.position.copy(bed.position);cat.position.y=.22;dog.position.copy(dogBed.getWorldPosition(new THREE.Vector3()));dog.position.y=.22;
   box(30.6,.12,10.1,'#d5b595',-.95,.12,7.1,livingRoom).name='floor-living';
   for(let z=2.4;z<12;z+=.4)box(30.3,.012,.012,'#ba977a',-.95,.19,z,livingRoom);
   const commonWall=box(.18,3.9,10.1,'#c0c9c3',-16.15,2.08,7.1,livingRoom);
   // 一道连续分隔墙开三个卧室门，装饰挂在门洞之间。
   // 客厅右侧增加共同餐桌、收藏角；中央留出宽通道。
+  house=livingRoom;const diningTableParts=mark();
   round(3.1,.16,1.9,'#c7a27e',7,1.05,7.3,.055,livingRoom);
   for(const x of [5.7,8.3])for(const z of [6.6,8])box(.09,.78,.09,'#987a60',x,.58,z,livingRoom);
-  for(const [x,z] of [[5,7.3],[9,7.3],[7,5.9],[7,8.8]]){seat(round(.75,.13,.70,'#a4bfae',x,.61,z,.035,livingRoom),Math.atan2(7-x,7.3-z));for(const dx of [-.25,.25])for(const dz of [-.22,.22])box(.055,.45,.055,'#9b8067',x+dx,.32,z+dz,livingRoom)}
+  rememberSince('dining-table','共同餐桌',diningTableParts);
+  for(const [id,x,z] of [['west',5,7.3],['east',9,7.3],['north',7,5.9],['south',7,8.8]]){const diningChairParts=mark();const diningChair=round(.75,.13,.70,'#a4bfae',x,.61,z,.035,livingRoom);for(const dx of [-.25,.25])for(const dz of [-.22,.22])box(.055,.45,.055,'#9b8067',x+dx,.32,z+dz,livingRoom);seat(diningChair,Math.atan2(7-x,7.3-z),house.children.filter(o=>!diningChairParts.has(o)));rememberSince('dining-chair-'+id,({west:'左侧',east:'右侧',north:'后侧',south:'前侧'})[id]+'餐椅',diningChairParts)}
+  const diningPropsParts=mark();
   cylinder(.14,.11,.20,'#d2abc3',6.7,1.23,7.3,livingRoom);box(.65,.04,.45,'#efe1c4',7.45,1.16,7.3,livingRoom);
+  builtinDefinitions.find(d=>d.id==='dining-table').parts.push(...house.children.filter(o=>!diningPropsParts.has(o)));const collectionParts=mark();
   // Joey 门前保留通道，收藏柜移到客厅右侧墙边。
   round(3.2,.9,.7,'#b89b83',11.2,.66,10.3,.045,livingRoom);for(let n=0;n<11;n++)box(.12,.43,.36,palette[n%6],9.85+n*.25,1.32,10.3,livingRoom);
+  rememberSince('collection-cabinet','共同收藏柜',collectionParts);
   const building=new THREE.Group();building.name='shared-foundation';scene.add(building);
   box(30.6,.48,22.7,'#b89cbd',-.95,-.16,.8,building).name='foundation-slab';
   function frontDoor(group,x,z,min,max,label,id){
@@ -553,7 +596,7 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
       }else if(catTimer<=0&&!catPath.length){
         if(catMode==='return'){catMode='sleep';catTimer=night?35:14}
         else if(catMode==='sleep'){catMode='idle';catTimer=4}
-        else if(night||Math.random()<.35){catMode='return';if(!catRoute(bed.position)){catMode='idle';catTimer=6}}
+        else if(night||Math.random()<.35){catMode='return';if(!catRoute(bed.getWorldPosition(new THREE.Vector3()))){catMode='idle';catTimer=6}}
         else{catMode='roam';catTimer=6;const targets=[{x:-5.5,z:10.4},{x:-6.95,z:10},{x:-4.4,z:9.5},{x:0,z:5}];catRoute(targets[Math.floor(Math.random()*targets.length)])}
       }
     }
@@ -580,7 +623,7 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
       if(dogMode==='return'){dogMode='rest';dogTimer=night?24:10}
       else if(dogMode==='rest'||dogMode==='pet'){dogMode='idle';dogTimer=4}
       else{const returning=dogMode==='roam'||(night&&Math.random()<.65);dogMode=returning?'return':'roam';dogTimer=5;
-        const targets=[{x:0,z:4.7},{x:1.1,z:3.8},{x:-.75,z:5.5}];dogPath=catNavigator.findPath(dog.position,returning?dogBed.position:targets[Math.floor(Math.random()*targets.length)])??[];
+        const targets=[{x:0,z:4.7},{x:1.1,z:3.8},{x:-.75,z:5.5}];dogPath=catNavigator.findPath(dog.position,returning?dogBed.getWorldPosition(new THREE.Vector3()):targets[Math.floor(Math.random()*targets.length)])??[];
         if(!dogPath.length){dogMode='idle';dogTimer=5}
       }
     }
@@ -648,17 +691,17 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
     walkRing.position.set(next.x,.285,next.z);
     const room=navigator.roomAt(next);if(room!==walker.room||moving!==lastWalking){walker.room=room;lastWalking=moving;onWalkState(walkState())}
   }
-  function furnitureTargets(){return fixedFurniture.concat(decoration.getFurnitureTargets());}
+  function furnitureTargets(){return fixedFurniture.filter(t=>builtins.visible(t.root)).concat(decoration.getFurnitureTargets());}
   function occupied(dock){return residents.getStates().some(n=>n.index!==walker.index&&n.visible&&['sit','bed'].includes(n.mode)&&Math.hypot(n.position.x-dock.x,n.position.z-dock.z)<.65);}
   function targetDock(target,slot){return target.root.localToWorld(new THREE.Vector3(...slot.dock));}
   function approachFurniture(target){
-    if(!ensurePlayer()||!standUp())return false;prepareNavigation();scene.updateMatrixWorld(true);
+    if(!target||!builtins.visible(target.root)||!ensurePlayer()||!standUp())return false;prepareNavigation();scene.updateMatrixWorld(true);
     const fail=message=>{onWalkState({...walkState(),interactionError:message});return false;};
     if(target.owner!==null&&target.owner!==undefined&&target.owner!==Math.min(walker.index,2))return fail('这是家人的床，回自己的房间躺一会儿吧');
     const slots=target.mode==='bed'&&target.owner===2?[target.slots[walker.index===3?1:0]]:target.slots;
     const bounds=new THREE.Box3().setFromObject(target.root),options=[];let available=false;
     for(const slot of slots){const dock=targetDock(target,slot);if(occupied(dock))continue;available=true;
-      const q=target.root.getWorldQuaternion(new THREE.Quaternion()),angle=new THREE.Euler().setFromQuaternion(q).y+(slot.rotation??0);
+      const q=target.root.getWorldQuaternion(new THREE.Quaternion()),direction=new THREE.Vector3(0,0,1).applyQuaternion(q),angle=Math.atan2(direction.x,direction.z)+(slot.rotation??0);
       // 从家具四边采样落脚点，且必须能回到房门，避免床边孤立区域。
       const candidates=[];for(let n=0;n<5;n++){const t=n/4;candidates.push({x:bounds.min.x-.7,z:bounds.min.z+(bounds.max.z-bounds.min.z)*t},{x:bounds.max.x+.7,z:bounds.min.z+(bounds.max.z-bounds.min.z)*t},{x:bounds.min.x+(bounds.max.x-bounds.min.x)*t,z:bounds.min.z-.7},{x:bounds.min.x+(bounds.max.x-bounds.min.x)*t,z:bounds.max.z+.7});}
       for(const exit of candidates){if(!navigator.canStand(exit))continue;const safe=residents.safePosition(exit,walker.index);if(!safe||Math.hypot(safe.x-exit.x,safe.z-exit.z)>.12)continue;const path=navigator.findPath(walker.actor.position,exit,residents.blockers(walker.index));if(!path?.length)continue;const cost=path.reduce((s,p,i)=>s+(i?Math.hypot(p.x-path[i-1].x,p.z-path[i-1].z):0),0)+Math.hypot(dock.x-exit.x,dock.z-exit.z);options.push({target,slot,dock,angle,exit,path,cost});}
@@ -670,9 +713,28 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
     if(walker.pose==='sit')for(const side of ['left','right']){a.getObjectByName(side+'-leg').rotation.x=-Math.PI/2;a.getObjectByName(side+'-leg').position.y=.025;a.getObjectByName(side+'-shoe').position.set(side==='left'?-.13:.13,-.13,.42);}
     onWalkState(walkState());
   }
+  // 同名家具在不同房间具有独立状态；只在所有户型变换完成后建立编辑根组。
+  const allRooms=[...rooms,livingRoom];
+  for(const def of builtinDefinitions)def.id='r'+allRooms.indexOf(def.room)+'-'+def.id;
+  const builtins=createBuiltinFurniture(allRooms,builtinDefinitions);
+  // 灯光与点击代理跟随家具，保留原有照片数据和点击逻辑。
+  const lampRoot=builtins.root('r3-living-lamp');lampRoot.attach(lampLight);
+  for(let i=0;i<3;i++)builtins.root('r'+i+'-bedside').attach(homeLights[i+1]);
+  for(const id of ['plans','lamp']){const target=hits.find(o=>o.userData.id===id);if(target)builtins.root(id==='plans'?'r3-living-table':'r3-living-lamp').attach(target);}
+  for(const h of livingHotDefs)if(h.id==='plans'){const world=h.p.clone();h.root=builtins.root('r3-living-table');h.p=h.root.worldToLocal(world);}
+  function restTarget(index,mode){
+    const owner=Math.min(index,2),candidates=fixedFurniture.filter(t=>t.mode===mode&&builtins.visible(t.root));
+    let t=mode==='bed'?candidates.find(t=>t.owner===owner):defaultSeats[index];
+    if(!t||!builtins.visible(t.root))return null;scene.updateMatrixWorld(true);
+    const slot=t.slots[mode==='bed'&&owner===2&&index===3?1:0],dock=targetDock(t,slot);
+    const q=t.root.getWorldQuaternion(new THREE.Quaternion()),direction=new THREE.Vector3(0,0,1).applyQuaternion(q);
+    return {dock:{x:dock.x,y:dock.y,z:dock.z},rotation:Math.atan2(direction.x,direction.z)+(slot.rotation??0)};
+  }
+  const defaultSeats=avatars.map((a,index)=>{const pos=rooms[Math.min(index,2)].localToWorld(a.position.clone());return fixedFurniture.filter(t=>t.mode==='sit'&&builtins.visible(t.root)).sort((a,b)=>a.root.getWorldPosition(new THREE.Vector3()).distanceTo(pos)-b.root.getWorldPosition(new THREE.Vector3()).distanceTo(pos))[0]});
+
   const seats=avatars.map((a,index)=>{const room=rooms[Math.min(index,2)];return {local:a.position.clone(),world:{x:room.position.x+a.position.x,y:a.position.y,z:room.position.z+a.position.z},rotation:a.rotation.y}});
-  const residents=createResidents({scene,sources:avatars,models:avatars.map((a,i)=>standingModel(i,'resident-npc-'+i)),rooms,seats,getNavigator(){prepareNavigation();return navigator},getControlled:()=>walker,getCat:()=>cat.position,getDog:()=>dog.position,onPet(kind){if(kind==='cat'){catMode='pet';catTimer=2.8;catPath=[];heart.visible=true}else{dogMode='pet';dogTimer=3;dogPath=[]}}});
-  const decoration=createDecorationSystem({rooms:[...rooms,livingRoom],scene,box,ball,cylinder,round,stopWalking,invalidate(){navigator=null;catNavigator=null;floorMeshes=[];walkPath=[];catPath=[];dogPath=[];}});
+  const residents=createResidents({scene,sources:avatars,models:avatars.map((a,i)=>standingModel(i,'resident-npc-'+i)),rooms,seats,getRestTarget:restTarget,getNavigator(){prepareNavigation();return navigator},getControlled:()=>walker,getCat:()=>cat.position,getDog:()=>dog.position,onPet(kind){if(kind==='cat'){catMode='pet';catTimer=2.8;catPath=[];heart.visible=true}else{dogMode='pet';dogTimer=3;dogPath=[]}}});
+  const decoration=createDecorationSystem({rooms:allRooms,builtins,beforeLayoutChange:stopWalking,afterLayoutChange:()=>residents.layoutChanged(),scene,box,ball,cylinder,round,stopWalking,invalidate(){navigator=null;catNavigator=null;floorMeshes=[];walkPath=[];catPath=[];dogPath=[];}});
   const decorPreviewCache=new Map();let publishedModelCatalog={},modelDebug=null,inspectionScene=null;
   function inspectDecor(item){
     const wasInspecting=Boolean(inspectionScene);
@@ -793,9 +855,10 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
     }
     frame.photo.material.map.needsUpdate=true;
   }
-  return {setPlayer(index){playerIndex=[0,1,2,3].includes(index)?index:null;},ensurePlayer,standUp,getFurnitureTargets:furnitureTargets,useFurniture:approachFurniture,inspectDecor,dispose(){inspectDecor(null);disposed=true;cancelAnimationFrame(frameId);resizeObserver.disconnect();controls.dispose();clearModelDebug();const geometries=new Set(),mats=new Set(),textures=new Set();scene.traverse(o=>{if(o.geometry)geometries.add(o.geometry);for(const m of [o.material??[]].flat()){mats.add(m);if(m.map)textures.add(m.map)}});geometries.forEach(g=>g.dispose());textures.forEach(t=>t.dispose());mats.forEach(m=>m.dispose());renderer.dispose();renderer.domElement.remove();hotDefs.forEach(h=>h.el.remove())},showModelDebug,setDecorCatalog(config){publishedModelCatalog=config;decoration.setCatalog(config);decorPreviewCache.clear();navigator=null;catNavigator=null;},getResidentStates:residents.getStates,setResidentsPaused:residents.setPaused,setResidentNight:residents.setNight,setAquariumColors:decoration.setAquariumColors,getDecorPreviews,setDecorRoom:decoration.setRoom,setDecorationEditor:decoration.setEditor,canPlaceDecor:decoration.canPlace,setGardenPlants,petDog,getDogState:()=>({mode:dogMode,position:dog.position.clone()}),petCat,getCatState:()=>({mode:catMode,position:cat.position.clone()}),startWalking,stopWalking,walkTo,cancelWalk,getWalkState:walkState,setWalkInput(x,y){if(x||y){if(!ensurePlayer()||!standUp())return;idleControl=0;}if(!walker)return;if(!(x||y)){walkInput.set(0,0);return;}pendingFurniture=null;walkInput.set(x,y);walkPath=[];walkGoal=null;destination.visible=false},setRoomPhoto(room,slot,src){return updatePhotoFrame(roomFrames[room]?.[slot],src)},setCouplePhoto(slot,src){return updatePhotoFrame(coupleFrames[slot],src)},setLivingPhoto(slot,src){return updatePhotoFrame(livingFrames[slot],src)},setRoom(index){
+  return {setPlayer(index){playerIndex=[0,1,2,3].includes(index)?index:null;},ensurePlayer,standUp,getFurnitureTargets:furnitureTargets,useFurniture:approachFurniture,inspectDecor,dispose(){inspectDecor(null);disposed=true;cancelAnimationFrame(frameId);resizeObserver.disconnect();controls.dispose();clearModelDebug();const geometries=new Set(),mats=new Set(),textures=new Set();scene.traverse(o=>{if(o.geometry)geometries.add(o.geometry);for(const m of [o.material??[]].flat()){mats.add(m);if(m.map)textures.add(m.map)}});geometries.forEach(g=>g.dispose());textures.forEach(t=>t.dispose());mats.forEach(m=>m.dispose());renderer.dispose();renderer.domElement.remove();hotDefs.forEach(h=>h.el.remove())},showModelDebug,setDecorCatalog(config){publishedModelCatalog=config;decoration.setCatalog(config);decorPreviewCache.clear();navigator=null;catNavigator=null;},getResidentStates:residents.getStates,setResidentsPaused:residents.setPaused,setResidentNight:residents.setNight,setAquariumColors:decoration.setAquariumColors,getDecorPreviews,getBuiltinFurniture:builtins.list,getBuiltinSpec:builtins.spec,getBuiltinState:builtins.state,setDecorRoom:decoration.setRoom,setDecorationEditor:decoration.setEditor,canPlaceDecor:decoration.canPlace,setGardenPlants,petDog,getDogState:()=>({mode:dogMode,position:dog.position.clone()}),petCat,getCatState:()=>({mode:catMode,position:cat.position.clone()}),startWalking,stopWalking,walkTo,cancelWalk,getWalkState:walkState,setWalkInput(x,y){if(x||y){if(!ensurePlayer()||!standUp())return;idleControl=0;}if(!walker)return;if(!(x||y)){walkInput.set(0,0);return;}pendingFurniture=null;walkInput.set(x,y);walkPath=[];walkGoal=null;destination.visible=false},setRoomPhoto(room,slot,src){return updatePhotoFrame(roomFrames[room]?.[slot],src)},setCouplePhoto(slot,src){return updatePhotoFrame(coupleFrames[slot],src)},setLivingPhoto(slot,src){return updatePhotoFrame(livingFrames[slot],src)},setRoom(index){
     if(![-3,-2,-1,0,1,2].includes(index))return;
     currentView=index;hotDefs=index===-3?gardenHotDefs:index===-2?overviewHotDefs:index===-1?livingHotDefs:roomHotDefs[index];mountHotspots();down=null;
     const view=viewFor(index);move(view.position,view.target);
   },setNight(value){night=value;if(inspectionScene){inspectionScene.background.set(night?'#b4a6c8':'#ede8f3');inspectionScene.children[0].intensity=night?1.2:3;inspectionScene.children[1].intensity=night?1.5:4;}ambient.intensity=night?.9:2.7;sun.intensity=night?.55:4.3;fill.intensity=night?1.7:1.5;fill.color.set(night?'#9783ef':'#bfb8ed');renderer.toneMappingExposure=night?1.1:1.35;homeLights.forEach(light=>light.intensity=night||lit?6:0);decorLights.forEach(light=>light.intensity=night?1.6:.35);lampMat.emissiveIntensity=night||lit?1:.35;sky.material.color.set(night?'#9d90c4':'#ffffff')},setLamp(value){lit=value;homeLights.forEach(light=>light.intensity=night||lit?6:0);decorLights.forEach(light=>light.intensity=night?1.6:.35);lampMat.emissiveIntensity=night||lit?1:.35},zoom(factor){const delta=camera.position.clone().sub(controls.target);delta.setLength(THREE.MathUtils.clamp(delta.length()*factor,9,85));move(controls.target.clone().add(delta),controls.target.clone())},reset(){currentView=-2;hotDefs=overviewHotDefs;mountHotspots();const view=viewFor(-2);move(view.position,view.target)},renderer};
 }
+

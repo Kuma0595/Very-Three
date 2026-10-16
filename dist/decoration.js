@@ -1,36 +1,53 @@
 import {decorLimit} from './decor-limits.js?v=1';
 import {client,currentMember,currentRoom} from './cloud.js?v=4';
-import {DECOR_ITEMS,DECOR_COLORS,DECOR_PAGES,modelSpec} from './decoration-scene.js?v=10';
+import {DECOR_ITEMS,DECOR_COLORS,DECOR_PAGES,modelSpec} from './decoration-scene.js?v=11-layout';
 export function setupDecoration({home,focus,notify}){
  const button=document.createElement('button');button.id='decorate-room';button.textContent='布置我的房间';button.type='button';document.querySelector('.focus-summary').append(button);
  const commonButton=document.createElement('button');commonButton.id='decorate-living';commonButton.textContent='布置客厅 · 大家一起';commonButton.type='button';button.after(commonButton);
  const drawer=document.createElement('section');drawer.className='decor-editor';drawer.hidden=true;drawer.setAttribute('aria-label','布置房间');document.querySelector('main').append(drawer);
  const catalog=document.createElement('dialog');catalog.className='decor-dialog';catalog.setAttribute('aria-labelledby','decor-dialog-title');document.body.append(catalog);
  catalog.addEventListener('click',event=>{if(event.target===catalog){const r=catalog.getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)catalog.close()}});
+ let showFurniture=false,starting=false;
  let modelCatalog={},catalogKey='',records=[],ready=false,editing=false,draft=null,history=[],selected=null,valid=false,busy=false,version=0,catalogPage=0,editingRoom=null,commonReady=false;
  const escape=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
- const empty=()=>({colors:{},items:[]}),room=()=>editingRoom??currentRoom(),title=()=>room()===3?'布置我们的客厅':'布置我的房间';
- async function sync(){if(busy)return;try{const [own,common,models]=await Promise.all([client.from('vt_decor').select('*'),client.from('vt_common_decor').select('*'),client.from('vt_model_catalog').select('config').eq('id',1).maybeSingle()]);if(!models.error){const next=models.data?.config??{},key=JSON.stringify(next);if(key!==catalogKey){catalogKey=key;modelCatalog=next;home()?.setDecorCatalog(next)}}ready=!own.error;commonReady=!common.error&&Boolean(common.data?.length);records=(own.data??[]).filter(r=>r.room_id<3).concat(commonReady?common.data.map(r=>({...r,room_id:3})):[]);for(const row of records)if(!editing||row.room_id!==room())home()?.setDecorRoom(row.room_id,row.config)}catch{} }
+ const empty=()=>({colors:{},items:[],furniture:{}}),room=()=>editingRoom??currentRoom(),title=()=>room()===3?'布置我们的客厅':'布置我的房间';
+ async function sync(){if(busy)return;try{
+  const [own,common,models]=await Promise.all([client.from('vt_decor').select('*'),client.from('vt_common_decor').select('*'),client.from('vt_model_catalog').select('config').eq('id',1).maybeSingle()]);
+  if(!models.error){const next=models.data?.config??{},key=JSON.stringify(next);if(key!==catalogKey){catalogKey=key;modelCatalog=next;home()?.setDecorCatalog(next)}}
+  ready=!own.error;commonReady=!common.error&&Boolean(common.data?.length);
+  // 网络错误不当作空布局，保留最后一次读到的房间与家具状态。
+  if(!own.error)records=records.filter(r=>r.room_id===3).concat((own.data??[]).filter(r=>r.room_id<3));
+  if(!common.error)records=records.filter(r=>r.room_id!==3).concat((common.data??[]).map(r=>({...r,room_id:3})));
+  for(const row of records)if(!editing||row.room_id!==room())home()?.setDecorRoom(row.room_id,row.config);
+ }catch{ready=false;commonReady=false}}
+
+ function selectedSpec(){return selected?.builtin?home().getBuiltinSpec(selected.builtin):DECOR_ITEMS[selected?.type]}
+ function selectBuiltin(id){const state=draft.furniture?.[id]??home().getBuiltinState(id);selected={builtin:id,type:'builtin',...state,hidden:false};valid=!state.hidden;preview();render()}
  function push(){history.push(structuredClone(draft));if(history.length>30)history.shift()}
  function preview(){home()?.setDecorRoom(room(),draft);home()?.setDecorationEditor(room(),selected,change=>{
+  if(change.builtin){selectBuiltin(change.builtin);return}
   if(change.selected){selected=structuredClone(draft.items.find(i=>i.id===change.selected));valid=true;preview();render()}
   if(change.item){selected=change.item;valid=change.valid;preview();render()}
  });}
  function render(){
-  drawer.innerHTML=`<div class="decor-heading"><strong>${title()}</strong><button data-action="cancel" ${busy?'disabled':''} aria-label="退出布置">×</button></div><p class="decor-tip" role="status">${selected?valid?'位置可以摆放，点击确定':DECOR_ITEMS[selected.type].wall?'点客厅后方墙面选位置；红色表示不能摆放':'点地面选位置；红色表示不能摆放':'点选已摆放的物件，或添加一件小装饰'}</p><div class="decor-colors">${[['wall',room()===3?'客厅墙面':'墙面'],['floor','地板'],['rug','原有地毯']].map(([key,label])=>`<label>${label}<select data-color="${key}" aria-label="${label}颜色"><option value="">原配色</option>${DECOR_COLORS.map((c,i)=>`<option value="${c}" ${draft.colors[key]===c?'selected':''}>${['暖粉','浅绿','淡紫','奶油','雾蓝','木棕'][i]}</option>`).join('')}</select></label>`).join('')}</div><button class="decor-browse" data-action="browse">选择装饰 · 查看物品预览</button>${selected?`<div class="decor-selection"><span>${DECOR_ITEMS[selected.type].name}</span><button data-action="rotate" ${DECOR_ITEMS[selected.type].wall?'disabled':''}>旋转 90°</button><button data-action="place" ${valid?'':'disabled'}>确定</button><button data-action="remove">${draft.items.some(i=>i.id===selected.id)?'收回':'取消添加'}</button></div>`:''}<div class="decor-footer"><button data-action="undo" ${history.length?'':'disabled'}>撤销</button><button data-action="reset">恢复默认</button><button class="primary" data-action="save" ${busy||selected?'disabled':''}>${busy?'保存中…':'保存布置'}</button></div><small>最多 ${decorLimit(room())} 件 · ${room()===3?'四位家人都可编辑 · 保存后同步':'只修改自己的房间 · 保存后共享'}</small>`;
+  drawer.innerHTML=`<div class="decor-heading"><strong>${title()}</strong><button data-action="cancel" ${busy?'disabled':''} aria-label="退出布置">×</button></div><p class="decor-tip" role="status">${selected?valid?'位置可以摆放，点击确定':selectedSpec().wall?'点客厅后方墙面选位置；红色表示不能摆放':'点地面选位置；红色表示不能摆放':'点选房间里的家具，或从家具清单选择；红色表示不能摆放'}</p><div class="decor-colors">${[['wall',room()===3?'客厅墙面':'墙面'],['floor','地板'],['rug','原有地毯']].map(([key,label])=>`<label>${label}<select data-color="${key}" aria-label="${label}颜色"><option value="">原配色</option>${DECOR_COLORS.map((c,i)=>`<option value="${c}" ${draft.colors[key]===c?'selected':''}>${['暖粉','浅绿','淡紫','奶油','雾蓝','木棕'][i]}</option>`).join('')}</select></label>`).join('')}</div><button class="decor-browse" data-action="browse">选择装饰 · 查看物品预览</button><button class="decor-browse decor-furniture-toggle" data-action="furniture" aria-expanded="${showFurniture}">原有家具 · 移动与收纳</button>${showFurniture?`<div class="decor-furniture-list" aria-label="原有家具清单">${home().getBuiltinFurniture(room()).map(item=>`<button data-furniture="${item.id}" aria-pressed="${selected?.builtin===item.id}"><span>${escape(item.name)}</span><small>${item.hidden?'已收纳 · 点此摆出':'已摆放 · 点此调整'}</small></button>`).join('')}</div>`:''}${selected?`<div class="decor-selection"><span>${selectedSpec().name}</span><button data-action="rotate" ${selectedSpec().wall?'disabled':''}>旋转 90°</button><button data-action="place" ${valid?'':'disabled'}>确定</button><button data-action="deselect">取消选择</button><button data-action="remove">${selected.builtin?'收纳':draft.items.some(i=>i.id===selected.id)?'收回':'取消添加'}</button></div>`:''}<div class="decor-footer"><button data-action="undo" ${history.length?'':'disabled'}>撤销</button><button data-action="reset">恢复默认</button><button class="primary" data-action="save" ${busy||selected?'disabled':''}>${busy?'保存中…':'保存布置'}</button></div><small>原有家具另计 · 可添置 ${decorLimit(room())} 件 · ${room()===3?'四位家人都可编辑 · 保存后同步':'只修改自己的房间 · 保存后共享'}</small>`;
+  drawer.querySelectorAll('[data-furniture]').forEach(b=>b.onclick=()=>{if(!busy)selectBuiltin(b.dataset.furniture)});
   drawer.querySelectorAll('[data-color]').forEach(b=>b.onchange=()=>{push();if(b.value)draft.colors[b.dataset.color]=b.value;else delete draft.colors[b.dataset.color];preview();render()});
   drawer.querySelectorAll('[data-action]').forEach(b=>b.onclick=async()=>{
    if(busy)return;const action=b.dataset.action;
+   if(action==='furniture'){showFurniture=!showFurniture;render();return}
+   if(action==='deselect'){selected=null;preview();render();return}
    if(action==='browse'){openCatalog();return}
    if(action==='cancel'){finish(false);return}
    if(action==='rotate'){selected.rotation=(selected.rotation+1)%4;valid=home().canPlaceDecor(room(),selected)}
-   if(action==='place'&&valid){push();draft.items=draft.items.filter(i=>i.id!==selected.id).concat(selected);selected=null}
-   if(action==='remove'){if(draft.items.some(i=>i.id===selected.id)){push();draft.items=draft.items.filter(i=>i.id!==selected.id)}selected=null}
+   if(action==='place'&&valid){push();if(selected.builtin){draft.furniture??={};draft.furniture[selected.builtin]={x:selected.x,z:selected.z,rotation:selected.rotation,hidden:false}}else draft.items=draft.items.filter(i=>i.id!==selected.id).concat(selected);selected=null}
+   if(action==='remove'){if(selected.builtin){push();draft.furniture??={};const old=draft.furniture[selected.builtin]??home().getBuiltinState(selected.builtin);draft.furniture[selected.builtin]={...old,hidden:true}}else if(draft.items.some(i=>i.id===selected.id)){push();draft.items=draft.items.filter(i=>i.id!==selected.id)}selected=null}
    if(action==='undo'){draft=history.pop();selected=null}
    if(action==='reset'){push();draft=empty();selected=null}
    if(action==='save'){
     if(room()===3&&!commonReady){notify('客厅共享保存需要先执行 living-decoration.sql，当前布置仍可预览');return;}
-    busy=true;render();try{const {data,error}=await client.rpc(room()===3?'vt_save_common_decor':'vt_save_decor',{p_config:draft,p_version:version});if(error)throw error;const savedRow=Array.isArray(data)?data[0]:data;const row={...savedRow,room_id:room()};records=records.filter(r=>r.room_id!==room()).concat(row);finish(true);notify('布置已保存，家人也能看到啦')}
+    if(new TextEncoder().encode(JSON.stringify(draft)).length>10000){notify('布置内容过多，请减少新增装饰后再保存');return}
+    busy=true;render();try{const {data,error}=await client.rpc(room()===3?'vt_save_common_decor':'vt_save_decor',{p_config:draft,p_version:version});if(error)throw error;const savedRow=Array.isArray(data)?data[0]:data;if(!savedRow?.config||!Number.isInteger(savedRow.version))throw new Error('未收到保存确认');const row={...savedRow,room_id:room()};records=records.filter(r=>r.room_id!==room()).concat(row);finish(true);notify('布置已保存，家人也能看到啦')}
     catch(error){notify(error.message?.includes('无效的装饰')?'新增家具需要先在 Supabase 执行 living-decoration.sql':error.message?.includes('其他设备')?'其他设备更新了房间，请退出后重新布置':'布置保存未完成，请检查网络后重试')}finally{busy=false;if(editing)render()}return;
    }
    preview();render();
@@ -43,12 +60,13 @@ export function setupDecoration({home,focus,notify}){
   catalog.innerHTML=`<div class="decor-dialog-heading"><div><small>VERY THREE / 房间布置</small><h2 id="decor-dialog-title">${room()===3?'一起布置我们的客厅。':'给房间添点喜欢的。'}</h2></div><button data-close aria-label="关闭装饰选择">×</button></div><p class="decor-dialog-desc">${full?`当前空间已有 ${decorLimit(room())} 件装饰，先收回一件再添加。`:page===5?'选择墙饰，再点客厅后方墙面摆放。预览与实际模型一致。':'选择家具，再点地面摆放。预览与实际模型一致。'}</p><nav class="decor-pages" aria-label="装饰分类">${DECOR_PAGES.map((name,i)=>i===5&&room()!==3?'':`<button data-page="${i}" aria-pressed="${i===page}">${i+1} · ${name}</button>`).join('')}</nav><div class="decor-item-grid">${entries.map(([key,v])=>`<button class="decor-item-card" data-add="${key}" ${full?'disabled':''}>${images[key]?`<img src="${images[key]}" alt="${escape(v.name)}的三维模型预览" width="192" height="192">`:'<span class="decor-preview-empty">预览暂不可用</span>'}<span class="decor-item-name">${escape(v.name)}</span><small>${escape(v.desc)}${['arcade','aquarium','telescope'].includes(key)?' · 可互动':''}</small><span class="decor-item-add">＋ 选它</span></button>`).join('')}</div><button class="decor-dialog-back" data-close>回房间继续布置</button>`;
   catalog.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>{openCatalog(Number(b.dataset.page));catalog.querySelector(`[data-page="${catalogPage}"]`)?.focus()});
   catalog.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>catalog.close());
-  catalog.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{selected={id:crypto.randomUUID(),type:b.dataset.add,rotation:0,color:modelCatalog[b.dataset.add]?.color??DECOR_COLORS[room()]};valid=false;catalog.close();preview();render();notify(DECOR_ITEMS[selected.type].wall?'点客厅后方墙面选位置，门洞周围不能摆放':'点地面选位置，再点击确定')});
+  catalog.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{selected={id:crypto.randomUUID(),type:b.dataset.add,rotation:0,color:modelCatalog[b.dataset.add]?.color??DECOR_COLORS[room()]};valid=false;catalog.close();preview();render();notify(selectedSpec().wall?'点客厅后方墙面选位置，门洞周围不能摆放':'点地面选位置，再点击确定')});
   if(!catalog.open)catalog.showModal();
  }
  function finish(saved){catalog.close();editing=false;drawer.hidden=true;document.body.classList.remove('decorating');home()?.setDecorationEditor(-1,null);const row=records.find(r=>r.room_id===room());home()?.setDecorRoom(room(),row?.config??empty());selected=null;editingRoom=null;void sync()}
- async function begin(target){if(editing||busy)return;if(!home()){notify('3D 场景尚未准备好');return}await sync();if(target!==3&&!ready){notify('装饰功能需要先在 Supabase 执行 decoration.sql');return}editingRoom=target;const row=records.find(r=>r.room_id===room());version=row?.version??0;draft=structuredClone(row?.config??empty());history=[];selected=null;catalogPage=0;editing=true;document.querySelector('#panel').close();focus(room()===3?-1:room());drawer.hidden=false;document.body.classList.add('decorating');preview();render();openCatalog();if(target===3&&!commonReady)notify('可以先预览布置；共享保存需执行 living-decoration.sql')}
+ async function begin(target){if(editing||busy||starting)return;if(!home()){notify('3D 场景尚未准备好');return}starting=true;await sync();starting=false;if(target!==3&&!ready){notify('装饰功能需要先在 Supabase 执行 decoration.sql');return}editingRoom=target;const row=records.find(r=>r.room_id===room());version=row?.version??0;draft=structuredClone(row?.config??empty());history=[];selected=null;catalogPage=0;showFurniture=false;editing=true;document.querySelector('#panel').close();focus(room()===3?-1:room());drawer.hidden=false;document.body.classList.add('decorating');preview();render();if(target===3&&!commonReady)notify('可以先预览布置；共享保存需执行 living-decoration.sql')}
  button.onclick=()=>begin(currentRoom());commonButton.onclick=()=>begin(3);
  const timer=setInterval(sync,10000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)void sync()});window.addEventListener('pagehide',()=>clearInterval(timer));void sync();
  return {get editing(){return editing}};
 }
+

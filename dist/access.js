@@ -13,7 +13,7 @@ async function enterHome(){
  try{
   await getMember();
   shell.hidden=false;gate.hidden=true;
-  await import('./app.js?v=39-mobile-fit');
+  await import('./app.js?v=40-whole-home');
   opened=true;input.value='';
   document.querySelector('#lock-home').textContent='退出登录';
   document.querySelector('#lock-home').onclick=async()=>{
@@ -44,3 +44,4 @@ try{
  const {data:{session}}=await client.auth.getSession();
  if(session){entering=true;submit.disabled=true;submit.textContent='正在回家…';await enterHome()}
 }catch{failure('暂时无法恢复登录，请重新登录。')}
+

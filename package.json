@@ -8,6 +8,7 @@
     "start": "node scripts/dev.mjs",
     "test:admin": "node scripts/check-admin.mjs",
     "test:models:browser": "node scripts/check-models-browser.mjs",
+    "test:layout": "node scripts/check-furniture-layout.mjs && node scripts/check-decoration-controller.mjs",
     "test:player": "node scripts/check-player-actions.mjs",
     "test:player:browser": "node scripts/check-player-browser.mjs"
   },
@@ -15,3 +16,4 @@
     "node": ">=18"
   }
 }
+
