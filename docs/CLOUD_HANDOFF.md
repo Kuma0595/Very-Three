@@ -150,7 +150,8 @@ journalctl -u very-three-backup.service -n 20 --no-pager
 - 真实浏览器测试尝试未能启动：当前环境没有 Chromium 可执行文件。不能宣称手机视觉效果、实际触摸选择或 WebGL 截图已通过。
 - 在线账号的真实保存/刷新/多设备同步尚未验证；现有 RPC 兼容性基于仓库 SQL 与模拟接口测试，不冒充已连接自建数据库验证。
 - 当前对话实测主域名曾返回 `502 / connection closed`，用户访问 panel 子域名跳 DNSPod 拦截页；备案原因尚未独立核实。SSH 再次测试仍 `Network is unreachable`，宝塔浏览器也没有已验证的登录权限。不要把权限开启或 GitHub 提交当作服务器执行成功。
-- main 的 dist 更新会交给既有自动部署器；本轮部署结果需要重新读取公开版本标记/静态文件验证，不能按历史五分钟自动拉取记录宣称已上线。
+- 功能已提交 GitHub main：`c35b412b1dddb0ffda26b4f74aee5a09e4bf8baa`，分支 ref、新增模块与本文内容已重新读取核验。dist 更新交给既有自动部署器。
+- 提交后实际访问 `https://verythree.online/very-three-release.json` 被当前云端浏览器阻止：`net::ERR_BLOCKED_BY_CLIENT`，未读到线上版本。**自动部署结果待验证，不宣称已上线**；该错误也不能证明服务器自身故障。
 - 第一版仍固定墙体、门窗和原有相册/墙面入口；未新增自由桌面摆放、原有墙饰高度编辑或庭院编辑。功能区内部分收藏与家具作为完整组移动，后续可继续细分。
 
 ## 后续待办顺序
