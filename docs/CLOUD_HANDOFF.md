@@ -1,0 +1,128 @@
+# Very Three 云端交接
+
+更新：2026-10-16 09:35 左右（北京时间）。先读根目录 AGENTS.md、本文件及相关源代码，再核验外部服务状态。本文是进度交接，不是全部聊天；成功提示只代表当时检查结果。
+
+## 先看这五项
+
+1. 网站、数据库、账号和照片已迁移腾讯云自建 Supabase，**不要重复导入覆盖新数据**。
+2. 自动部署已安装，并通过两次公开版本标记确认工作；最新前端提交 `2bfba8315d480e271426e9d092381ea4a506fc66`。
+3. 手机横向溢出修复已上线，但**真机效果待用户确认，本轮浏览器布局测试未运行**。
+4. 域名网页和 HTTPS 已配置，域名下后端路由此前 404、前端仍用 IP 后端；完整域名切换尚未完成。
+5. 每日备份脚本和安装包已交付，**未收到首次备份与定时器成功日志，不能宣称已启用**。
+
+## 用户与项目
+
+- 用户 Piggy，前端工程师，中文沟通。希望直接完成工作，减少宝塔终端和聊天间转发。不得把待执行/待验证的步骤报告为完成。
+- 仓库：<https://github.com/Kuma0595/Very-Three>，默认分支 main。
+- 静态 HTML/CSS/JS、Three.js，小屋在 dist/，管理台在 dist/admin/；无需安装 npm 依赖即可 npm run dev。以 package.json 为准，不擅自换框架。
+- 四位成员：Piggy、4010、Joey、Zakery。Zakery 是 Joey 的男朋友，两人共享卧室。三室一厅加庭院。
+- 个人房间面积接近；客厅后面是墙而不是过道；窗户朝外，避免朝向其他卧室。保持门口/家具间寻路通畅。
+- 公共区域文字使用“我们家”，不是“一家人”。客厅布置上限 30 件、成员共同编辑、支持墙面物品。
+- 已移除“串门”开关，默认点地面移动，椅子可坐、自己的床可躺。睡眠依据真实时间，视觉昼夜切换不应强制上床。
+- 照片支持大图和相册内左右切换；Joey 房间两人都能上传，最多 6 张。
+- 避免回归：地毯/沙发深度闪烁、照片点击错位、窗户残留建模、起床后被模型卡住。
+- 保留既有本地数据、权限和云端备份，不能擅自删除/重置。
+
+## 部署路径
+
+| 项目 | 配置 |
+| --- | --- |
+| 小屋 / 后台 | <https://verythree.online/> / <https://verythree.online/admin/> |
+| IP 入口 | <https://114.132.201.227/> |
+| 旧 GitHub Pages | <https://kuma0595.github.io/Very-Three/> |
+| 主机 | 腾讯云 OpenCloudOS 9.6 x86_64，4 核、约 4GB 内存、40GB 磁盘、1GB swap，宝塔 |
+| 网站 | /www/wwwroot/very-three/dist（自动部署后为版本目录链接） |
+| Nginx / 服务 | /www/server/nginx/sbin/nginx / /etc/init.d/nginx |
+| 原 IP vhost | /www/server/panel/vhost/nginx/very-three.conf |
+| 原 IP 证书 | /www/server/panel/vhost/cert/very-three/ |
+| 后端 | /www/server/very-three-backend |
+| 内网 API | 127.0.0.1:18000 |
+
+**访问边界**：此前云端 SSH 连接 114.132.201.227:22 返回 Network is unreachable，未进入认证；没有保存可用 SSH 凭据。HTTPS 读取、GitHub 连接可用不等于能执行服务器命令。不要要求用户在聊天发送私钥/root 密码。确需服务器配置时，准备校验过的一次性包，由用户宝塔终端执行，再核验非敏感结果。
+
+过去 Safari HTTP IP 页面约 10 FPS，HTTPS 同一模型约 49 FPS；不要回退 HTTP。
+
+## 自建 Supabase：迁移完成
+
+- 已迁移并验证数据库、账号/权限、照片，切换 IP 站前端。迁移时验证 4 个账号、16 张业务表逐条数据、9 张照片字节/SHA256及真实登录；用户需要重新登录。
+- 当前公开 API URL：https://114.132.201.227/backend 。dist/cloud-config.js 仅含公开 anon key，不得放入 service_role、数据库密码、JWT 签名密钥。
+- Compose 环境：COMPOSE_FILE=docker-compose.yml:docker-compose.very-three.yml；COMPOSE_PROJECT_NAME=very-three-backend。
+- 官方源版本 self-hosted/v0.8.2，源提交 564eab8ad7840b13324f68b1bfac074ef8d51c21。
+- 正常启用 db、auth、rest、realtime、storage、imgproxy、api-gw；其他管理/维护服务不按全套默认启用。
+- 旧云端项目 yfbyyfpazdjsgpyzktak 保留。托管 Supabase 插件连接不等于能管理自建后端；操作前确认目标。不要重复导入。
+- 业务表：vt_admin_log、vt_admin_users、vt_common_decor、vt_decor、vt_frames、vt_garden、vt_members、vt_model_catalog、vt_model_workspace、vt_notes、vt_photos、vt_plans、vt_play、vt_rooms、vt_settings、vt_wishes。
+
+保留材料：
+
+- /www/backup/very-three-cloud-u9fC7fc7（云端初始备份）
+- /www/backup/very-three-restore-eudMCXcb（数据库恢复记录）
+- /www/backup/very-three-migrate-all-86bpn9vu（整批迁移成功记录）
+
+这些材料可能含账号密码哈希、密钥和私人照片，不能上传到公开仓库或聊天。
+
+## 自动部署：已安装并验证
+
+说明：docs/server-autodeploy.md；代码：scripts/server-autodeploy/。
+
+- 3f8e30b4ab9bfc9242c7fde892d0a6a0279990d9：部署器及备份链接兼容修改。用户安装后公开版本标记确认首次发布，首页/后台返回 200。
+- 2bfba8315d480e271426e9d092381ea4a506fc66：手机适配。约 09:35 再读公开标记确认已上线，created_at 为 2026-10-16T01:30:53.185201+00:00。
+- 标记地址：<https://verythree.online/very-three-release.json>。
+
+机制：约每 5 分钟检查 main，锁定提交 SHA 下载官方 GitHub 包，仅 dist 有变化时发布；不运行仓库 shell/npm 或数据库迁移。**保留服务器当前 cloud-config.js**，不能靠改仓库此文件来变更线上后端地址。
+
+先检查静态文件，再原子切换目录；本机 HTTPS 检查版本标记、首页、后台、模型页，失败自动回退。首次安装前的原站目录保留，最近 3 个受管理版本轮换并保护当前/上一版。与备份共享锁，异常中断留下 pending 时暂停。
+
+路径：/www/server/very-three-tools/deploy.py；状态 /www/server/very-three-autodeploy/state.json；版本 /www/wwwroot/very-three-releases/。
+
+```bash
+systemctl list-timers very-three-deploy.timer
+journalctl -u very-three-deploy.service -n 20 --no-pager
+systemctl start very-three-deploy.service
+python3 /www/server/very-three-tools/deploy.py pause
+python3 /www/server/very-three-tools/deploy.py rollback
+python3 /www/server/very-three-tools/deploy.py resume
+```
+
+main 的后续 dist 改动会自动上线，未准备发布的代码放其他分支。部署器本身不会自更新。**文档/脚本提交不会重新发布网页，因此网页版本标记不等于最新 HEAD 不一定是故障。**
+
+## 手机适配：已上线，实际显示待确认
+
+用户 iPhone 内嵌浏览器截图显示左侧被切、右侧大块紫色空白、底部横向滚动条。对话中可见截图，但工具环境无法重新打开原文件；不要声称已在同款 iPhone 复现。
+
+2bfba83 的修改：
+
+- dist/style.css：<=850px 改自然文档流/grid；四位成员一行、六个房间入口两行；画布/工具栏/底栏限制在可用宽度内；页面和场景分别约束横向溢出。
+- dist/scene.js：离屏、非有限或相机外标签设 hidden，不写极大投影坐标；零尺寸跳过 renderer resize。
+- dist/index.html、access.js、app.js：缓存版本链 39-mobile-fit / 30-mobile-fit。
+- 新增 scripts/check-mobile-overflow.mjs：实际投影片段回归，已通过。
+- 扩展 scripts/check-player-browser.mjs：320/360/393/430/768/850/851/1440 宽度，全景/聚焦模式、成员/导航/画布边界和极端投影回归。
+
+本轮通过：JS 语法、投影回归、npm run test:player、npm run test:admin、node scripts/check-navigation.mjs、node scripts/check-cat-sound.mjs。
+
+**本轮没有执行真实浏览器布局/截图测试**：环境缺少内核，Playwright 下载得到不可用 HTML/损坏包。不能称桌面/手机像素布局已验证。内核可用时运行 package.json 中浏览器测试，可用 VT_CHROME 指定内核，脚本支持 VT_PLAYWRIGHT_MODULE。用户真机效果是当前优先待办。
+
+## 每日备份：安装状态待确认
+
+代码 scripts/server-backup/，说明 docs/server-operations.md。设计为北京时间 04:00 systemd timer，先成功执行首次备份再启用定时器。API 会短暂停止以保持数据库/照片一致，finally 恢复并等健康；不停止 Nginx/PostgreSQL。
+
+包含数据库 custom dump、角色、照片、后端配置/密钥、Postgres 配置卷、网页、原 IP Nginx/证书/acme.sh 材料。目录 /www/backup/very-three-auto，仅轮换本工具最近 7 份成功备份，手工/迁移备份不删。仅同机备份，没有异地副本，也没有整机恢复演练。
+
+自动部署安装器会更新已安装的 backup.py，用 tar -h 打包链接后的实际网页；未装备份则不会擅自启用。新域名可能使用独立 vhost/证书目录，必须补齐备份覆盖。
+
+```bash
+systemctl list-timers very-three-backup.timer
+journalctl -u very-three-backup.service -n 20 --no-pager
+```
+
+旧对话临时下载包不保证新环境可访问。需要交付包时从仓库脚本重新打包，并生成/检查 SHA256SUMS；不要把服务器实际 .env 放进交付包。
+
+## 后续待办顺序
+
+1. 确认手机适配效果；若仍偏移，获取实际视口/横向滚动偏移及内嵌浏览器与 Safari 差异，不直接断言根因完全查清。
+2. 完整域名切换：约 03:03 实测域名首页/后台 200、HTTP 301 到 HTTPS；/backend/auth/v1/health 为 404，cloud-config 为 IP URL。目前未修，先重新核验。
+3. 服务器 nginx -T 查明域名真实 vhost/证书目录，备份后代理 /backend/{auth/v1,rest/v1,storage/v1,realtime/v1} 到本机 API，保留重写/WebSocket，不公开数据库/管理端口。
+4. 核验当前 Compose 实际使用的登录/外部 URL 变量后再改，不能机械替换未使用变量；同步服务器与仓库公开 URL。
+5. 域名后端可用后，将 scripts/build-pages-redirect.py 从 IP 目的地改为域名并发布验证。
+6. 确认每日备份状态，补齐新域名配置/证书覆盖。
+
+边界：前端/文档修改不授权重置数据库、删除备份或关闭旧项目。遇权限限制说明并停下，不能以网站可访问冒充服务器 shell 权限。
