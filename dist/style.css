@@ -63,3 +63,41 @@ body.night .access-card{--ink:#433552;--muted:#726480;color:var(--ink)}
 .admin-entry{color:inherit;font-size:inherit;margin-right:12px;opacity:.8}.admin-entry:hover{opacity:1}
 
 .walk-controls{max-width:160px}.walk-controls small{max-width:140px}.walk-controls #walk-stand{background:#796195;color:#fff}
+
+/* 页面与场景各自约束横向范围；屏幕外标签不得撑大 iOS 的滚动区域。 */
+html,body{width:100%;min-width:0;max-width:100%;overflow-x:hidden;overflow-x:clip}
+.home-shell{width:100%;min-width:0;max-width:100%}
+#stage{overflow:hidden;isolation:isolate;min-width:0}
+#stage>canvas{max-width:100%}
+#hotspots{overflow:hidden;contain:layout paint}
+.hotspot[hidden]{display:none!important}
+
+/* 手机改为自然文档流，四位成员、房间入口和画布不再依赖绝对坐标。 */
+@media(max-width:850px){
+  .home-shell header{height:auto;min-height:85px;flex-wrap:wrap;gap:12px;padding:16px max(14px,env(safe-area-inset-left)) 16px max(14px,env(safe-area-inset-right));width:100%;min-width:0}
+  .home-shell .brand{min-width:0;flex-shrink:0}
+  .home-shell .header-actions{min-width:0;max-width:100%;margin-left:auto;flex-shrink:0}
+  .home-shell main,body.room-focus .home-shell main{display:grid;grid-template-columns:minmax(0,1fr);grid-template-areas:"intro" "rooms" "summary" "stage" "dock" "gesture" "footer";grid-template-rows:auto auto auto auto auto auto auto;gap:12px;width:100%;min-width:0;height:auto;min-height:calc(100svh - 85px);max-height:none;padding:0 max(14px,env(safe-area-inset-left)) max(16px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-right))}
+  .home-shell .intro{grid-area:intro;position:static;width:100%;max-width:none;min-width:0}
+  .home-shell .intro .handwritten{margin-bottom:4px}
+  .home-shell .intro h1{max-width:none;font-size:24px;line-height:1.4;margin-bottom:6px}
+  .home-shell .intro #home-description{max-width:none;margin:6px 0}
+  .home-shell .intro .members{position:static;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));width:100%;gap:8px;margin:12px 0 0}
+  .home-shell .intro .members button{width:100%;min-width:0}
+  .home-shell .intro .member-name{max-width:100%;font-size:10px}
+  .home-shell .room-nav,body.room-focus .home-shell .room-nav{grid-area:rooms;position:static;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%;min-width:0;gap:6px}
+  .home-shell .room-nav button{width:100%;max-width:none;min-width:0;padding:9px 5px}
+  body.room-focus .home-shell .focus-summary{grid-area:summary;position:static;transform:none;width:100%;min-width:0;margin:0}
+  .home-shell main #stage{grid-area:stage;position:relative;inset:auto;width:100%;height:clamp(340px,52svh,560px);min-height:0}
+  .home-shell .scene-caption{max-width:calc(100% - 12px);white-space:normal;text-align:center;justify-content:center}
+  .home-shell .view-controls,body.room-focus .home-shell .view-controls{grid-area:stage;position:relative;inset:auto;justify-self:end;align-self:end;height:max-content;margin:0 8px 28px 0}
+  .home-shell .walk-controls{grid-area:stage;position:relative;inset:auto;justify-self:start;align-self:end;max-width:135px;margin:0 0 28px 8px}
+  .home-shell .dock,body.room-focus .home-shell .dock{grid-area:dock;position:relative;inset:auto;transform:none;justify-self:center;width:100%;min-width:0;margin:0}
+  .home-shell .dock button{flex:1;min-width:0;padding:6px 2px}
+  .home-shell .gesture{grid-area:gesture;position:static;margin:0;line-height:1.6}
+  .home-shell footer{grid-area:footer;position:static;min-width:0;flex-wrap:wrap;justify-content:center;gap:8px 14px;text-align:center;line-height:1.7}
+  .home-shell footer>span{min-width:0;overflow-wrap:anywhere}
+  .home-shell footer>span:last-child{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 12px}
+  .home-shell footer #lock-home{margin-left:0}
+  .decorating .home-shell main #stage{height:53svh;min-height:300px}
+}

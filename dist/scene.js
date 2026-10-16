@@ -745,7 +745,7 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
     }
     return {target,position:target.clone().addScaledVector(direction,distance)};
   }
-  function resize(){const w=stage.clientWidth,h=stage.clientHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();if(inspectionScene)return;const view=viewFor(currentView);camera.position.copy(view.position);controls.target.copy(view.target);tween=null;controls.update()}
+  function resize(){const w=stage.clientWidth,h=stage.clientHeight;if(w<=0||h<=0)return;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();if(inspectionScene)return;const view=viewFor(currentView);camera.position.copy(view.position);controls.target.copy(view.target);tween=null;controls.update()}
   const resizeObserver=new ResizeObserver(resize);resizeObserver.observe(stage);resize();
   controls.addEventListener('start',()=>{tween=null});
   let disposed=false,frameId;
@@ -758,7 +758,13 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
       animatedProps.forEach(({kind,mesh})=>{if(kind==='vinyl')mesh.rotation.y=seconds*1.7;else mesh.material.emissiveIntensity=.55+Math.sin(seconds*2)*.20});
     }
     controls.update();renderer.render(inspectionScene??scene,camera);
-    hotDefs.forEach(h=>{const point=h.root.localToWorld(h.p.clone()),p=point.project(camera);h.el.style.left=((p.x*.5+.5)*stage.clientWidth)+'px';h.el.style.top=((-p.y*.5+.5)*stage.clientHeight)+'px';const visible=p.z<1&&Math.abs(p.x)<.96&&Math.abs(p.y)<.96;h.el.style.opacity=Number(visible);h.el.style.pointerEvents=visible?'auto':'none'});
+    hotDefs.forEach(h=>{
+      const point=h.root.localToWorld(h.p.clone()),p=point.project(camera);
+      const visible=Number.isFinite(p.x+p.y+p.z)&&p.z>=-1&&p.z<=1&&Math.abs(p.x)<.96&&Math.abs(p.y)<.96;
+      // 透明标签仍会参与滚动范围计算；离屏时彻底隐藏，且不写入极大投影坐标。
+      h.el.hidden=!visible;h.el.style.pointerEvents=visible?'auto':'none';
+      if(visible){h.el.style.left=((p.x*.5+.5)*stage.clientWidth)+'px';h.el.style.top=((-p.y*.5+.5)*stage.clientHeight)+'px';h.el.style.opacity='1'}
+    });
   }
   frameId=requestAnimationFrame(frame);
   function move(to,target){

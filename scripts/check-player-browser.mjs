@@ -10,4 +10,31 @@ await page.evaluate(()=>{window.__home.setRoom(-1);window.__step(1);});await tap
 await page.locator('#walk-stand').click();assert.equal(await page.evaluate(()=>window.__home.getWalkState().pose),'stand');await page.evaluate(()=>{window.__home.setRoom(0);window.__step(1);});await tap([-8.5,1.14,-8.5]);await page.evaluate(()=>window.__step(600));assert.equal(await page.evaluate(()=>window.__home.getWalkState().pose),'bed');if(process.env.VT_SCREENSHOTS)await page.screenshot({path:process.env.VT_SCREENSHOTS+'/player-bed.png'});
 await page.locator('#walk-stand').click();await page.locator('#help').click();assert((await page.locator('#panel').textContent()).includes('无需开启模式'));await page.keyboard.press('Escape');
 await page.locator('#focus-info').click();await page.keyboard.press('Escape');await page.locator('#decorate-room').click();await page.waitForSelector('.decor-dialog[open]');assert.equal(await page.evaluate(()=>window.__home.getWalkState().active),false);await page.keyboard.press('Escape');await page.locator('[data-action="cancel"]').click();await page.evaluate(()=>{window.__home.setRoom(-1);window.__step(1);});await tap([0,.18,9]);await page.evaluate(()=>window.__step(450));assert(await page.evaluate(()=>window.__home.getWalkState().active),'default control resumes after arranging');
-await page.setViewportSize({width:390,height:844});await page.evaluate(()=>window.__step(1));assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.deepEqual(errors,[]);console.log('PASS: real main app floor/sofa/bed clicks, stand toolbar, help, decoration priority/resume, mobile fit and no browser exceptions');}finally{await browser.close();server.shutdown();}
+for(const width of [320,360,393,430,768,850,851,1440]){
+  await page.setViewportSize({width,height:844});
+  await page.evaluate(()=>window.__home.stopWalking());
+  await page.locator('[data-room="-2"]').click();
+  await page.evaluate(()=>{window.__step(1);window.scrollTo(0,0)});
+  await page.waitForTimeout(100);
+  const layout=await page.evaluate(()=>{
+    const rect=selector=>{const r=document.querySelector(selector).getBoundingClientRect();return {left:r.left,right:r.right,width:r.width,top:r.top,bottom:r.bottom}};
+    return {width:innerWidth,scroll:document.documentElement.scrollWidth,stage:rect('#stage'),canvas:rect('#stage canvas'),members:[...document.querySelectorAll('.members button')].map(el=>{const r=el.getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,width:r.width}}),nav:rect('.room-nav'),dock:rect('.dock'),brand:rect('.brand'),actions:rect('.header-actions')};
+  });
+  assert(layout.scroll<=width,`viewport ${width}: no horizontal overflow`);
+  for(const name of ['stage','canvas','nav','dock','brand','actions'])assert(layout[name].left>=-1&&layout[name].right<=width+1,`${width}: ${name} fits`);
+  assert(Math.abs(layout.stage.width-layout.canvas.width)<2,`${width}: canvas fills stage`);
+  if(width<=850){
+    assert(layout.members.length===4&&layout.members.every(r=>r.width>0&&r.left>=0&&r.right<=width),`${width}: all four members visible and fit`);
+    assert(layout.members.every(r=>Math.abs(r.top-layout.members[0].top)<1),`${width}: members stay in one row`);
+  }
+  // 即使投影层意外收到极大坐标，也必须由容器裁剪，而非撑大页面。
+  await page.evaluate(()=>{const el=document.createElement('button');el.className='hotspot';el.id='overflow-fixture';el.style.cssText='position:absolute;left:100000px;top:0';document.querySelector('#hotspots').append(el)});
+  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`${width}: projected overflow stays contained`);
+  await page.locator('#overflow-fixture').evaluate(el=>el.remove());
+  if(process.env.VT_SCREENSHOTS&&width===393)await page.screenshot({path:process.env.VT_SCREENSHOTS+'/mobile-fit-393.png',fullPage:true});
+  await page.locator('[data-room="-1"]').click();
+  await page.evaluate(()=>window.__step(1));
+  await page.waitForTimeout(100);
+  assert(await page.evaluate(()=>{const r=document.querySelector('#stage').getBoundingClientRect();return document.body.classList.contains('room-focus')&&r.width>0&&r.left>=-1&&r.right<=innerWidth+1&&document.documentElement.scrollWidth<=innerWidth}),`${width}: focused room also fits`);
+}
+assert.deepEqual(errors,[]);console.log('PASS: real main app floor/sofa/bed clicks, stand toolbar, help, decoration priority/resume, 8 viewport layouts and no browser exceptions');}finally{await browser.close();server.shutdown();}
