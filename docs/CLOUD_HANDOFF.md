@@ -116,6 +116,16 @@ journalctl -u very-three-backup.service -n 20 --no-pager
 
 旧对话临时下载包不保证新环境可访问。需要交付包时从仓库脚本重新打包，并生成/检查 SHA256SUMS；不要把服务器实际 .env 放进交付包。
 
+## 2026-10-16 补充：跨对话与宝塔代理状态
+
+- 用户已在 ChatGPT Projects 的 Very Three 项目设置开发指令；新对话不保证完整读取其他对话，必须主动读取 GitHub 最新 AGENTS.md 和本文件。
+- 用户在电脑与 iPhone 间切换，希望多个短对话接力，尽量避免逐条复制宝塔命令。优先 GitHub 自动部署；探索 Work 浏览器或受限、可审计、可回滚的自动化运维通道。**目前没有已验证的宝塔浏览器或 SSH 执行权限。**
+- 宝塔终端确认域名 vhost 为 `/www/server/panel/vhost/nginx/verythree.online.conf`，其中有 `server_name verythree.online`、`root /www/wwwroot/very-three/dist` 和 `include /www/server/panel/vhost/nginx/extension/verythree.online/*.conf;`。
+- 扩展目录 `grep -Rn 'proxy_pass' ...` 当时无结果，但没有完整检查 `nginx -T`。本机 `curl -I http://127.0.0.1:18000/auth/v1/health` 返回 401 Unauthorized（server: envoy），仅表明网关响应。
+- 曾向用户提供**待执行**的单行 Python 命令：仅当目标文件不存在时创建 `/www/server/panel/vhost/nginx/extension/verythree.online/backend.conf`，使用 `location ^~ /backend/`、`proxy_pass http://127.0.0.1:18000/;`。**没有收到执行成功证据，不能认定文件已创建、Nginx 已重载或代理已生效。**
+- 后续先确认文件、备份和回滚，再 `/www/server/nginx/sbin/nginx -t`，通过后才 reload；验证域名后端认证/照片、Compose 外部 URL、服务器保留的 cloud-config.js、域名证书/vhost 备份和每日备份 timer。
+- 重要任务完成后记录已完成、已验证、未完成、待验证；仅在 GitHub 提交并重新读取成功后称文档已更新。禁止重复迁移或删除业务数据、照片、备份。
+
 ## 后续待办顺序
 
 1. 确认手机适配效果；若仍偏移，获取实际视口/横向滚动偏移及内嵌浏览器与 Safari 差异，不直接断言根因完全查清。
