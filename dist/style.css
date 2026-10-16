@@ -103,11 +103,3 @@ html,body{width:100%;min-width:0;max-width:100%;overflow-x:hidden;overflow-x:cli
 }
 
 
-/* 全屋布置：清单可折叠，手机保留足够的场景点击区域。 */
-.decor-editor .decor-furniture-toggle{background:#e7dfd2;color:#5c4c44;margin-top:6px}
-.decor-furniture-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;max-height:180px;overflow:auto;margin:8px 0}
-.decor-furniture-list button{text-align:left;min-width:0;border:1px solid transparent}
-.decor-furniture-list button[aria-pressed="true"]{border-color:#796195;background:#d9c9e7}
-.decor-furniture-list span{display:block;font-size:12px;overflow-wrap:anywhere}
-.decor-furniture-list small{margin-top:3px;font-size:10px}
-@media(max-width:600px){.decor-furniture-list{max-height:120px}.decor-editor .decor-browse{margin:6px 0;padding:9px}.decor-selection{margin:6px 0}}

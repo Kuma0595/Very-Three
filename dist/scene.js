@@ -752,21 +752,28 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
   }
   // 复用主场景的模型与渲染器生成缩略图，不额外创建 WebGL 上下文。
   function getDecorPreviews(color,types=Object.keys(DECOR_ITEMS)){
-    const key=color+types.join(',');if(decorPreviewCache.has(key))return decorPreviewCache.get(key);
+    return getModelPreviews('decor:'+color+types.join(','),types,type=>decoration.createPreviewModel({id:'preview',type,color:publishedModelCatalog[type]?.color??color,rotation:0}));
+  }
+  function getBuiltinPreviews(room,ids=builtins.list(room).map(item=>item.id)){
+    const colors=[];for(const id of ids)builtins.root(id)?.traverse(o=>{if(o.isMesh)colors.push(o.material.color?.getHexString())});
+    return getModelPreviews('builtin:'+room+ids.join(',')+colors.join(','),ids,id=>{const model=builtins.preview(id);if(model){model.position.set(0,0,0);model.rotation.y=0;}return model;});
+  }
+  function getModelPreviews(key,types,createModel){
+    if(decorPreviewCache.has(key))return decorPreviewCache.get(key);
     const result={},size=192,target=new THREE.WebGLRenderTarget(size,size),previous=renderer.getRenderTarget();
     target.texture.colorSpace=THREE.SRGBColorSpace;
     const previewScene=new THREE.Scene();previewScene.background=new THREE.Color('#eee5dc');
     previewScene.add(new THREE.HemisphereLight('#fff7e9','#a497b4',3));const light=new THREE.DirectionalLight('#fff3dc',3);light.position.set(3,5,4);previewScene.add(light);
     const previewCamera=new THREE.PerspectiveCamera(35,1,.01,20);
     try{for(const type of types){
-      const model=decoration.createPreviewModel({id:'preview',type,color:publishedModelCatalog[type]?.color??color,rotation:0});previewScene.add(model);
+      const model=createModel(type);if(!model)continue;previewScene.add(model);try{
       const bounds=new THREE.Box3().setFromObject(model),center=bounds.getCenter(new THREE.Vector3()),extent=bounds.getSize(new THREE.Vector3());
       const distance=Math.max(extent.x,extent.y,extent.z,.6)*2.5;previewCamera.position.copy(center).add(new THREE.Vector3(1,1.1,1.5).normalize().multiplyScalar(distance));previewCamera.lookAt(center);
       renderer.setRenderTarget(target);renderer.render(previewScene,previewCamera);
       const pixels=new Uint8Array(size*size*4);renderer.readRenderTargetPixels(target,0,0,size,size,pixels);
       const canvas=document.createElement('canvas');canvas.width=canvas.height=size;const ctx=canvas.getContext('2d'),data=ctx.createImageData(size,size);
       for(let y=0;y<size;y++)data.data.set(pixels.subarray((size-1-y)*size*4,(size-y)*size*4),y*size*4);
-      ctx.putImageData(data,0,0);result[type]=canvas.toDataURL('image/png');previewScene.remove(model);model.traverse(o=>{if(o.isMesh){o.geometry.dispose();if(o.userData.ownedMaterial){o.material.map?.dispose();o.material.dispose()}}});
+      ctx.putImageData(data,0,0);result[type]=canvas.toDataURL('image/png');}finally{previewScene.remove(model);model.traverse(o=>{if(o.isMesh){o.geometry.dispose();if(o.userData.ownedMaterial||o.userData.previewMaterial){o.material.map?.dispose();o.material.dispose()}}});}
     }}finally{renderer.setRenderTarget(previous);target.dispose()}
     decorPreviewCache.set(key,result);return result;
   }
@@ -855,7 +862,7 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
     }
     frame.photo.material.map.needsUpdate=true;
   }
-  return {setPlayer(index){playerIndex=[0,1,2,3].includes(index)?index:null;},ensurePlayer,standUp,getFurnitureTargets:furnitureTargets,useFurniture:approachFurniture,inspectDecor,dispose(){inspectDecor(null);disposed=true;cancelAnimationFrame(frameId);resizeObserver.disconnect();controls.dispose();clearModelDebug();const geometries=new Set(),mats=new Set(),textures=new Set();scene.traverse(o=>{if(o.geometry)geometries.add(o.geometry);for(const m of [o.material??[]].flat()){mats.add(m);if(m.map)textures.add(m.map)}});geometries.forEach(g=>g.dispose());textures.forEach(t=>t.dispose());mats.forEach(m=>m.dispose());renderer.dispose();renderer.domElement.remove();hotDefs.forEach(h=>h.el.remove())},showModelDebug,setDecorCatalog(config){publishedModelCatalog=config;decoration.setCatalog(config);decorPreviewCache.clear();navigator=null;catNavigator=null;},getResidentStates:residents.getStates,setResidentsPaused:residents.setPaused,setResidentNight:residents.setNight,setAquariumColors:decoration.setAquariumColors,getDecorPreviews,getBuiltinFurniture:builtins.list,getBuiltinSpec:builtins.spec,getBuiltinState:builtins.state,setDecorRoom:decoration.setRoom,setDecorationEditor:decoration.setEditor,canPlaceDecor:decoration.canPlace,setGardenPlants,petDog,getDogState:()=>({mode:dogMode,position:dog.position.clone()}),petCat,getCatState:()=>({mode:catMode,position:cat.position.clone()}),startWalking,stopWalking,walkTo,cancelWalk,getWalkState:walkState,setWalkInput(x,y){if(x||y){if(!ensurePlayer()||!standUp())return;idleControl=0;}if(!walker)return;if(!(x||y)){walkInput.set(0,0);return;}pendingFurniture=null;walkInput.set(x,y);walkPath=[];walkGoal=null;destination.visible=false},setRoomPhoto(room,slot,src){return updatePhotoFrame(roomFrames[room]?.[slot],src)},setCouplePhoto(slot,src){return updatePhotoFrame(coupleFrames[slot],src)},setLivingPhoto(slot,src){return updatePhotoFrame(livingFrames[slot],src)},setRoom(index){
+  return {setPlayer(index){playerIndex=[0,1,2,3].includes(index)?index:null;},ensurePlayer,standUp,getFurnitureTargets:furnitureTargets,useFurniture:approachFurniture,inspectDecor,dispose(){inspectDecor(null);disposed=true;cancelAnimationFrame(frameId);resizeObserver.disconnect();controls.dispose();clearModelDebug();const geometries=new Set(),mats=new Set(),textures=new Set();scene.traverse(o=>{if(o.geometry)geometries.add(o.geometry);for(const m of [o.material??[]].flat()){mats.add(m);if(m.map)textures.add(m.map)}});geometries.forEach(g=>g.dispose());textures.forEach(t=>t.dispose());mats.forEach(m=>m.dispose());renderer.dispose();renderer.domElement.remove();hotDefs.forEach(h=>h.el.remove())},showModelDebug,setDecorCatalog(config){publishedModelCatalog=config;decoration.setCatalog(config);decorPreviewCache.clear();navigator=null;catNavigator=null;},getResidentStates:residents.getStates,setResidentsPaused:residents.setPaused,setResidentNight:residents.setNight,setAquariumColors:decoration.setAquariumColors,getDecorPreviews,getBuiltinPreviews,getBuiltinFurniture:builtins.list,getBuiltinSpec:builtins.spec,getBuiltinState:builtins.state,setDecorRoom:decoration.setRoom,setDecorationEditor:decoration.setEditor,canPlaceDecor:decoration.canPlace,setGardenPlants,petDog,getDogState:()=>({mode:dogMode,position:dog.position.clone()}),petCat,getCatState:()=>({mode:catMode,position:cat.position.clone()}),startWalking,stopWalking,walkTo,cancelWalk,getWalkState:walkState,setWalkInput(x,y){if(x||y){if(!ensurePlayer()||!standUp())return;idleControl=0;}if(!walker)return;if(!(x||y)){walkInput.set(0,0);return;}pendingFurniture=null;walkInput.set(x,y);walkPath=[];walkGoal=null;destination.visible=false},setRoomPhoto(room,slot,src){return updatePhotoFrame(roomFrames[room]?.[slot],src)},setCouplePhoto(slot,src){return updatePhotoFrame(coupleFrames[slot],src)},setLivingPhoto(slot,src){return updatePhotoFrame(livingFrames[slot],src)},setRoom(index){
     if(![-3,-2,-1,0,1,2].includes(index))return;
     currentView=index;hotDefs=index===-3?gardenHotDefs:index===-2?overviewHotDefs:index===-1?livingHotDefs:roomHotDefs[index];mountHotspots();down=null;
     const view=viewFor(index);move(view.position,view.target);

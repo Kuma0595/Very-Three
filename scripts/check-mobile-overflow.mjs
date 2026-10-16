@@ -28,7 +28,7 @@ assert(css.includes('grid-template-columns:repeat(3,minmax(0,1fr))'));
 assert(css.includes('.home-shell main #stage{grid-area:stage;position:relative;inset:auto;'));
 const html=fs.readFileSync(new URL('../dist/index.html',import.meta.url),'utf8');
 assert(html.includes('width=device-width, initial-scale=1, viewport-fit=cover'));
-assert(html.includes('style.css?v=40-whole-home'));
-assert(html.includes('access.js?v=40-whole-home'));
+assert(html.includes('style.css?v=41-furniture-catalog'));
+assert(html.includes('access.js?v=41-furniture-catalog'));
 console.log('PASS: 离屏/非有限/相机外投影不撑宽、可见标签恢复、手机布局与缓存版本约束');
 

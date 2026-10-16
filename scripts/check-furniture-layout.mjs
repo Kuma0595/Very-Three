@@ -1,9 +1,10 @@
 import fs from 'node:fs';import assert from 'node:assert/strict';
+import {builtinCategory,furniturePages} from '../dist/furniture-catalog.js';
 const base=new URL('../dist/',import.meta.url),noop=()=>{},events={},opened=[],states=[];
 const ctx=new Proxy({}, {get:(_,k)=>k==='createImageData'?(w,h)=>({data:new Uint8ClampedArray(w*h*4)}):k==='createLinearGradient'?()=>({addColorStop:noop}):noop,set:()=>true});
 globalThis.document={createElement:()=>({getContext:()=>ctx,style:{},addEventListener:noop,append:noop,remove:noop,toDataURL:()=>''})};globalThis.devicePixelRatio=1;globalThis.matchMedia=()=>({matches:true});globalThis.ResizeObserver=class{observe(){}disconnect(){}};globalThis.cancelAnimationFrame=noop;
 let frame;globalThis.requestAnimationFrame=fn=>{frame=fn;return 1;};
-const prelude=`import * as THREE from '${new URL('vendor/three.module.js',base)}';class OrbitControls{constructor(camera){this.camera=camera;this.target=new THREE.Vector3()}addEventListener(){}update(){this.camera.lookAt(this.target)}dispose(){}}class Renderer{constructor(){this.domElement={addEventListener(k,f){globalThis.playerEvents[k]=f},getBoundingClientRect(){return {left:0,top:0,width:1200,height:650}},remove(){}};this.shadowMap={};}setPixelRatio(){}setSize(){}render(scene,camera){scene.updateMatrixWorld(true);camera.updateMatrixWorld(true)}dispose(){}}\n`;
+const prelude=`import * as THREE from '${new URL('vendor/three.module.js',base)}';class OrbitControls{constructor(camera){this.camera=camera;this.target=new THREE.Vector3()}addEventListener(){}update(){this.camera.lookAt(this.target)}dispose(){}}class Renderer{constructor(){this.domElement={addEventListener(k,f){globalThis.playerEvents[k]=f},getBoundingClientRect(){return {left:0,top:0,width:1200,height:650}},remove(){}};this.shadowMap={};}getRenderTarget(){return this.target??null}setRenderTarget(target){this.target=target}readRenderTargetPixels(){}setPixelRatio(){}setSize(){}render(scene,camera){scene.updateMatrixWorld(true);camera.updateMatrixWorld(true)}dispose(){}}\n`;
 globalThis.playerEvents=events;
 let source=fs.readFileSync(new URL('scene.js',base),'utf8').replace(/from '(\.\/[^']+)'/g,(_,p)=>`from '${new URL(p,base)}'`).replace(/import \* as THREE[^\n]+\n/,'').replace(/import \{ OrbitControls \}[^\n]+\n/,'').replace('new THREE.WebGLRenderer({antialias:true,alpha:true})','new Renderer()').replace('reset(){currentView=-2;','reset(){currentView=-2;').replace('},renderer};','},renderer,scene,camera,getNavigation(){prepareNavigation();return navigator}};');
 const {createHome}=await import('data:text/javascript;base64,'+Buffer.from(prelude+source).toString('base64'));
@@ -19,8 +20,9 @@ for(let room=0;room<4;room++){
  console.log('room',room,':',list.map(i=>i.name).join(' / '));
 }
 // 每件原有家具均可创建/清除预览；取消选择不销毁原模型几何体与照片纹理。
-const count=beforeCount();for(let room=0;room<4;room++)for(const entry of home.getBuiltinFurniture(room)){
+const count=beforeCount();assert.equal(furniturePages(['a','b','c','d','e','f'])[6],'卧室家具');for(let room=0;room<4;room++)for(const entry of home.getBuiltinFurniture(room)){
  let disposed=false;const original=root(entry.id);original.traverse(o=>{if(o.isMesh)o.geometry.addEventListener('dispose',()=>disposed=true)});
+ const category=builtinCategory(entry.id);assert(Number.isInteger(category)&&category>=0&&category<=6);const images=home.getBuiltinPreviews(room,[entry.id]);assert(entry.id in images,'each original has a thumbnail entry');assert.strictEqual(home.getBuiltinPreviews(room,[entry.id]),images,'thumbnail cache reused');
  home.setDecorationEditor(room,{builtin:entry.id,type:'builtin',...entry});assert.equal(original.visible,false);home.setDecorationEditor(-1,null);assert.equal(original.visible,true);assert.equal(disposed,false,entry.id+' original geometry retained');
 }assert.equal(beforeCount(),count);
 // 每组原有家具在腾空房间后都能找到合法的新位置，避免只接入清单却无法摆放。
