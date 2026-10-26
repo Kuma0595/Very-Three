@@ -116,7 +116,7 @@ export function createDecorationSystem({rooms,builtins,beforeLayoutChange=()=>{}
  }
  function dispose(g){g.traverse(o=>{if(o.isMesh){o.geometry.dispose();if(o.userData.previewMaterial||o.userData.ownedMaterial){o.material.map?.dispose();o.material.dispose()}}});g.clear()}
  function setRoom(room,config={}){
-  if(!rooms[room])return;const key=JSON.stringify([config,catalog]);if(keys[room]===key)return;keys[room]=key;
+  if(!rooms[room])return;const key=JSON.stringify([config.colors??{},config.items??[],config.furniture??{},catalog]);if(keys[room]===key)return;keys[room]=key;
   for(const [surface,objects] of Object.entries(defaults[room]))for(const o of objects)o.material.color.set(config.colors?.[surface]??'#'+o.userData.defaultColor);
   clearPreview();const furnitureKey=JSON.stringify(config.furniture??{}),layoutChanged=furnitureKey!==furnitureKeys[room];if(layoutChanged)beforeLayoutChange();furnitureKeys[room]=furnitureKey;builtins.apply(room,config.furniture);dispose(groups[room]);for(const item of config.items??[])if(DECOR_ITEMS[item.type])model(item,groups[room]);invalidate();if(layoutChanged)afterLayoutChange();
  }

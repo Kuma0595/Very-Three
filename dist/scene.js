@@ -1,6 +1,8 @@
+import {applyOutfit,releaseOutfit} from './outfit-model.js?v=1';
+import {normalizeOutfit,defaultOutfit} from './outfits.js?v=1';
 import {createBuiltinFurniture} from './builtin-furniture.js?v=1';
 import {createResidents} from './residents.js?v=6-layout';
-import {createDecorationSystem,DECOR_ITEMS} from './decoration-scene.js?v=11-layout';
+import {createDecorationSystem,DECOR_ITEMS} from './decoration-scene.js?v=12-outfits';
 import * as THREE from 'three';
 import { OrbitControls } from './vendor/OrbitControls.js';
 import { createNavigator } from './navigation.js?v=2';
@@ -95,10 +97,10 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
   box(.47,.035,.36,'#fff1b7',.3,.965,.28,table);
   const note=art(.43,.30,.3,.987,.28,(ctx,w,h)=>{ctx.fillStyle='#fff1b7';ctx.fillRect(0,0,w,h);ctx.fillStyle='#9b7d67';ctx.font='70px sans-serif';ctx.textAlign='center';ctx.fillText('回来坐坐',w/2,230);ctx.fillText('♡',w/2,370)},table);note.rotation.x=-Math.PI/2;
   // 三个原创小人：衣服、发型、肤色分别不同。
-  const avatars=[];
+  const avatars=[],outfits=Array.from({length:4},(_,i)=>defaultOutfit(i));
   function person(x,shirt,skin,hair,style){const g=new THREE.Group();g.position.set(x,1.04,-2.03);house.add(g);avatars.push(g);
-    round(style===0?.59:style===2?.56:.44,.45,style===0?.40:.30,shirt,0,.35,0,.07,g);
-    if(style===0){const belly=ball(.25,shirt,0,.32,.04,g);belly.scale.set(1.20,.9,1);g.scale.set(1.08,1.02,1.05)}
+    round(style===0?.59:style===2?.56:.44,.45,style===0?.40:.30,shirt,0,.35,0,.07,g).userData.clothingPart='top';
+    if(style===0){const belly=ball(.25,shirt,0,.32,.04,g);belly.userData.clothingPart='top';belly.scale.set(1.20,.9,1);g.scale.set(1.08,1.02,1.05)}
     const leftArm=cylinder(.075,.08,.36,skin,style===0?-.37:-.29,.27,.03,g);leftArm.name='left-arm';leftArm.rotation.z=-.18;const rightArm=cylinder(.075,.08,.36,skin,style===0?.37:.29,.27,.03,g);rightArm.name='right-arm';rightArm.rotation.z=.18;
     ball(.08,skin,style===0?-.40:-.32,.1,.06,g).name='left-hand';ball(.08,skin,style===0?.40:.32,.1,.06,g).name='right-hand';
     for(const px of [-.13,.13]){const leg=round(style===2?.20:.14,style===2?.48:.13,style===2?.20:.48,style===2?'#454351':'#657087',px,style===2?-.08:.04,style===2?.02:.25,.03,g);leg.name=px<0?'left-leg':'right-leg';round(.17,.14,.25,'#f4e6d9',px,style===2?-.36:-.02,style===2?.10:.50,.035,g).name=px<0?'left-shoe':'right-shoe'}
@@ -106,16 +108,20 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
     ball(.06,skin,-.244,.74,.02,g);ball(.06,skin,.244,.74,.02,g);
     for(const px of [-.08,.08]){ball(.018,'#44333d',px,.76,.253,g);if(style!==2)ball(.036,'#dc9b8f',px*1.6,.695,.236,g)}
     const smile=mesh(new THREE.TorusGeometry(.045,.007,6,14,Math.PI), '#895853',0,.692,.266,g);smile.rotation.z=Math.PI;
-    if(style===1){for(const px of [-.082,.082])mesh(new THREE.TorusGeometry(.06,.009,6,16),'#514951',px,.76,.27,g);box(.045,.014,.02,'#514951',0,.76,.28,g)}
+    const beforeGlasses=new Set(g.children);if(style===1){for(const px of [-.082,.082])mesh(new THREE.TorusGeometry(.06,.009,6,16),'#514951',px,.76,.27,g);box(.045,.014,.02,'#514951',0,.76,.28,g)}
+    for(const child of g.children)if(!beforeGlasses.has(child))child.userData.clothingPart='accessory';
     if(style===2){
       // Joey：低矮短寸轮廓与偏方的短刘海，不再保留丸子或蓬松圆发束。
       round(.33,.075,.13,hair,0,.91,.17,.02,g);
       for(const px of [-.12,-.04,.04,.12])box(.06,.06,.08,hair,px,.94,.045,g);
-      for(const px of [-.22,.22])round(.12,.36,.31,'#6c5884',px,.36,.01,.02,g);
+      for(const px of [-.22,.22])round(.12,.36,.31,'#6c5884',px,.36,.01,.02,g).userData.clothingPart='top-detail';
     }
-    if(style===0){art(.23,.24,0,.38,.299,(ctx,W,H)=>{ctx.fillStyle='#383540';ctx.fillRect(0,0,W,H);ctx.fillStyle='#edc573';ctx.beginPath();ctx.moveTo(300,40);ctx.lineTo(120,290);ctx.lineTo(260,290);ctx.lineTo(195,460);ctx.lineTo(410,190);ctx.lineTo(270,190);ctx.closePath();ctx.fill()},g)}
-    if(style===1){mesh(new THREE.TorusGeometry(.277,.025,8,24,Math.PI),'#565057',0,.78,.025,g);for(const x of [-.279,.279]){const pad=cylinder(.08,.08,.06,'#6e6560',x,.76,.02,g);pad.rotation.z=Math.PI/2}}
-    if(style===2){art(.23,.22,0,.36,.164,(ctx,W,H)=>{ctx.fillStyle='#745277';ctx.fillRect(0,0,W,H);ctx.fillStyle='#ecb5d5';ctx.font='350px sans-serif';ctx.textAlign='center';ctx.fillText('✦',W/2,390)},g)}
+    const beforePrint=new Set(g.children);if(style===0){art(.23,.24,0,.38,.299,(ctx,W,H)=>{ctx.fillStyle='#383540';ctx.fillRect(0,0,W,H);ctx.fillStyle='#edc573';ctx.beginPath();ctx.moveTo(300,40);ctx.lineTo(120,290);ctx.lineTo(260,290);ctx.lineTo(195,460);ctx.lineTo(410,190);ctx.lineTo(270,190);ctx.closePath();ctx.fill()},g)}
+    for(const child of g.children)if(!beforePrint.has(child))child.userData.clothingPart='top-print';
+    const beforeHeadphones=new Set(g.children);if(style===1){mesh(new THREE.TorusGeometry(.277,.025,8,24,Math.PI),'#565057',0,.78,.025,g);for(const x of [-.279,.279]){const pad=cylinder(.08,.08,.06,'#6e6560',x,.76,.02,g);pad.rotation.z=Math.PI/2}}
+    for(const child of g.children)if(!beforeHeadphones.has(child))child.userData.clothingPart='accessory';
+    const beforeJoeyPrint=new Set(g.children);if(style===2){art(.23,.22,0,.36,.164,(ctx,W,H)=>{ctx.fillStyle='#745277';ctx.fillRect(0,0,W,H);ctx.fillStyle='#ecb5d5';ctx.font='350px sans-serif';ctx.textAlign='center';ctx.fillText('✦',W/2,390)},g)}
+    for(const child of g.children)if(!beforeJoeyPrint.has(child))child.userData.clothingPart='top-print';
     return g;
   }
   person(-1.24,'#383540','#e5b196','#49374a',0);person(0,'#bda77e','#b98365','#433a35',1);person(1.24,'#745277','#efc5a8','#665046',2);
@@ -639,7 +645,7 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
   function walkState(){const position=walker?.actor.position??(playerIndex===null?null:residents.getPosition(playerIndex));return {active:Boolean(walker),room:position?(prepareNavigation(),navigator.roomAt(position)):-1,moving:lastWalking,pose:walker?.pose??'stand'}}
   function cancelWalk(){pendingFurniture=null;walkPath=[];walkGoal=null;walkBlocked=0;walkInput.set(0,0);destination.visible=false;lastWalking=false;if(walker)onWalkState(walkState())}
   function stopWalking(){
-    if(walker){residents.resume(walker.index,walker.actor.position);walker.source.visible=false;scene.remove(walker.actor);walker.ownedGeometry.forEach(geometry=>geometry.dispose());walker=null}
+    if(walker){residents.resume(walker.index,walker.actor.position);walker.source.visible=false;scene.remove(walker.actor);releaseOutfit(walker.actor);walker.ownedGeometry.forEach(geometry=>geometry.dispose());walker=null}
     cancelWalk();walkRing.visible=false;onWalkState(walkState());
   }
   function standingModel(index,name){
@@ -651,6 +657,7 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
       const arm=actor.getObjectByName(side+'-arm'),hand=actor.getObjectByName(side+'-hand'),sign=side==='left'?-1:1;
       arm.position.set(sign*(index===0?.28:.25),.27,.03);arm.rotation.set(0,0,sign*.18);hand.position.set(sign*.29,.1,.06);
     }
+    if(name==='walking-resident')applyOutfit(actor,index,outfits[index]);
     return {actor,ownedGeometry};
   }
   function startWalking(index){
@@ -734,6 +741,10 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
 
   const seats=avatars.map((a,index)=>{const room=rooms[Math.min(index,2)];return {local:a.position.clone(),world:{x:room.position.x+a.position.x,y:a.position.y,z:room.position.z+a.position.z},rotation:a.rotation.y}});
   const residents=createResidents({scene,sources:avatars,models:avatars.map((a,i)=>standingModel(i,'resident-npc-'+i)),rooms,seats,getRestTarget:restTarget,getNavigator(){prepareNavigation();return navigator},getControlled:()=>walker,getCat:()=>cat.position,getDog:()=>dog.position,onPet(kind){if(kind==='cat'){catMode='pet';catTimer=2.8;catPath=[];heart.visible=true}else{dogMode='pet';dogTimer=3;dogPath=[]}}});
+  function setOutfit(index,value){
+    if(!Number.isInteger(index)||index<0||index>3)return;const next=normalizeOutfit(value,index);if(JSON.stringify(next)===JSON.stringify(outfits[index]))return;outfits[index]=next;
+    const npc=scene.getObjectByName('resident-npc-'+index);if(npc)applyOutfit(npc,index,next);if(walker?.index===index)applyOutfit(walker.actor,index,next);
+  }
   const decoration=createDecorationSystem({rooms:allRooms,builtins,beforeLayoutChange:stopWalking,afterLayoutChange:()=>residents.layoutChanged(),scene,box,ball,cylinder,round,stopWalking,invalidate(){navigator=null;catNavigator=null;floorMeshes=[];walkPath=[];catPath=[];dogPath=[];}});
   const decorPreviewCache=new Map();let publishedModelCatalog={},modelDebug=null,inspectionScene=null;
   function inspectDecor(item){
@@ -776,6 +787,17 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
       ctx.putImageData(data,0,0);result[type]=canvas.toDataURL('image/png');}finally{previewScene.remove(model);model.traverse(o=>{if(o.isMesh){o.geometry.dispose();if(o.userData.ownedMaterial||o.userData.previewMaterial){o.material.map?.dispose();o.material.dispose()}}});}
     }}finally{renderer.setRenderTarget(previous);target.dispose()}
     decorPreviewCache.set(key,result);return result;
+  }
+  function getOutfitPreview(index,value,angle=0){
+    if(!Number.isInteger(index)||index<0||index>3)return '';
+    const {actor,ownedGeometry}=standingModel(index,'outfit-preview');actor.position.set(0,0,0);actor.rotation.set(0,angle,0);applyOutfit(actor,index,value);
+    const previewScene=new THREE.Scene();previewScene.background=new THREE.Color('#eee7e2');previewScene.add(actor,new THREE.HemisphereLight('#fff7ef','#9b8fa8',3));const light=new THREE.DirectionalLight('#fff7e8',3.5);light.position.set(3,5,5);previewScene.add(light);
+    const target=new THREE.WebGLRenderTarget(384,448),previous=renderer.getRenderTarget(),exposure=renderer.toneMappingExposure;
+    try{
+      const previewCamera=new THREE.OrthographicCamera(-.78,.78,.91,-.91,.1,20);previewCamera.position.set(1.45,1.25,4);previewCamera.lookAt(0,.30,0);renderer.toneMappingExposure=1.25;renderer.setRenderTarget(target);renderer.render(previewScene,previewCamera);
+      const pixels=new Uint8Array(384*448*4);renderer.readRenderTargetPixels(target,0,0,384,448,pixels);const canvas=document.createElement('canvas');canvas.width=384;canvas.height=448;const ctx=canvas.getContext('2d'),image=ctx.createImageData(384,448);
+      for(let y=0;y<448;y++)image.data.set(pixels.subarray((447-y)*384*4,(448-y)*384*4),y*384*4);ctx.putImageData(image,0,0);return canvas.toDataURL('image/png');
+    }finally{renderer.setRenderTarget(previous);renderer.toneMappingExposure=exposure;target.dispose();releaseOutfit(actor);ownedGeometry.forEach(g=>g.dispose())}
   }
   const ray=new THREE.Raycaster(),pointer=new THREE.Vector2();let down=null,multiGesture=false;const activePointers=new Set();
   renderer.domElement.addEventListener('pointerdown',e=>{activePointers.add(e.pointerId);if(activePointers.size>1){multiGesture=true;down=null}else if(!multiGesture)down={id:e.pointerId,x:e.clientX,y:e.clientY,t:performance.now()}});
@@ -862,7 +884,7 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
     }
     frame.photo.material.map.needsUpdate=true;
   }
-  return {setPlayer(index){playerIndex=[0,1,2,3].includes(index)?index:null;},ensurePlayer,standUp,getFurnitureTargets:furnitureTargets,useFurniture:approachFurniture,inspectDecor,dispose(){inspectDecor(null);disposed=true;cancelAnimationFrame(frameId);resizeObserver.disconnect();controls.dispose();clearModelDebug();const geometries=new Set(),mats=new Set(),textures=new Set();scene.traverse(o=>{if(o.geometry)geometries.add(o.geometry);for(const m of [o.material??[]].flat()){mats.add(m);if(m.map)textures.add(m.map)}});geometries.forEach(g=>g.dispose());textures.forEach(t=>t.dispose());mats.forEach(m=>m.dispose());renderer.dispose();renderer.domElement.remove();hotDefs.forEach(h=>h.el.remove())},showModelDebug,setDecorCatalog(config){publishedModelCatalog=config;decoration.setCatalog(config);decorPreviewCache.clear();navigator=null;catNavigator=null;},getResidentStates:residents.getStates,setResidentsPaused:residents.setPaused,setResidentNight:residents.setNight,setAquariumColors:decoration.setAquariumColors,getDecorPreviews,getBuiltinPreviews,getBuiltinFurniture:builtins.list,getBuiltinSpec:builtins.spec,getBuiltinState:builtins.state,setDecorRoom:decoration.setRoom,setDecorationEditor:decoration.setEditor,canPlaceDecor:decoration.canPlace,setGardenPlants,petDog,getDogState:()=>({mode:dogMode,position:dog.position.clone()}),petCat,getCatState:()=>({mode:catMode,position:cat.position.clone()}),startWalking,stopWalking,walkTo,cancelWalk,getWalkState:walkState,setWalkInput(x,y){if(x||y){if(!ensurePlayer()||!standUp())return;idleControl=0;}if(!walker)return;if(!(x||y)){walkInput.set(0,0);return;}pendingFurniture=null;walkInput.set(x,y);walkPath=[];walkGoal=null;destination.visible=false},setRoomPhoto(room,slot,src){return updatePhotoFrame(roomFrames[room]?.[slot],src)},setCouplePhoto(slot,src){return updatePhotoFrame(coupleFrames[slot],src)},setLivingPhoto(slot,src){return updatePhotoFrame(livingFrames[slot],src)},setRoom(index){
+  return {setPlayer(index){playerIndex=[0,1,2,3].includes(index)?index:null;},setOutfit,getOutfitPreview,getOutfit:index=>normalizeOutfit(outfits[index],index),ensurePlayer,standUp,getFurnitureTargets:furnitureTargets,useFurniture:approachFurniture,inspectDecor,dispose(){inspectDecor(null);for(let i=0;i<4;i++){const npc=scene.getObjectByName('resident-npc-'+i);if(npc)releaseOutfit(npc)}if(walker)releaseOutfit(walker.actor);disposed=true;cancelAnimationFrame(frameId);resizeObserver.disconnect();controls.dispose();clearModelDebug();const geometries=new Set(),mats=new Set(),textures=new Set();scene.traverse(o=>{if(o.geometry)geometries.add(o.geometry);for(const m of [o.material??[]].flat()){mats.add(m);if(m.map)textures.add(m.map)}});geometries.forEach(g=>g.dispose());textures.forEach(t=>t.dispose());mats.forEach(m=>m.dispose());renderer.dispose();renderer.domElement.remove();hotDefs.forEach(h=>h.el.remove())},showModelDebug,setDecorCatalog(config){publishedModelCatalog=config;decoration.setCatalog(config);decorPreviewCache.clear();navigator=null;catNavigator=null;},getResidentStates:residents.getStates,setResidentsPaused:residents.setPaused,setResidentNight:residents.setNight,setAquariumColors:decoration.setAquariumColors,getDecorPreviews,getBuiltinPreviews,getBuiltinFurniture:builtins.list,getBuiltinSpec:builtins.spec,getBuiltinState:builtins.state,setDecorRoom:decoration.setRoom,setDecorationEditor:decoration.setEditor,canPlaceDecor:decoration.canPlace,setGardenPlants,petDog,getDogState:()=>({mode:dogMode,position:dog.position.clone()}),petCat,getCatState:()=>({mode:catMode,position:cat.position.clone()}),startWalking,stopWalking,walkTo,cancelWalk,getWalkState:walkState,setWalkInput(x,y){if(x||y){if(!ensurePlayer()||!standUp())return;idleControl=0;}if(!walker)return;if(!(x||y)){walkInput.set(0,0);return;}pendingFurniture=null;walkInput.set(x,y);walkPath=[];walkGoal=null;destination.visible=false},setRoomPhoto(room,slot,src){return updatePhotoFrame(roomFrames[room]?.[slot],src)},setCouplePhoto(slot,src){return updatePhotoFrame(coupleFrames[slot],src)},setLivingPhoto(slot,src){return updatePhotoFrame(livingFrames[slot],src)},setRoom(index){
     if(![-3,-2,-1,0,1,2].includes(index))return;
     currentView=index;hotDefs=index===-3?gardenHotDefs:index===-2?overviewHotDefs:index===-1?livingHotDefs:roomHotDefs[index];mountHotspots();down=null;
     const view=viewFor(index);move(view.position,view.target);

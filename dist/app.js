@@ -1,10 +1,11 @@
+import {setupWardrobe} from './wardrobe.js?v=1';
 import {DEFAULT_HOME_SETTINGS,loadHomeSettings} from './home-settings.js?v=1';
 import {setupPhotoViewer} from './photo-viewer.js?v=2';
 import {setupActivities} from './activities.js?v=5';
-import {setupDecoration} from './decoration.js?v=16-furniture-catalog';
+import {setupDecoration} from './decoration.js?v=17-outfits';
 import {loadGarden,gardenAction,growthStage,SPECIES,STAGES} from './garden.js?v=4';
 import {loadCloud,saveCloud,currentMember,currentRoom,cloudError,startCloudSync} from './cloud.js?v=4';
-import { createHome } from './scene.js?v=32-furniture-catalog';
+import { createHome } from './scene.js?v=33-outfits';
 import { createRoomMusic } from './room-music.js?v=2-cat';
 import { watchHomeTime } from './time-theme.js?v=4-settings';
 const $=s=>document.querySelector(s);
@@ -236,7 +237,7 @@ async function toggleLamp(){if(await update({lit:!data.lit})){applyTheme();toast
 $('#lamp').onclick=toggleLamp;$('#zoom-in').onclick=()=>home?.zoom(.85);$('#zoom-out').onclick=()=>home?.zoom(1.15);$('#reset').onclick=()=>switchRoom(-2);
 applyCloud(await loadCloud());await refreshHomeSettings();
 try{home=createHome($('#stage'),openPanel,onWalkState);$('#loading').remove();syncRoomPhotos()}catch(error){console.error(error);$('#loading').innerHTML='这个浏览器暂时无法显示 3D 小屋<small>试试 Safari / Chrome；下方留言与相册仍可使用。</small>'}
-home?.setPlayer(currentMember().id);syncSystemTheme(true);void syncGarden();decorController=setupDecoration({home:()=>home,focus:switchRoom,notify:toast});activityController=setupActivities({home:()=>home,notify:toast});
+home?.setPlayer(currentMember().id);syncSystemTheme(true);void syncGarden();decorController=setupDecoration({home:()=>home,focus:switchRoom,notify:toast});activityController=setupActivities({home:()=>home,notify:toast});setupWardrobe({home:()=>home,notify:toast,canOpen(){if(decorController?.editing){toast('请先退出房间布置，再来换衣服');return false}cancelMovement();return true}});
 
 
 let lastSyncError=0;

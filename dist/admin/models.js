@@ -1,7 +1,7 @@
 import {decorLimit} from '../decor-limits.js?v=1';
 import {modelApi} from './model-api.js?v=1';
 import {adminApi,adminError} from './admin-api.js?v=1';
-import {createHome} from '../scene.js?v=32-furniture-catalog';
+import {createHome} from '../scene.js?v=33-outfits';
 import {DECOR_ITEMS,DECOR_PAGES,DECOR_COLORS,modelSpec} from '../decoration-scene.js?v=11-layout';
 const root=document.querySelector('#workbench'),names=['Piggy','4010','Joey & Zakery','我们的客厅'];
 const clone=x=>JSON.parse(JSON.stringify(x)),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

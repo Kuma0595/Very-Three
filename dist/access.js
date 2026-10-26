@@ -13,7 +13,7 @@ async function enterHome(){
  try{
   await getMember();
   shell.hidden=false;gate.hidden=true;
-  await import('./app.js?v=41-furniture-catalog');
+  await import('./app.js?v=42-outfits');
   opened=true;input.value='';
   document.querySelector('#lock-home').textContent='退出登录';
   document.querySelector('#lock-home').onclick=async()=>{

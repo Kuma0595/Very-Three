@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
+import {fileURLToPath} from 'node:url';
 const playwrightPath=process.env.VT_PLAYWRIGHT_MODULE??(process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES?process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES+'/playwright/index.mjs':'playwright');const {chromium}=await import(playwrightPath);
-const {createDevServer}=await import('./dev.mjs');const server=createDevServer(new URL('../dist/',import.meta.url).pathname);await new Promise(r=>server.listen(0,'127.0.0.1',r));const origin='http://127.0.0.1:'+server.address().port;
+const {createDevServer}=await import('./dev.mjs');const server=createDevServer(fileURLToPath(new URL('../dist/',import.meta.url)));await new Promise(r=>server.listen(0,'127.0.0.1',r));const origin='http://127.0.0.1:'+server.address().port;
 const fixture={rooms:{'0':{colors:{},items:[]},'1':{colors:{},items:[]},'2':{colors:{},items:[]},'3':{colors:{},items:[]}},versions:{'0':0,'1':0,'2':0,'3':0}};
 const mock=`const clone=x=>JSON.parse(JSON.stringify(x));let live=${JSON.stringify({...fixture,catalog:{},state:{id:1,draft:null,draft_base:null,previous:null,published_versions:null,version:0}})};window.__modelCalls=[];window.__live=live;
 const auth={async getUser(){return {data:{user:{id:'test-admin'}}}},onAuthStateChange(fn){window.__auth=fn;return{}},async signOut(){return{}}};

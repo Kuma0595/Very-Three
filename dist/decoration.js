@@ -1,6 +1,6 @@
 import {decorLimit} from './decor-limits.js?v=1';
 import {client,currentMember,currentRoom} from './cloud.js?v=4';
-import {DECOR_ITEMS,DECOR_COLORS,DECOR_PAGES,modelSpec} from './decoration-scene.js?v=11-layout';
+import {DECOR_ITEMS,DECOR_COLORS,DECOR_PAGES,modelSpec} from './decoration-scene.js?v=12-outfits';
 import {BEDROOM_PAGE,builtinCategory,furniturePages} from './furniture-catalog.js?v=1';
 export function setupDecoration({home,focus,notify}){
  const button=document.createElement('button');button.id='decorate-room';button.textContent='布置我的房间';button.type='button';document.querySelector('.focus-summary').append(button);
@@ -42,7 +42,7 @@ export function setupDecoration({home,focus,notify}){
    if(action==='place'&&valid){push();if(selected.builtin){draft.furniture??={};draft.furniture[selected.builtin]={x:selected.x,z:selected.z,rotation:selected.rotation,hidden:false}}else draft.items=draft.items.filter(i=>i.id!==selected.id).concat(selected);selected=null}
    if(action==='remove'){if(selected.builtin){push();draft.furniture??={};const old=draft.furniture[selected.builtin]??home().getBuiltinState(selected.builtin);draft.furniture[selected.builtin]={...old,hidden:true}}else if(draft.items.some(i=>i.id===selected.id)){push();draft.items=draft.items.filter(i=>i.id!==selected.id)}selected=null}
    if(action==='undo'){draft=history.pop();selected=null}
-   if(action==='reset'){push();draft=empty();selected=null}
+   if(action==='reset'){push();draft={...draft,...empty()};selected=null}
    if(action==='save'){
     if(room()===3&&!commonReady){notify('客厅共享保存需要先执行 living-decoration.sql，当前布置仍可预览');return;}
     if(new TextEncoder().encode(JSON.stringify(draft)).length>10000){notify('布置内容过多，请减少新增装饰后再保存');return}
