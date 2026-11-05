@@ -1,6 +1,6 @@
 import {decorLimit} from './decor-limits.js?v=1';
 import {client,currentMember,currentRoom} from './cloud.js?v=4';
-import {DECOR_ITEMS,DECOR_COLORS,DECOR_PAGES,modelSpec} from './decoration-scene.js?v=12-outfits';
+import {DECOR_ITEMS,DECOR_COLORS,DECOR_PAGES,modelSpec} from './decoration-scene.js?v=13-courtyard';
 import {BEDROOM_PAGE,builtinCategory,furniturePages} from './furniture-catalog.js?v=1';
 export function setupDecoration({home,focus,notify}){
  const button=document.createElement('button');button.id='decorate-room';button.textContent='布置我的房间';button.type='button';document.querySelector('.focus-summary').append(button);

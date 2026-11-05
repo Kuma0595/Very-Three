@@ -1,8 +1,10 @@
-import {applyOutfit,releaseOutfit} from './outfit-model.js?v=1';
+import {buildUtilityRooms} from './utility-rooms.js?v=1';
+import {createCharacter} from './character-model.js?v=1';
+import {applyOutfit,releaseOutfit} from './outfit-model.js?v=2';
 import {normalizeOutfit,defaultOutfit} from './outfits.js?v=1';
 import {createBuiltinFurniture} from './builtin-furniture.js?v=1';
-import {createResidents} from './residents.js?v=6-layout';
-import {createDecorationSystem,DECOR_ITEMS} from './decoration-scene.js?v=12-outfits';
+import {createResidents} from './residents.js?v=7-courtyard';
+import {createDecorationSystem,DECOR_ITEMS} from './decoration-scene.js?v=13-courtyard';
 import * as THREE from 'three';
 import { OrbitControls } from './vendor/OrbitControls.js';
 import { createNavigator } from './navigation.js?v=2';
@@ -96,35 +98,14 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
   cup(-.64,-.17,'#d79095');cup(0,-.25,'#8ebbad');cup(.6,-.10,'#b298c7');
   box(.47,.035,.36,'#fff1b7',.3,.965,.28,table);
   const note=art(.43,.30,.3,.987,.28,(ctx,w,h)=>{ctx.fillStyle='#fff1b7';ctx.fillRect(0,0,w,h);ctx.fillStyle='#9b7d67';ctx.font='70px sans-serif';ctx.textAlign='center';ctx.fillText('回来坐坐',w/2,230);ctx.fillText('♡',w/2,370)},table);note.rotation.x=-Math.PI/2;
-  // 三个原创小人：衣服、发型、肤色分别不同。
+  // 四位住户使用同一套圆润基础模型，各自保留衣服、发型与肤色。
   const avatars=[],outfits=Array.from({length:4},(_,i)=>defaultOutfit(i));
-  function person(x,shirt,skin,hair,style){const g=new THREE.Group();g.position.set(x,1.04,-2.03);house.add(g);avatars.push(g);
-    round(style===0?.59:style===2?.56:.44,.45,style===0?.40:.30,shirt,0,.35,0,.07,g).userData.clothingPart='top';
-    if(style===0){const belly=ball(.25,shirt,0,.32,.04,g);belly.userData.clothingPart='top';belly.scale.set(1.20,.9,1);g.scale.set(1.08,1.02,1.05)}
-    const leftArm=cylinder(.075,.08,.36,skin,style===0?-.37:-.29,.27,.03,g);leftArm.name='left-arm';leftArm.rotation.z=-.18;const rightArm=cylinder(.075,.08,.36,skin,style===0?.37:.29,.27,.03,g);rightArm.name='right-arm';rightArm.rotation.z=.18;
-    ball(.08,skin,style===0?-.40:-.32,.1,.06,g).name='left-hand';ball(.08,skin,style===0?.40:.32,.1,.06,g).name='right-hand';
-    for(const px of [-.13,.13]){const leg=round(style===2?.20:.14,style===2?.48:.13,style===2?.20:.48,style===2?'#454351':'#657087',px,style===2?-.08:.04,style===2?.02:.25,.03,g);leg.name=px<0?'left-leg':'right-leg';round(.17,.14,.25,'#f4e6d9',px,style===2?-.36:-.02,style===2?.10:.50,.035,g).name=px<0?'left-shoe':'right-shoe'}
-    ball(.245,skin,0,.76,.03,g);const cap=mesh(new THREE.SphereGeometry(.254,24,16,0,Math.PI*2,0,Math.PI*(style===2?.43:.53)),hair,0,.79,.02,g);cap.rotation.x=-.2;
-    ball(.06,skin,-.244,.74,.02,g);ball(.06,skin,.244,.74,.02,g);
-    for(const px of [-.08,.08]){ball(.018,'#44333d',px,.76,.253,g);if(style!==2)ball(.036,'#dc9b8f',px*1.6,.695,.236,g)}
-    const smile=mesh(new THREE.TorusGeometry(.045,.007,6,14,Math.PI), '#895853',0,.692,.266,g);smile.rotation.z=Math.PI;
-    const beforeGlasses=new Set(g.children);if(style===1){for(const px of [-.082,.082])mesh(new THREE.TorusGeometry(.06,.009,6,16),'#514951',px,.76,.27,g);box(.045,.014,.02,'#514951',0,.76,.28,g)}
-    for(const child of g.children)if(!beforeGlasses.has(child))child.userData.clothingPart='accessory';
-    if(style===2){
-      // Joey：低矮短寸轮廓与偏方的短刘海，不再保留丸子或蓬松圆发束。
-      round(.33,.075,.13,hair,0,.91,.17,.02,g);
-      for(const px of [-.12,-.04,.04,.12])box(.06,.06,.08,hair,px,.94,.045,g);
-      for(const px of [-.22,.22])round(.12,.36,.31,'#6c5884',px,.36,.01,.02,g).userData.clothingPart='top-detail';
-    }
-    const beforePrint=new Set(g.children);if(style===0){art(.23,.24,0,.38,.299,(ctx,W,H)=>{ctx.fillStyle='#383540';ctx.fillRect(0,0,W,H);ctx.fillStyle='#edc573';ctx.beginPath();ctx.moveTo(300,40);ctx.lineTo(120,290);ctx.lineTo(260,290);ctx.lineTo(195,460);ctx.lineTo(410,190);ctx.lineTo(270,190);ctx.closePath();ctx.fill()},g)}
-    for(const child of g.children)if(!beforePrint.has(child))child.userData.clothingPart='top-print';
-    const beforeHeadphones=new Set(g.children);if(style===1){mesh(new THREE.TorusGeometry(.277,.025,8,24,Math.PI),'#565057',0,.78,.025,g);for(const x of [-.279,.279]){const pad=cylinder(.08,.08,.06,'#6e6560',x,.76,.02,g);pad.rotation.z=Math.PI/2}}
-    for(const child of g.children)if(!beforeHeadphones.has(child))child.userData.clothingPart='accessory';
-    const beforeJoeyPrint=new Set(g.children);if(style===2){art(.23,.22,0,.36,.164,(ctx,W,H)=>{ctx.fillStyle='#745277';ctx.fillRect(0,0,W,H);ctx.fillStyle='#ecb5d5';ctx.font='350px sans-serif';ctx.textAlign='center';ctx.fillText('✦',W/2,390)},g)}
-    for(const child of g.children)if(!beforeJoeyPrint.has(child))child.userData.clothingPart='top-print';
-    return g;
+  function person(x,shirt,skin,hair){
+    const index=avatars.length;
+    const g=createCharacter({round,ball,cylinder,mesh,art},shirt,skin,hair,index);
+    g.position.set(x,1.04,-2.03);house.add(g);avatars.push(g);return g;
   }
-  person(-1.24,'#383540','#e5b196','#49374a',0);person(0,'#bda77e','#b98365','#433a35',1);person(1.24,'#745277','#efc5a8','#665046',2);
+  person(-1.24,'#383540','#e5b196','#49374a');person(0,'#bda77e','#b98365','#433a35');person(1.24,'#745277','#efc5a8','#665046');
   const livingDeskParts=mark();
   // 靠右的小书桌，电脑屏幕与Very Three的小物件。
   for(const x of [2.75,3.65])for(const z of [-2.7,-1.15])box(.075,1.18,.075,'#a98061',x,.82,z);
@@ -466,15 +447,24 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
   builtinDefinitions.find(d=>d.id==='living-sofa').parts.push(...house.children.filter(o=>!sofaThrowParts.has(o)));
   magazine(-.22,.99,.76,'#927482','OUR DAYS',table);
   cylinder(.23,.23,.035,'#ead7b5',-.67,.98,.35,table);for(let n=0;n<5;n++)ball(.045,'#c69262',-.82+(n%3)*.12,1.02,.27+Math.floor(n/3)*.13,table);
-  house=rooms[2];const zakery=person(0,'#608c8e','#ddb799','#3b393d',1);zakery.name='resident-3';zakery.position.set(.7,.83,6.8);zakery.rotation.y=Math.PI;
+  house=rooms[2];const zakery=person(0,'#608c8e','#ddb799','#3b393d');zakery.name='resident-3';zakery.position.set(.7,.83,6.8);zakery.rotation.y=Math.PI;
   const zakeryChairParts=new Set(house.children),zakeryChair=round(.88,.14,.85,'#94b0a5',.7,.49,6.8,.04,house);round(.88,.57,.16,'#aac3b6',.7,.85,7.15,.04,house);for(const x of [.37,1.03])for(const z of [6.5,7.08])box(.055,.4,.055,'#967a63',x,.25,z,house);
   residentPoses.push({resident:zakery,room:2,position:zakery.position.clone(),rotation:zakery.rotation.y});
   seat(zakeryChair,Math.PI,house.children.filter(o=>!zakeryChairParts.has(o)));
   rememberSince('zakery-chair','Zakery 的椅子',zakeryChairParts);
-  // A 户型：三间等面积卧室在北侧，直接开门进入客厅，客厅直通南侧庭院。
-  const layout=[new THREE.Vector3(-10.2,0,-6.9),new THREE.Vector3(0,0,-6.9),new THREE.Vector3(10.2,0,-6.9)];
+  // 参考像素版 L 形庭院屋：北侧两卧、南侧共用卧室，右侧留给庭院。房内坐标不变，旧家具配置可直接恢复。
+  const layout=[new THREE.Vector3(-10.2,0,-6.9),new THREE.Vector3(0,0,-6.9),new THREE.Vector3(-10.2,0,15.8)];
   livingRoom.name='living-room';livingRoom.userData.floorPlan={minX:-16.25,maxX:14.35,minZ:2.05,maxZ:12.15};
-  rooms.forEach((room,i)=>{room.position.copy(layout[i]);room.visible=true});
+  rooms.forEach((room,i)=>{room.position.copy(layout[i]);room.visible=true;room.userData.exit={x:[-.9,.5,-.95][i],z:i===2?-2.7:8};});
+  // 南侧卧室从北面入户；移除原背墙，由带门洞的隔墙替代。
+  for(const child of [...rooms[2].children])if(child.userData.architecture&&child.position.z<-3.3&&child.position.y>.2)rooms[2].remove(child);
+  const southWindow=rooms[2].getObjectByName('room-window');southWindow.position.set(-5.91,2.4,6.8);southWindow.rotation.y=Math.PI/2;
+  // 庭院一侧使用低墙保留开放视角，只在花园门处可穿行。
+  for(const [start,end] of [[-3.65,3.9],[5.7,8.95]]){
+    box(.16,.85,end-start,'#b8a7c3',4.05,.62,(start+end)/2,rooms[2]);
+    box(.20,.07,end-start,'#ddd0d9',4.05,1.08,(start+end)/2,rooms[2]);
+  }
+  box(10.2,.48,12.6,'#b89cbd',-10.2-0.95,-.16,18.45,scene).name='south-foundation';
   livingRoom.remove(livingBackWall,livingLeftWall,livingRoom.getObjectByName('floor-living'));
   for(const child of [...livingRoom.children]){
     const d=child.geometry?.parameters;
@@ -515,22 +505,27 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
     art(1.8,.28,0,2.96,.07,(ctx,W,H)=>{ctx.fillStyle='#f4e6d5';ctx.fillRect(0,0,W,H);ctx.fillStyle='#705773';ctx.font='bold 75px sans-serif';ctx.textAlign='center';ctx.fillText(label,W/2,300)},door);
     const target=mesh(new THREE.BoxGeometry(2,2.8,.18),new THREE.MeshBasicMaterial({visible:false}),0,1.5,0,door);target.userData={id,room:group};hits.push(target);
   }
-  rooms.forEach((room,i)=>frontDoor(room,[-.9,.5,-.95][i],8.85,room.userData.floorPlan.minX,room.userData.floorPlan.maxX,['Piggy','4010','Joey & Zakery'][i],'focus'+i));
-  frontDoor(livingRoom,0,12.04,-16.225,14.325,'共同庭院','focus-3');
+  rooms.forEach((room,i)=>frontDoor(room,[-.9,.5,-.95][i],i===2?-3.56:8.85,room.userData.floorPlan.minX,room.userData.floorPlan.maxX,['Piggy','4010','Joey & Zakery'][i],'focus'+i));
+  frontDoor(livingRoom,0,12.04,-6.025,14.325,'共同庭院','focus-3');
+  buildUtilityRooms({THREE,parent:livingRoom,box,round,cylinder,mesh,art});
+  frontDoor(livingRoom,9.25,1.95,4.15,14.35,'厨房 · 洗浴','focus-1');
   // 每间房自己的床头灯，不再移动同一盏灯来模拟切换。
   lampLight.position.x-=5.5;lampLight.position.z+=5.7;const homeLights=[lampLight];
   rooms.forEach(room=>{const light=new THREE.PointLight('#ffbf7b',0,8,1.6);light.position.copy(room.position).add(new THREE.Vector3(3.48,1.4,-2.72));scene.add(light);homeLights.push(light)});
   livingHotDefs.forEach(h=>h.root=h.id==='cat-pet'?cat:h.id==='dog-pet'?dog:livingRoom);roomHotDefs.forEach((defs,i)=>defs.forEach(h=>h.root=rooms[i]));
-  // 北侧庭院经客厅门洞相接，草坪保持与室内相同地面高度。
+  // 东南侧庭院经客厅与南侧卧室门洞相接，草坪保持与室内相同地面高度。
   const garden=new THREE.Object3D();garden.name='garden';garden.position.set(0,0,3.85);garden.rotation.y=0;scene.add(garden);
-  box(30.6,.48,8,'#a7a287',-.95,-.16,12.3,garden);
-  box(30.6,.12,8,'#91ad88',-.95,.12,12.3,garden).name='floor-garden';
+  box(20.4,.48,12.6,'#a7a287',4.15,-.16,14.6,garden);
+  box(20.4,.12,12.6,'#91ad88',4.15,.12,14.6,garden).name='floor-garden';
+  round(8,.025,3.5,'#cebca0',8.6,.205,11.9,.01,garden);
+  for(let z=10.3;z<13.5;z+=.13)box(7.7,.008,.013,'#b4a084',8.6,.222,z,garden);
+  for(let i=0;i<6;i++)round(1.1,.025,.65,'#d4c7ae',-5,.205,10+i*1.25,.08,garden);
   for(let i=0;i<7;i++)round(1.3,.025,.7,i%2?'#d7c9b3':'#cabcaa',0,.205,8.8+i,.10,garden);
-  for(const x of [-16.1,14.2]){box(.09,.12,8,'#ccb79b',x,.55,12.3,garden);for(let i=0;i<9;i++)box(.12,.75,.12,'#e1ccae',x,.56,8.5+i*.94,garden)}
-  for(const [left,right] of [[-16.1,-1.1],[1.1,14.2]]){box(right-left,.12,.09,'#ccb79b',(left+right)/2,.55,16.15,garden);for(let x=left;x<right;x+=.75)box(.12,.75,.12,'#e1ccae',x,.56,16.15,garden)}
+  for(const x of [14.2]){box(.09,.12,12.6,'#ccb79b',x,.55,14.6,garden);for(let i=0;i<14;i++)box(.12,.75,.12,'#e1ccae',x,.56,8.5+i*.94,garden)}
+  for(const [left,right] of [[-5.9,-1.1],[1.1,14.2]]){box(right-left,.12,.09,'#ccb79b',(left+right)/2,.55,20.75,garden);for(let x=left;x<right;x+=.75)box(.12,.75,.12,'#e1ccae',x,.56,20.75,garden)}
   const gardenCrops=[],gardenHotDefs=[];
   for(let room=0;room<3;room++){
-    const x=-10+room*2.7;
+    const x=-3.5+room*2.7;
     round(1.5,.4,1.6,'#ac8061',x,.4,13.65,.07,garden);box(1.3,.035,1.4,'#675143',x,.61,13.65,garden);
     art(1.05,.3,x,.65,14.48,ctx=>{ctx.fillStyle='#f6ebd5';ctx.fillRect(0,0,512,512);ctx.fillStyle='#6c5849';ctx.font='bold 110px sans-serif';ctx.textAlign='center';ctx.fillText(['Piggy','4010','Joey & Zakery'][room],256,300)},garden);
     for(let slot=0;slot<3;slot++){const crop=new THREE.Group();crop.name='garden-plants';crop.position.set(x+(slot-1)*.43,.63,13.65);garden.add(crop);gardenCrops.push({room,slot,crop,key:null})}
@@ -653,7 +648,8 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
     for(const name of ['piggy-controller','resident-record-sleeve']){const prop=actor.getObjectByName(name);if(prop)prop.parent.remove(prop)}
     for(const side of ['left','right']){
       const x=side==='left'?-.13:.13,leg=actor.getObjectByName(side+'-leg'),shoe=actor.getObjectByName(side+'-shoe');
-      leg.geometry=new THREE.BoxGeometry(index===2?.20:.14,.48,.20);ownedGeometry.push(leg.geometry);leg.position.set(x,-.08,.02);leg.rotation.set(0,0,0);shoe.position.set(x,-.36,.10);shoe.rotation.set(0,0,0);
+      // 圆角腿部与源模型共用几何体，姿态只改变变换。
+      leg.position.set(x,-.08,.02);leg.rotation.set(0,0,0);shoe.position.set(x,-.36,.10);shoe.rotation.set(0,0,0);
       const arm=actor.getObjectByName(side+'-arm'),hand=actor.getObjectByName(side+'-hand'),sign=side==='left'?-1:1;
       arm.position.set(sign*(index===0?.28:.25),.27,.03);arm.rotation.set(0,0,sign*.18);hand.position.set(sign*.29,.1,.06);
     }
@@ -792,7 +788,7 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
     if(!Number.isInteger(index)||index<0||index>3)return '';
     const {actor,ownedGeometry}=standingModel(index,'outfit-preview');actor.position.set(0,0,0);actor.rotation.set(0,angle,0);applyOutfit(actor,index,value);
     const previewScene=new THREE.Scene();previewScene.background=new THREE.Color('#eee7e2');previewScene.add(actor,new THREE.HemisphereLight('#fff7ef','#9b8fa8',3));const light=new THREE.DirectionalLight('#fff7e8',3.5);light.position.set(3,5,5);previewScene.add(light);
-    const target=new THREE.WebGLRenderTarget(384,448),previous=renderer.getRenderTarget(),exposure=renderer.toneMappingExposure;
+    const target=new THREE.WebGLRenderTarget(384,448);target.texture.colorSpace=THREE.SRGBColorSpace;const previous=renderer.getRenderTarget(),exposure=renderer.toneMappingExposure;
     try{
       const previewCamera=new THREE.OrthographicCamera(-.78,.78,.91,-.91,.1,20);previewCamera.position.set(1.45,1.25,4);previewCamera.lookAt(0,.30,0);renderer.toneMappingExposure=1.25;renderer.setRenderTarget(target);renderer.render(previewScene,previewCamera);
       const pixels=new Uint8Array(384*448*4);renderer.readRenderTargetPixels(target,0,0,384,448,pixels);const canvas=document.createElement('canvas');canvas.width=384;canvas.height=448;const ctx=canvas.getContext('2d'),image=ctx.createImageData(384,448);

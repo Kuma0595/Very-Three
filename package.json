@@ -11,10 +11,10 @@
     "test:outfits": "node scripts/check-outfits.mjs",
     "test:layout": "node scripts/check-furniture-layout.mjs && node scripts/check-decoration-controller.mjs",
     "test:player": "node scripts/check-player-actions.mjs",
-    "test:player:browser": "node scripts/check-player-browser.mjs"
+    "test:player:browser": "node scripts/check-player-browser.mjs",
+    "test:courtyard:browser": "node scripts/check-courtyard-browser.mjs"
   },
   "engines": {
     "node": ">=18"
   }
 }
-

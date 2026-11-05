@@ -133,8 +133,8 @@ export function createDecorationSystem({rooms,builtins,beforeLayoutChange=()=>{}
   const p=rooms[room].userData.floorPlan,w=(item.rotation%2?spec.d:spec.w)/2+.08,d=(item.rotation%2?spec.w:spec.d)/2+.08;
   const regions=[p,...(p.wing?[p.wing]:[])];if(!regions.some(r=>item.x-w>=r.minX+.25&&item.x+w<=r.maxX-.25&&item.z-d>=r.minZ+.25&&item.z+d<=r.maxZ-.25))return false;
   // 始终给门洞和日常人物起点留出空间。
-  const spawn=[{x:-.9,z:3.7},{x:1.1,z:2.8},{x:-1.2,z:2.3},{x:0,z:7.8}][room],exit=[{x:-.9,z:8},{x:.5,z:8},{x:-.95,z:8},{x:0,z:11.3}][room];
-  const access=room===3?[spawn,exit,...[-11.1,.5,9.25].map(x=>({x,z:2.95}))]:[spawn,exit];
+  const spawn=[{x:-.9,z:3.7},{x:1.1,z:2.8},{x:-1.2,z:2.3},{x:0,z:7.8}][room],exit=rooms[room].userData.exit??[{x:-.9,z:8},{x:.5,z:8},{x:-.95,z:8},{x:0,z:11.3}][room];
+  const access=room===3?[spawn,exit,{x:-11.15,z:11.25},...[-11.1,.5,9.25].map(x=>({x,z:2.95}))]:[spawn,exit,...(room===2?[{x:3.25,z:4.8}]:[])];
   if(access.some(q=>Math.abs(q.x-item.x)<w+.65&&Math.abs(q.z-item.z)<d+.65))return false;
   if(spec.low)return true;
   const obs=obstacles(room,item.builtin??item.id),rect={minX:item.x-w,maxX:item.x+w,minZ:item.z-d,maxZ:item.z+d};

@@ -11,7 +11,7 @@ export function releaseOutfit(actor){
 }
 export function applyOutfit(actor,index,value){
  releaseOutfit(actor);const outfit=normalizeOutfit(value,index),state={originals:[],added:[]};owned.set(actor,state);
- const width=index===0?.59:index===2?.56:.44,front=index===0?.305:.175,skin=['#e5b196','#b98365','#efc5a8','#ddb799'][index];
+ const width=index===0?.55:index===2?.49:.46,front=index===0?.205:.185,skin=['#e5b196','#b98365','#efc5a8','#ddb799'][index];
  function remember(node){if(!state.originals.some(entry=>entry.node===node))state.originals.push({node,material:node.material,visible:node.visible})}
  function paint(node,color){remember(node);node.material=node.material.clone();node.material.color.set(color)}
  function add(geometry,color,x,y,z,parent=actor){const node=new THREE.Mesh(geometry,new THREE.MeshStandardMaterial({color,roughness:.86}));node.position.set(x,y,z);node.castShadow=true;node.receiveShadow=true;node.userData.outfitPart=true;parent.add(node);state.added.push(node);return node}
@@ -27,12 +27,12 @@ export function applyOutfit(actor,index,value){
  for(const side of ['left','right']){
   const leg=actor.getObjectByName(side+'-leg'),shoe=actor.getObjectByName(side+'-shoe'),arm=actor.getObjectByName(side+'-arm');
   paint(leg,outfit.bottom.style==='shorts'?skin:outfit.bottom.color);paint(shoe,outfit.shoes.color);
-  if(outfit.bottom.style==='shorts')box(index===2?.216:.16,.26,.216,outfit.bottom.color,0,.12,0,leg);
+  if(outfit.bottom.style==='shorts')box(index===2?.216:.185,.26,.225,outfit.bottom.color,0,.12,0,leg);
   if(outfit.bottom.style==='trousers'){box(.012,.37,.012,'#f4e6d9',side==='left'?-.072:.072,0,.104,leg);box(.07,.07,.012,outfit.bottom.color,0,.13,.107,leg)}
   if(outfit.top.style!=='original')tube(.098,outfit.top.style==='tee'?.16:.31,outfit.top.color,0,outfit.top.style==='tee'?.10:.02,0,arm);
   if(outfit.shoes.style!=='original'){
-   box(.181,.045,.265,'#f4e6d9',0,-.063,0,shoe);
-   if(outfit.shoes.style==='sneakers')for(const y of [0,.025,.05])box(.095,.01,.012,'#f4e6d9',0,y,.127,shoe);
+   box(.21,.035,.305,'#f4e6d9',0,-.057,0,shoe);
+   if(outfit.shoes.style==='sneakers')for(const y of [0,.025,.05])box(.095,.01,.012,'#f4e6d9',0,y,.156,shoe);
    else box(.175,.17,.19,outfit.shoes.color,0,.115,-.025,shoe);
   }
  }
@@ -50,16 +50,16 @@ export function applyOutfit(actor,index,value){
  }
  const accent=outfit.accessory.color;
  if(outfit.accessory.style==='glasses'){
-  for(const x of [-.082,.082])add(new THREE.TorusGeometry(.064,.01,8,20),accent,x,.76,.283);
-  box(.045,.014,.02,accent,0,.76,.283);
+  for(const x of [-.092,.092])add(new THREE.TorusGeometry(.064,.01,8,20),accent,x,.79,.283);
+  box(.045,.014,.02,accent,0,.79,.283);
  }
  if(outfit.accessory.style==='headphones'){
-  add(new THREE.TorusGeometry(.28,.026,8,24,Math.PI),accent,0,.78,.025);
-  for(const x of [-.28,.28]){const pad=tube(.084,.065,accent,x,.76,.02);pad.rotation.z=Math.PI/2}
+  add(new THREE.TorusGeometry(.30,.026,8,24,Math.PI),accent,0,.78,.025);
+  for(const x of [-.30,.30]){const pad=tube(.084,.065,accent,x,.76,.02);pad.rotation.z=Math.PI/2}
  }
  if(outfit.accessory.style==='beanie'){
-  add(new THREE.SphereGeometry(.273,20,16,0,Math.PI*2,0,Math.PI*.5),accent,0,.83,.015);
-  tube(.271,.075,accent,0,.84,.015);ball(.055,accent,0,1.10,.015);
+  add(new THREE.SphereGeometry(.298,20,16,0,Math.PI*2,0,Math.PI*.5),accent,0,.86,.015);
+  tube(.297,.075,accent,0,.87,.015);ball(.055,accent,0,1.16,.015);
  }
  if(outfit.accessory.style==='scarf'){
   tube(.16,.07,accent,0,.59,.02);box(.09,.22,.035,accent,.085,.47,front+.025);

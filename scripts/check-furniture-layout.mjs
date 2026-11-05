@@ -13,6 +13,15 @@ const home=createHome({clientWidth:1200,clientHeight:650,prepend:noop,querySelec
 home.setResidentsPaused(true);home.setPlayer(0);step();
 const config=furniture=>({colors:{},items:[],furniture}),v=(x,y,z)=>new home.camera.position.constructor(x,y,z);
 const root=id=>home.scene.getObjectByName('furniture-'+id);
+// 新户型必须真实连通：南侧卧室、厨房、洗浴和庭院均从客厅可达。
+const nav=home.getNavigation(),hub={x:0,z:9};
+for(const goal of [{x:-11.15,z:13.1},{x:9.25,z:0},{x:9.25,z:-4},{x:0,z:20},{x:-5,z:20.6}])assert(nav.findPath(hub,goal)?.length,'courtyard route '+JSON.stringify(goal));
+assert(!nav.canStand({x:11.4,z:-9.52}),'不能穿过厨房柜体');
+assert(!nav.canStand({x:-6.15,z:17}),'南侧卧室低墙仍阻挡行走');
+assert(nav.findPath({x:-7,z:20.6},{x:-5,z:20.6})?.length,'卧室花园门连通');
+assert.equal(home.canPlaceDecor(2,{type:'armchair',x:-.95,z:-2.7,rotation:0}),false,'保护南侧卧室新门口');
+assert.equal(home.canPlaceDecor(2,{type:'armchair',x:3.25,z:4.8,rotation:0}),false,'保护卧室花园门');
+
 const beforeCount=()=>{let n=0;home.scene.traverse(o=>{if(o.isMesh)n++});return n};
 for(let room=0;room<4;room++){
  const list=home.getBuiltinFurniture(room);assert(list.length>=8,`room ${room} includes its original furniture`);assert.equal(new Set(list.map(e=>e.id)).size,list.length);
