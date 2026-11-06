@@ -1,6 +1,6 @@
 import {migrateLayoutConfig} from './home-layout.js?v=2';
 import * as THREE from './vendor/three.module.js';
-import {createNavigator} from './navigation.js?v=3';
+import {createNavigator} from './navigation.js?v=4';
 export const DECOR_ITEMS={
  plant:{name:'盆栽',w:.65,d:.65,page:0,desc:'陶盆与层叠叶片'},lamp:{name:'落地灯',w:.65,d:.65,page:0,desc:'有褶纹的暖光灯罩'},stool:{name:'小凳子',w:.7,d:.7,page:0,desc:'木腿与横撑的小凳'},table:{name:'边桌',w:.85,d:.85,page:0,desc:'双层木边桌'},cushion:{name:'坐垫',w:.8,d:.8,page:0,desc:'有滚边与纽扣的软垫'},rug:{name:'小地毯',w:1.4,d:1,page:0,desc:'条纹与流苏地毯'},
  arcade:{name:'迷你街机',w:.85,d:.85,page:1,desc:'像素游戏屏与摇杆'},turntable:{name:'黑胶听音柜',w:1.1,d:.8,page:1,desc:'唱针、黑胶与唱片槽'},guitarstand:{name:'电吉他架',w:.75,d:.65,page:1,desc:'琴弦、拾音器与琴架'},speaker:{name:'复古音箱',w:.7,d:.65,page:1,desc:'木壳与双单元音箱'},neon:{name:'彩虹灯牌',w:1.1,d:.55,page:1,desc:'桌架上的六色彩虹'},recordrack:{name:'专辑收藏架',w:1.1,d:.7,page:1,desc:'彩色封套与收藏小物'},

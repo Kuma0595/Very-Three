@@ -12,6 +12,7 @@
     "test:home-layout": "node scripts/check-home-layout.mjs",
     "test:layout": "node scripts/check-home-layout.mjs && node scripts/check-furniture-layout.mjs && node scripts/check-decoration-controller.mjs",
     "test:player": "node scripts/check-player-actions.mjs",
+    "test:room-focus:browser": "node scripts/check-room-focus-browser.mjs",
     "test:gestures:browser": "node scripts/check-scene-gestures.mjs",
     "test:player:browser": "node scripts/check-player-browser.mjs",
     "test:courtyard:browser": "node scripts/check-courtyard-browser.mjs"

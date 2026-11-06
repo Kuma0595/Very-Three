@@ -16,6 +16,8 @@ for(const [name,x,y] of [['Piggy',12,8],['4010',24,8],['Joey',12,25],['厨房',3
  const goal=cell(x,y);console.log(name,'stand',nav.canStand(goal),'path',Boolean(nav.findPath(hub,goal)));
  assert(nav.findPath(hub,goal)?.length,name+' 必须与客厅相通');
 }
+assert.equal(nav.roomAt(cell(36,8)),-4,'厨房具有独立镜头分区');assert.equal(nav.roomAt(cell(37,17)),-5,'卫生间具有独立镜头分区');
+const threshold=cell(36,11.5);assert.equal(nav.roomAt({...threshold,z:threshold.z-.08},-1),-1);assert.equal(nav.roomAt({...threshold,z:threshold.z-.25},-1),-4);assert.equal(nav.roomAt({...threshold,z:threshold.z+.08},-4),-4);assert.equal(nav.roomAt({...threshold,z:threshold.z+.25},-4),-1);
 for(const [x,y] of [[11,19.5],[17.5,21],[24.5,21],[35.5,30],[40,22.1],[35,5]])assert.equal(nav.canStand(cell(x,y)),false,'墙体/池塘/菜地/柜体阻挡 '+[x,y]);
 for(const i of [0,1,2,3]){
  home.stopWalking();home.setPlayer(i);assert(home.ensurePlayer());

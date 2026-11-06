@@ -79,5 +79,10 @@ export function createNavigator(floors,obstacles,{radius=.40,step=.25}={}){
   }
   return q;
  }
- return {canStand,findPath,move,nearest(p){const key=nearestKey(p,3);return key<0?null:point(key)},roomAt(p){return floors.find(r=>contains(r,p))?.room??-1}};
+ return {canStand,findPath,move,nearest(p){const key=nearestKey(p,3);return key<0?null:point(key)},roomAt(p,previous){
+  const room=floors.find(r=>contains(r,p))?.room??-1;
+  // 门槛附近保留上一个分区，跨入 18cm 后再切镜头，防止边界抖动。
+  if(room!==previous&&previous!==undefined&&floors.some(r=>r.room===previous&&p.x>=r.minX-.18&&p.x<=r.maxX+.18&&p.z>=r.minZ-.18&&p.z<=r.maxZ+.18))return previous;
+  return room;
+ }};
 }
