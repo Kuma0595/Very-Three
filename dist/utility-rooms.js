@@ -1,50 +1,26 @@
-// 北侧服务区使用现有公共房间坐标；不占用卧室 ID 或改写成员的家具存档。
+import {cell,region} from './home-layout.js?v=2';
+// 厨房在北侧，洗浴在东侧下方；中间留出两格宽横向通道。
 export function buildUtilityRooms({THREE,parent,box,round,cylinder,mesh,art}){
  const g=new THREE.Group();g.name='kitchen-and-bath';parent.add(g);
- const b=(w,h,d,c,x,y,z)=>box(w,h,d,c,x,y,z,g);
- const r=(w,h,d,c,x,y,z,radius=.05)=>round(w,h,d,c,x,y,z,radius,g);
- b(10.2,.12,7.5,'#cfb48e',9.25,.12,-6.8).name='floor-kitchen';
- b(10.2,.12,5.1,'#b9c8bc',9.25,.12,-.5).name='floor-bath';
- b(10.2,3.9,.18,'#e1d8bd',9.25,2.08,-10.46);
- b(.18,3.9,12.6,'#c0c9bc',4.25,2.08,-4.25);
- b(10.2,.15,.25,'#a78e6d',9.25,4.07,-10.46);
- // 浅色花砖和木柜区；花砖位于地面之上，避免深度闪烁。
- for(let x=4.65;x<14;x+=.7)for(let z=-2.65;z<1.8;z+=.7){const tile=b(.66,.012,.66,(Math.round((x-4.65)/.7)+Math.round((z+2.65)/.7))%2?'#dce2d2':'#cad6c8',x,.19,z);tile.castShadow=false;}
- for(const [left,right] of [[4.15,8.35],[10.15,14.35]])b(right-left,1.15,.13,'#99ad9e',(left+right)/2,.76,-3.04);
- // 一字型厨房将工作面靠墙，完整保留门口到灶台的通路。
- r(1.55,2.8,1.35,'#d6dfd0',5.5,1.60,-9.52,.12);
- r(1.43,.025,.08,'#9bac9a',5.5,1.9,-8.81,.01);
- r(.045,.48,.06,'#8a9786',6.02,2.25,-8.80,.015);
- for(const x of [7.5,9.45,11.4,13.2]){
-  r(1.72,1.12,1.35,'#b89570',x,.83,-9.52);
-  r(1.61,.92,.055,'#cfb18a',x,.84,-8.81,.025);
-  r(.32,.035,.045,'#786d54',x,1.13,-8.77,.01);
- }
- r(7.5,.12,1.49,'#f4ead5',10.25,1.45,-9.5,.04);
- r(1.25,.05,.8,'#899e99',9.45,1.53,-9.4,.08);
- r(1.02,.025,.61,'#bdd0c8',9.45,1.56,-9.4,.07);
- const faucet=mesh(new THREE.TorusGeometry(.20,.035,8,20,Math.PI),'#8c9f96',9.45,1.81,-9.8,g);
- cylinder(.035,.035,.27,'#8c9f96',9.65,1.68,-9.8,g);
- r(1.4,.06,.95,'#4d5651',11.65,1.55,-9.48,.035);
- for(const x of [11.31,11.99])for(const z of [-9.74,-9.22])cylinder(.18,.18,.02,'#879088',x,1.59,z,g);
- r(1.5,.65,.85,'#d5c3a2',11.65,3.12,-10,.04);
- // 岛台与浅色地毯明确划出备餐区，四周有可走空间。
- r(3.7,.035,2.2,'#a8b394',10,.22,-6.0,.012);
- r(2.6,.98,1.0,'#9eac91',10,.75,-6.1,.06);
- r(2.85,.12,1.22,'#e9d9bd',10,1.3,-6.1,.05);
- cylinder(.16,.13,.25,'#c08d70',10.7,1.49,-6.1,g);
- // 浴缸、洗手台与洗衣机做可识别的完整轮廓；本轮不添加虚假的互动按钮。
- r(2.9,.8,1.45,'#f2ecdc',12.3,.65,-1.7,.22);
- r(2.55,.12,1.13,'#a8c5bc',12.3,1.06,-1.7,.16);
- r(2.22,.045,.86,'#c8e1d7',12.3,1.13,-1.7,.12);
- r(1.45,.95,1.2,'#ece9db',7.5,.72,-1.95,.08);
- const drum=mesh(new THREE.TorusGeometry(.34,.055,12,28),'#8caaa0',7.5,.76,-1.31,g);
- const glass=mesh(new THREE.CircleGeometry(.28,28),'#6f8d8b',7.5,.76,-1.30,g);
- r(1.1,.85,.85,'#b99d7d',5.4,.67,-1.95,.04);
- r(1.17,.15,.91,'#f2eddf',5.4,1.15,-1.95,.08);
- r(.82,.025,.55,'#a9bdb0',5.4,1.24,-1.95,.06);
- for(const [label,x,z] of [['厨房',9.4,-10.34],['洗浴',6,-2.94]]){
-  art(1.4,.40,x,label==='厨房'?2.7:1.6,z,(ctx,W,H)=>{ctx.fillStyle='#f5eedc';ctx.fillRect(0,0,W,H);ctx.fillStyle='#687563';ctx.font='bold 130px sans-serif';ctx.textAlign='center';ctx.fillText(label,W/2,H*.64)},g);
- }
+ const b=(w,h,d,c,x,y,z)=>box(w,h,d,c,x,y,z,g),r=(w,h,d,c,x,y,z,radius=.05)=>round(w,h,d,c,x,y,z,radius,g);
+ const floor=(name,coords,color)=>{const p=region(...coords);b(p.maxX-p.minX,.12,p.maxZ-p.minZ,color,(p.minX+p.maxX)/2,.12,(p.minZ+p.maxZ)/2).name=name;};
+ floor('floor-kitchen',[30.5,3.5,42.5,11.5],'#dfd3af');floor('floor-bath',[31.5,14.5,42.5,19.5],'#b8cfc3');
+ function wall(x0,y0,x1,y1,height=1.15){const a=cell(x0,y0),c=cell(x1,y1);b(x0===x1?.16:Math.abs(c.x-a.x),height,y0===y1?.16:Math.abs(c.z-a.z),'#d0c7ac',(a.x+c.x)/2,.2+height/2,(a.z+c.z)/2);}
+ wall(30.5,3.5,42.5,3.5,3.9);wall(30.5,3.5,30.5,11.5,3.9);
+ wall(30.5,11.5,35,11.5);wall(37,11.5,42.5,11.5);
+ wall(42.5,3.5,42.5,8);wall(42.5,10,42.5,19.5);
+ wall(31.5,14.5,36,14.5);wall(38,14.5,42.5,14.5);wall(31.5,14.5,31.5,19.5);
+ for(let x=32;x<42;x++)for(let y=15;y<19;y++){const p=cell(x,y);b(.81,.012,.81,(x+y)%2?'#dce7d8':'#c9dcd0',p.x,.19,p.z);}
+ // 家具位置与像素版一致：冰箱、水槽、灶台沿北墙，咖啡车靠右侧后门。
+ let p=cell(32,5);r(1.35,2.4,1.15,'#d6dfd0',p.x,1.4,p.z,.1);r(.04,.45,.06,'#8a9786',p.x+.45,1.95,p.z+.62,.01);
+ for(const x of [35,38]){p=cell(x,5);r(1.8,1.05,1.25,'#b89570',p.x,.75,p.z);r(1.91,.1,1.36,'#f1e8d4',p.x,1.34,p.z,.04);for(const dx of [-.43,.43])r(.76,.8,.04,'#d1b28a',p.x+dx,.77,p.z+.66,.02);}
+ p=cell(35,5);r(1.13,.04,.76,'#8ba29c',p.x,1.42,p.z,.08);r(.88,.02,.53,'#c4d7ce',p.x,1.45,p.z,.06);mesh(new THREE.TorusGeometry(.17,.025,8,20,Math.PI),'#889d95',p.x,1.67,p.z-.4,g);
+ p=cell(38,5);r(1.4,.04,.9,'#48554f',p.x,1.41,p.z,.025);for(const dx of [-.34,.34])for(const dz of [-.24,.24])cylinder(.16,.16,.02,'#8d9991',p.x+dx,1.45,p.z+dz,g);
+ p=cell(39,9.5);r(1.7,.85,.8,'#b59970',p.x,.68,p.z);r(1.8,.1,.9,'#e8d8bb',p.x,1.16,p.z);r(.55,.55,.48,'#65766d',p.x,1.48,p.z,.07);
+ p=cell(35.8,3.7);r(3.2,1.35,.08,'#f5ebd5',p.x,2.8,p.z);r(2.95,1.12,.04,'#bed4cf',p.x,2.8,p.z+.06);b(.06,1.1,.06,'#f5ebd5',p.x,2.8,p.z+.1);
+ p=cell(40,16.4);r(2.1,.75,1.25,'#f2ecdc',p.x,.62,p.z,.19);r(1.8,.1,.94,'#a8c5bc',p.x,1.01,p.z,.13);
+ p=cell(35,16.1);r(1.45,1.0,1.2,'#ece9db',p.x,.72,p.z,.08);mesh(new THREE.TorusGeometry(.34,.055,12,28),'#8caaa0',p.x,.76,p.z+.64,g);mesh(new THREE.CircleGeometry(.28,28),'#6f8d8b',p.x,.76,p.z+.65,g);
+ p=cell(32.6,15.7);r(.68,.8,.52,'#e8e5d5',p.x,.72,p.z-.23,.06);const bowl=cylinder(.34,.24,.43,'#f4eee0',p.x,.49,p.z+.23,g);bowl.scale.z=1.25;
+ p=cell(37.7,15.1);b(.07,1.25,.07,'#9a947a',p.x,.84,p.z);r(.65,.6,.07,'#e4dec5',p.x,1.18,p.z+.04,.03);
  return g;
 }

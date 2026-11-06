@@ -1,7 +1,7 @@
 import * as THREE from './vendor/three.module.js';
 
 // 原有家具只记录变换，不重建几何体；稳定 ID 与场景建模顺序无关。
-export function createBuiltinFurniture(rooms, definitions){
+export function createBuiltinFurniture(rooms, definitions,{placements={},cell,fixedFurniture=[],registerFurniture}={}){
  const entries=new Map(),states=rooms.map(()=>({}));
  for(const def of definitions){
   const room=rooms.indexOf(def.room);if(room<0)continue;
@@ -13,17 +13,33 @@ export function createBuiltinFurniture(rooms, definitions){
   const bounds=new THREE.Box3().setFromObject(group),center=bounds.getCenter(new THREE.Vector3());
   const origin=def.room.worldToLocal(center);origin.y=0;
   group.position.copy(origin);for(const part of group.children)part.position.sub(origin);
+  const placement=placements[def.id];
+  if(placement){
+   const content=new THREE.Group();content.name='furniture-content';for(const part of [...group.children])content.add(part);group.add(content);
+   const [gx,gy,scale,rotation]=placement,world=cell(gx,gy);group.position.set(world.x-def.room.position.x,0,world.z-def.room.position.z);
+   content.scale.setScalar(scale);content.rotation.y=rotation*Math.PI/2;
+   if(def.id==='r2-bed'){
+    // 两张独立床共享原有布置 ID，每张床拥有独立的坐卧锚点。
+    const target=fixedFurniture.find(t=>t.mode==='bed'&&t.owner===2),rootIndex=content.children.indexOf(target.root);
+    const twin=content.clone(true);group.add(twin);content.scale.set(.60,1,.85);twin.scale.copy(content.scale);content.position.x=-3.1;twin.position.x=3.1;
+    target.slots=[{dock:[0,.28,.17],rotation:0}];target.memberIndex=2;
+    const twinRoot=twin.children[rootIndex];registerFurniture(twinRoot,'bed',[{dock:[0,.28,.17],rotation:0}],twin.children,2);fixedFurniture.at(-1).memberIndex=3;
+    def.name='Joey 与 Zakery 的双床';
+   }
+   origin.copy(group.position);
+  }
   group.updateWorldMatrix(true,true);
   const local=new THREE.Box3();group.traverse(o=>{if(o.isMesh&&o.material.visible!==false){o.geometry.computeBoundingBox();const b=o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld).applyMatrix4(group.matrixWorld.clone().invert());local.union(b)}});
   const size=local.getSize(new THREE.Vector3());
-  entries.set(def.id,{...def,room,root:group,base:{x:origin.x,z:origin.z,rotation:0,hidden:false},w:size.x,d:size.z,low:local.max.y<.35});
+  const footprints=def.id==='r2-bed'?group.children.map(child=>{const b=new THREE.Box3().setFromObject(child).applyMatrix4(group.matrixWorld.clone().invert()),c=b.getCenter(new THREE.Vector3()),s=b.getSize(new THREE.Vector3());return {x:c.x,z:c.z,w:s.x,d:s.z}}):null;
+  entries.set(def.id,{...def,room,root:group,base:{x:origin.x,z:origin.z,rotation:0,hidden:false},w:size.x,d:size.z,footprints,low:local.max.y<.35});
  }
  function state(id){const e=entries.get(id);return e?{...e.base,...states[e.room][id]}:null}
- function spec(id){const e=entries.get(id);return e?{name:e.name,w:e.w,d:e.d,wall:false,low:e.low}:null}
+ function spec(id){const e=entries.get(id);return e?{name:e.name,w:e.w,d:e.d,wall:false,low:e.low,footprints:e.footprints}:null}
  function clean(e,value){
   if(!value||!Number.isFinite(value.x)||!Number.isFinite(value.z)||![0,1,2,3].includes(value.rotation)||typeof value.hidden!=='boolean')return null;
-  const plan=rooms[e.room].userData.floorPlan;
-  if(value.x<plan.minX||value.x>plan.maxX||value.z<plan.minZ||value.z>plan.maxZ)return null;
+  const plans=rooms[e.room].userData.regions??[rooms[e.room].userData.floorPlan];
+  if(!plans.some(plan=>value.x>=plan.minX&&value.x<=plan.maxX&&value.z>=plan.minZ&&value.z<=plan.maxZ))return null;
   return {x:value.x,z:value.z,rotation:value.rotation,hidden:value.hidden};
  }
  function apply(room,config={}){

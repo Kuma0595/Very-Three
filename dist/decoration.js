@@ -1,6 +1,7 @@
+import {migrateLayoutConfig,LAYOUT_REVISION} from './home-layout.js?v=2';
 import {decorLimit} from './decor-limits.js?v=1';
 import {client,currentMember,currentRoom} from './cloud.js?v=4';
-import {DECOR_ITEMS,DECOR_COLORS,DECOR_PAGES,modelSpec} from './decoration-scene.js?v=13-courtyard';
+import {DECOR_ITEMS,DECOR_COLORS,DECOR_PAGES,modelSpec} from './decoration-scene.js?v=14-pixel-layout';
 import {BEDROOM_PAGE,builtinCategory,furniturePages} from './furniture-catalog.js?v=1';
 export function setupDecoration({home,focus,notify}){
  const button=document.createElement('button');button.id='decorate-room';button.textContent='布置我的房间';button.type='button';document.querySelector('.focus-summary').append(button);
@@ -11,7 +12,7 @@ export function setupDecoration({home,focus,notify}){
  let starting=false;
  let modelCatalog={},catalogKey='',records=[],ready=false,editing=false,draft=null,history=[],selected=null,valid=false,busy=false,version=0,catalogPage=0,editingRoom=null,commonReady=false;
  const escape=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
- const empty=()=>({colors:{},items:[],furniture:{}}),room=()=>editingRoom??currentRoom(),title=()=>room()===3?'布置我们的客厅':'布置我的房间';
+ const empty=()=>({colors:{},items:[],furniture:{},layoutRevision:LAYOUT_REVISION}),room=()=>editingRoom??currentRoom(),title=()=>room()===3?'布置我们的客厅':'布置我的房间';
  async function sync(){if(busy)return;try{
   const [own,common,models]=await Promise.all([client.from('vt_decor').select('*'),client.from('vt_common_decor').select('*'),client.from('vt_model_catalog').select('config').eq('id',1).maybeSingle()]);
   if(!models.error){const next=models.data?.config??{},key=JSON.stringify(next);if(key!==catalogKey){catalogKey=key;modelCatalog=next;home()?.setDecorCatalog(next)}}
@@ -19,6 +20,7 @@ export function setupDecoration({home,focus,notify}){
   // 网络错误不当作空布局，保留最后一次读到的房间与家具状态。
   if(!own.error)records=records.filter(r=>r.room_id===3).concat((own.data??[]).filter(r=>r.room_id<3));
   if(!common.error)records=records.filter(r=>r.room_id!==3).concat((common.data??[]).map(r=>({...r,room_id:3})));
+  records=records.map(row=>({...row,config:migrateLayoutConfig(row.room_id,row.config)}));
   for(const row of records)if(!editing||row.room_id!==room())home()?.setDecorRoom(row.room_id,row.config);
  }catch{ready=false;commonReady=false}}
 

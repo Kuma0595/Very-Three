@@ -1,6 +1,7 @@
 // 在连续地板上寻路，门洞可通过；墙体和家具使用水平包围盒避让。
 export function createNavigator(floors,obstacles,{radius=.40,step=.25}={}){
- const contains=(r,p)=>p.x>=r.minX&&p.x<=r.maxX&&p.z>=r.minZ&&p.z<=r.maxZ;
+ // Three.js 浮点顶点会使相邻地板出现微小接缝，只容忍几何精度误差。
+ const contains=(r,p)=>p.x>=r.minX-1e-5&&p.x<=r.maxX+1e-5&&p.z>=r.minZ-1e-5&&p.z<=r.maxZ+1e-5;
  const onFloor=p=>floors.some(r=>contains(r,p));
  function canStand(p){
   if(!onFloor(p))return false;

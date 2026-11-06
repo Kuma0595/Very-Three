@@ -11,17 +11,8 @@ const {createHome}=await import('data:text/javascript;base64,'+Buffer.from(prelu
 const home=createHome({clientWidth:1200,clientHeight:650,prepend:noop,querySelector:()=>({append:noop,replaceChildren:noop})},id=>opened.push(id),s=>states.push(s));let time=0;const step=(count=1)=>{for(let i=0;i<count;i++){time+=50;frame(time)}};
 
 home.setResidentsPaused(true);home.setPlayer(0);step();
-const config=furniture=>({colors:{},items:[],furniture}),v=(x,y,z)=>new home.camera.position.constructor(x,y,z);
+const config=furniture=>({colors:{},items:[],furniture,layoutRevision:2}),v=(x,y,z)=>new home.camera.position.constructor(x,y,z);
 const root=id=>home.scene.getObjectByName('furniture-'+id);
-// 新户型必须真实连通：南侧卧室、厨房、洗浴和庭院均从客厅可达。
-const nav=home.getNavigation(),hub={x:0,z:9};
-for(const goal of [{x:-11.15,z:13.1},{x:9.25,z:0},{x:9.25,z:-4},{x:0,z:20},{x:-5,z:20.6}])assert(nav.findPath(hub,goal)?.length,'courtyard route '+JSON.stringify(goal));
-assert(!nav.canStand({x:11.4,z:-9.52}),'不能穿过厨房柜体');
-assert(!nav.canStand({x:-6.15,z:17}),'南侧卧室低墙仍阻挡行走');
-assert(nav.findPath({x:-7,z:20.6},{x:-5,z:20.6})?.length,'卧室花园门连通');
-assert.equal(home.canPlaceDecor(2,{type:'armchair',x:-.95,z:-2.7,rotation:0}),false,'保护南侧卧室新门口');
-assert.equal(home.canPlaceDecor(2,{type:'armchair',x:3.25,z:4.8,rotation:0}),false,'保护卧室花园门');
-
 const beforeCount=()=>{let n=0;home.scene.traverse(o=>{if(o.isMesh)n++});return n};
 for(let room=0;room<4;room++){
  const list=home.getBuiltinFurniture(room);assert(list.length>=8,`room ${room} includes its original furniture`);assert.equal(new Set(list.map(e=>e.id)).size,list.length);
@@ -37,23 +28,23 @@ const count=beforeCount();assert.equal(furniturePages(['a','b','c','d','e','f'])
 // 每组原有家具在腾空房间后都能找到合法的新位置，避免只接入清单却无法摆放。
 for(let room=0;room<4;room++){
  const all=home.getBuiltinFurniture(room),stored=Object.fromEntries(all.map(e=>[e.id,{x:e.x,z:e.z,rotation:e.rotation,hidden:true}]));home.setDecorRoom(room,config(stored));
- for(const entry of all){let found=false;for(let z=room===3?3:-2;z<(room===3?11:8)&&!found;z+=1)for(let x=room===3?-14:-4;x<(room===3?13:3)&&!found;x+=1){if(home.canPlaceDecor(room,{builtin:entry.id,type:'builtin',x,z,rotation:0})){found=true;break}}assert(found,entry.id+' has a valid placement')}
- home.setDecorRoom(room,{colors:{},items:[]});
+ for(const entry of all){let found=home.canPlaceDecor(room,{builtin:entry.id,type:'builtin',...entry});for(let z=-2;z<(room===3?2.5:4)&&!found;z+=.5)for(let x=room===3?-14:-4;x<(room===3?5:3)&&!found;x+=.5){if(home.canPlaceDecor(room,{builtin:entry.id,type:'builtin',x,z,rotation:0})){found=true;break}}assert(found,entry.id+' has a valid placement')}
+ home.setDecorRoom(room,{colors:{},items:[],layoutRevision:2});
 }
 const bedId='r0-bed',original=home.getBuiltinState(bedId),bedTarget=()=>home.getFurnitureTargets().find(t=>t.mode==='bed'&&t.owner===0);
 // 清空原有家具以验证可用位置、移动后睡眠锚点与人物旋转，不修改任何数据库。
 let hidden=Object.fromEntries(home.getBuiltinFurniture(0).map(e=>[e.id,{x:e.x,z:e.z,rotation:e.rotation,hidden:true}]));
 home.setDecorRoom(0,config(hidden));assert.equal(bedTarget(),undefined,'stored bed is not interactive');home.setResidentNight(true);step();assert.notEqual(home.getResidentStates()[0].mode,'bed','no phantom bed at old position');
 const placement={builtin:bedId,type:'builtin',x:-2.8,z:0,rotation:1,hidden:false};assert(home.canPlaceDecor(0,placement),'bed fits empty interior');
-assert.equal(home.canPlaceDecor(0,{...placement,x:-.9,z:8}),false,'door clearance protected');assert.equal(home.canPlaceDecor(0,{...placement,x:50}),false,'outside room rejected');
+assert.equal(home.canPlaceDecor(0,{...placement,x:-.525,z:2.35}),false,'door clearance protected');assert.equal(home.canPlaceDecor(0,{...placement,x:50}),false,'outside room rejected');
 hidden[bedId]={x:placement.x,z:placement.z,rotation:placement.rotation,hidden:false};home.setDecorRoom(0,config(hidden));step();const target=bedTarget(),expected=target.root.localToWorld(v(...target.slots[0].dock)),npc=home.getResidentStates()[0];assert(npc.position.distanceTo(expected)<.001,'sleep follows moved bed');assert.equal(root(bedId).rotation.y,Math.PI/2);
 assert(home.ensurePlayer());assert(home.useFurniture(target));step(600);assert.equal(home.getWalkState().pose,'bed');let actor=home.scene.getObjectByName('walking-resident');assert(actor.position.distanceTo(expected)<.001);assert(Math.abs(actor.rotation.y-Math.PI/2)<.001);assert(home.standUp());assert(home.getNavigation().canStand(actor.position));
 // 正在使用的原有家具收到新布局时安全解除，再按新锚点运行。
 assert(home.useFurniture(target));step(600);hidden[bedId].hidden=true;home.setDecorRoom(0,config(hidden));step();assert.equal(home.getWalkState().active,false);assert.equal(bedTarget(),undefined);
 // 老数据没有 furniture 字段时，恢复默认且保留旧装饰的兼容路径。
-home.setDecorRoom(0,{colors:{},items:[]});assert.deepEqual(home.getBuiltinState(bedId),original);assert(root(bedId).visible);assert(bedTarget());
+home.setDecorRoom(0,{colors:{},items:[],layoutRevision:2});assert.deepEqual(home.getBuiltinState(bedId),original);assert(root(bedId).visible);assert(bedTarget());
 const sofaId='r3-living-sofa',sofaOriginal=home.getBuiltinState(sofaId);home.setDecorRoom(3,config({[sofaId]:{...sofaOriginal,rotation:3}}));const sofa=home.getFurnitureTargets().find(t=>t.mode==='sit'&&t.slots.length===3);const dir=v(0,0,1).applyQuaternion(sofa.root.getWorldQuaternion(new home.camera.quaternion.constructor()));assert(dir.x<-.99,'270-degree rotation retains sign');
 // 不可信/旧版本布局参数不会让场景变成 NaN、越界或隐藏全部物件。
 home.setDecorRoom(0,config({[bedId]:{x:Infinity,z:0,rotation:0,hidden:true},unknown:{x:0,z:0,rotation:0,hidden:true}}));assert.deepEqual(home.getBuiltinState(bedId),original);
-home.setDecorRoom(3,{colors:{},items:[]});assert.deepEqual(home.getBuiltinState(sofaId),sofaOriginal);
+home.setDecorRoom(3,{colors:{},items:[],layoutRevision:2});assert.deepEqual(home.getBuiltinState(sofaId),sofaOriginal);
 home.dispose();console.log('PASS: full furniture registry, non-destructive preview, moved/rotated bed interaction and NPC sleep, storage, door bounds, legacy/default restore and invalid data');

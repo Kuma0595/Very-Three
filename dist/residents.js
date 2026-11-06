@@ -4,7 +4,7 @@ export function createResidents({scene,sources,models,rooms,seats,getRestTarget,
  const occupants=new Map();let paused=false,routineNight=false;
  const residents=models.map(({actor},index)=>{
   actor.name='resident-npc-'+index;actor.userData.memberIndex=index;scene.add(actor);sources[index].visible=false;
-  const room=Math.min(index,2),spawn=[[-.9,3.7],[1.1,2.8],[-1.2,2.3],[.7,5.9]][index],p=rooms[room].position;
+  const room=Math.min(index,2),spawn=[rooms[room].userData.spawn.x+(index===3?.8:0),rooms[room].userData.spawn.z],p=rooms[room].position;
   actor.position.set(p.x+spawn[0],.63,p.z+spawn[1]);actor.rotation.set(0,Math.PI,0);
   return {index,actor,room,mode:'idle',timer:3+index*4,path:[],target:null,blocked:0,ready:false};
  });
@@ -19,7 +19,7 @@ export function createResidents({scene,sources,models,rooms,seats,getRestTarget,
    {mode:'sit',key:'seat-'+npc.index,point:rest?getNavigator().nearest({x:rest.dock.x,z:rest.dock.z+1})??rest.dock:world(npc.room,0,3.5),dock:rest?.dock,rotation:rest?.rotation??seat.rotation},
    {mode:'bed',key:'bed-'+npc.index,point:world(npc.room,-.5,-1.5),dock:{...world(npc.room,1.7,-1.55),y:1.15},rotation:0},
    {mode:'cat',key:'cat',point:getCat()}, {mode:'dog',key:'dog',point:getDog()},
-   {mode:'idle',point:{x:0,z:7.8}}, {mode:'idle',point:{x:0,z:15.3}},
+   {mode:'idle',point:{x:-1.7,z:.85}}, {mode:'idle',point:{x:3.4,z:6.8}},
    {mode:'idle',point:world((npc.room+1)%3,1,2.9)}, {mode:'idle',point:world(npc.room,-.7,3.5)}
   ];
   // 多试几条路线；不能到达就短暂停留，不穿越家具。

@@ -25,3 +25,6 @@ const closed=createNavigator(floors,[{minX:-.1,maxX:.1,minZ:-3,maxZ:3}]);
 assert.equal(closed.findPath(start,goal),null,'没有门洞时不能穿墙');
 assert.equal(nav.findPath(start,{x:9,z:9}),null,'不能走到远离地板的点');
 console.log('PASS: floor seams, door routes, furniture, body clearance, edge stop, no tunneling or wall crossing');
+
+const seam=createNavigator([{minX:-3,maxX:-1e-7,minZ:-2,maxZ:2},{minX:1e-7,maxX:3,minZ:-2,maxZ:2}],[]);assert(seam.findPath({x:-2,z:0},{x:2,z:0}),'浮点接缝可通过');
+const gap=createNavigator([{minX:-3,maxX:-.2,minZ:-2,maxZ:2},{minX:.2,maxX:3,minZ:-2,maxZ:2}],[]);assert(!gap.canStand({x:0,z:0}),'真实地板缺口不可通过');

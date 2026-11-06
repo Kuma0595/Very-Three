@@ -1,5 +1,6 @@
+import {migrateLayoutConfig} from './home-layout.js?v=2';
 import * as THREE from './vendor/three.module.js';
-import {createNavigator} from './navigation.js?v=2';
+import {createNavigator} from './navigation.js?v=3';
 export const DECOR_ITEMS={
  plant:{name:'盆栽',w:.65,d:.65,page:0,desc:'陶盆与层叠叶片'},lamp:{name:'落地灯',w:.65,d:.65,page:0,desc:'有褶纹的暖光灯罩'},stool:{name:'小凳子',w:.7,d:.7,page:0,desc:'木腿与横撑的小凳'},table:{name:'边桌',w:.85,d:.85,page:0,desc:'双层木边桌'},cushion:{name:'坐垫',w:.8,d:.8,page:0,desc:'有滚边与纽扣的软垫'},rug:{name:'小地毯',w:1.4,d:1,page:0,desc:'条纹与流苏地毯'},
  arcade:{name:'迷你街机',w:.85,d:.85,page:1,desc:'像素游戏屏与摇杆'},turntable:{name:'黑胶听音柜',w:1.1,d:.8,page:1,desc:'唱针、黑胶与唱片槽'},guitarstand:{name:'电吉他架',w:.75,d:.65,page:1,desc:'琴弦、拾音器与琴架'},speaker:{name:'复古音箱',w:.7,d:.65,page:1,desc:'木壳与双单元音箱'},neon:{name:'彩虹灯牌',w:1.1,d:.55,page:1,desc:'桌架上的六色彩虹'},recordrack:{name:'专辑收藏架',w:1.1,d:.7,page:1,desc:'彩色封套与收藏小物'},
@@ -116,7 +117,7 @@ export function createDecorationSystem({rooms,builtins,beforeLayoutChange=()=>{}
  }
  function dispose(g){g.traverse(o=>{if(o.isMesh){o.geometry.dispose();if(o.userData.previewMaterial||o.userData.ownedMaterial){o.material.map?.dispose();o.material.dispose()}}});g.clear()}
  function setRoom(room,config={}){
-  if(!rooms[room])return;const key=JSON.stringify([config.colors??{},config.items??[],config.furniture??{},catalog]);if(keys[room]===key)return;keys[room]=key;
+  if(!rooms[room])return;config=migrateLayoutConfig(room,config);const key=JSON.stringify([config.colors??{},config.items??[],config.furniture??{},catalog]);if(keys[room]===key)return;keys[room]=key;
   for(const [surface,objects] of Object.entries(defaults[room]))for(const o of objects)o.material.color.set(config.colors?.[surface]??'#'+o.userData.defaultColor);
   clearPreview();const furnitureKey=JSON.stringify(config.furniture??{}),layoutChanged=furnitureKey!==furnitureKeys[room];if(layoutChanged)beforeLayoutChange();furnitureKeys[room]=furnitureKey;builtins.apply(room,config.furniture);dispose(groups[room]);for(const item of config.items??[])if(DECOR_ITEMS[item.type])model(item,groups[room]);invalidate();if(layoutChanged)afterLayoutChange();
  }
@@ -129,18 +130,19 @@ export function createDecorationSystem({rooms,builtins,beforeLayoutChange=()=>{}
  function canPlace(room,item){
   const base=item.builtin?builtins.spec(item.builtin):DECOR_ITEMS[item.type],scale=item.builtin?1:modelScale(item,catalog),spec=base&&{...base,w:base.w*scale,d:base.d*scale};if(!spec||!Number.isFinite(scale)||scale<.5||scale>1.8||!Number.isFinite(item.x)||!Number.isFinite(item.z))return false;
   if(!rooms[room])return false;
-  if(spec.wall){if(room!==3||item.rotation!==0||Math.abs(item.z-2.08)>.01||item.x-spec.w/2<-15.95||item.x+spec.w/2>14.05)return false;const doors=[-11.1,.5,9.25];if(rooms[3].children.some(o=>o.isMesh&&o.material.visible!==false&&o.position.y>2.2&&o.position.z>1.9&&o.position.z<2.4&&Math.abs(o.position.x-item.x)<(o.geometry.parameters?.width??.4)/2+spec.w/2+.12))return false;if(doors.some(x=>Math.abs(x-item.x)<1.2+spec.w/2))return false;const root=groups[room];return !root.children.some(o=>o.userData.decorId!==item.id&&DECOR_ITEMS[o.userData.decorType]?.wall&&Math.abs(o.position.x-item.x)<(DECOR_ITEMS[o.userData.decorType].w*o.scale.x+spec.w)/2+.1)}
-  const p=rooms[room].userData.floorPlan,w=(item.rotation%2?spec.d:spec.w)/2+.08,d=(item.rotation%2?spec.w:spec.d)/2+.08;
-  const regions=[p,...(p.wing?[p.wing]:[])];if(!regions.some(r=>item.x-w>=r.minX+.25&&item.x+w<=r.maxX-.25&&item.z-d>=r.minZ+.25&&item.z+d<=r.maxZ-.25))return false;
-  // 始终给门洞和日常人物起点留出空间。
-  const spawn=[{x:-.9,z:3.7},{x:1.1,z:2.8},{x:-1.2,z:2.3},{x:0,z:7.8}][room],exit=rooms[room].userData.exit??[{x:-.9,z:8},{x:.5,z:8},{x:-.95,z:8},{x:0,z:11.3}][room];
-  const access=room===3?[spawn,exit,{x:-11.15,z:11.25},...[-11.1,.5,9.25].map(x=>({x,z:2.95}))]:[spawn,exit,...(room===2?[{x:3.25,z:4.8}]:[])];
-  if(access.some(q=>Math.abs(q.x-item.x)<w+.65&&Math.abs(q.z-item.z)<d+.65))return false;
+  if(spec.wall){if(room!==3||item.rotation!==0||Math.abs(item.z+3.70)>.01||item.x-spec.w/2<-15.4||item.x+spec.w/2>15.4)return false;const doors=[-10.2,0,10.2];if(rooms[3].children.some(o=>o.isMesh&&o.material.visible!==false&&o.position.y>2.2&&o.position.z>-4&&o.position.z<-3.4&&Math.abs(o.position.x-item.x)<(o.geometry.parameters?.width??.4)/2+spec.w/2+.12))return false;if(doors.some(x=>Math.abs(x-item.x)<1.2+spec.w/2))return false;const root=groups[room];return !root.children.some(o=>o.userData.decorId!==item.id&&DECOR_ITEMS[o.userData.decorType]?.wall&&Math.abs(o.position.x-item.x)<(DECOR_ITEMS[o.userData.decorType].w*o.scale.x+spec.w)/2+.1)}
+  const p=rooms[room].userData.floorPlan,regions=rooms[room].userData.regions??[p,...(p.wing?[p.wing]:[])];
+  // 双床分别计算占地，保留中间通道；旋转时同时变换中心与尺寸。
+  const angle=item.rotation*Math.PI/2,cos=Math.cos(angle),sin=Math.sin(angle);
+  const rects=(spec.footprints??[{x:0,z:0,w:spec.w,d:spec.d}]).map(f=>{const x=item.x+f.x*cos+f.z*sin,z=item.z-f.x*sin+f.z*cos,w=(item.rotation%2?f.d:f.w)/2+.08,d=(item.rotation%2?f.w:f.d)/2+.08;return {minX:x-w,maxX:x+w,minZ:z-d,maxZ:z+d}});
+  if(rects.some(r=>!regions.some(p=>r.minX>=p.minX+.25&&r.maxX<=p.maxX-.25&&r.minZ>=p.minZ+.25&&r.maxZ<=p.maxZ-.25)))return false;
+  const access=rooms[room].userData.access,exit=rooms[room].userData.exit;
+  if(rects.some(r=>access.some(q=>q.x>r.minX-.65&&q.x<r.maxX+.65&&q.z>r.minZ-.65&&q.z<r.maxZ+.65)))return false;
   if(spec.low)return true;
-  const obs=obstacles(room,item.builtin??item.id),rect={minX:item.x-w,maxX:item.x+w,minZ:item.z-d,maxZ:item.z+d};
-  if(obs.some(r=>rect.minX<r.maxX&&rect.maxX>r.minX&&rect.minZ<r.maxZ&&rect.maxZ>r.minZ))return false;
+  const obs=obstacles(room,item.builtin??item.id);
+  if(rects.some(rect=>obs.some(r=>rect.minX<r.maxX&&rect.maxX>r.minX&&rect.minZ<r.maxZ&&rect.maxZ>r.minZ)))return false;
   if(item.type==='rug')return true;
-  const nav=createNavigator(regions,(item.collision??catalog[item.type]?.collision)===false?obs:obs.concat(rect));return access.every(q=>Boolean(nav.findPath(q,exit)));
+  const nav=createNavigator(regions,(item.collision??catalog[item.type]?.collision)===false?obs:obs.concat(rects));return access.every(q=>Boolean(nav.findPath(q,exit)));
  }
  function clearPreview(){if(preview){dispose(preview);preview.parent.remove(preview);preview=null}if(hiddenOriginal){hiddenOriginal.root.visible=hiddenOriginal.visible;hiddenOriginal=null}}
  function setEditor(room,item,onChange=()=>{}){clearPreview();editor=room;callback=onChange;stopWalking();if(room<0)return;
@@ -149,7 +151,7 @@ export function createDecorationSystem({rooms,builtins,beforeLayoutChange=()=>{}
  function tap(ray){if(editor<0)return false;
   const selected=ray.intersectObjects([...groups[editor].children,...builtins.roots(editor)],true).find(h=>builtins.visible(h.object));
   if(!preview&&selected){const id=builtins.find(selected.object);if(id){callback({builtin:id});return true}let o=selected.object;while(!o.userData.decorId&&o.parent)o=o.parent;callback({selected:o.userData.decorId});return true}
-  if(preview&&DECOR_ITEMS[preview.userData.item.type]?.wall){const p=ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,0,1),-2.08),new THREE.Vector3());if(p&&p.y>1.4&&p.y<4){const item={...preview.userData.item,x:Math.round(p.x*4)/4,z:2.08,rotation:0};callback({item,valid:canPlace(editor,item)})}return true;}
+  if(preview&&DECOR_ITEMS[preview.userData.item.type]?.wall){const p=ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,0,1),3.70),new THREE.Vector3());if(p&&p.y>1.4&&p.y<4){const item={...preview.userData.item,x:Math.round(p.x*4)/4,z:-3.70,rotation:0};callback({item,valid:canPlace(editor,item)})}return true;}
   if(preview){const hits=ray.intersectObjects(rooms[editor].children.filter(o=>o.name.startsWith('floor-')));if(hits[0]){
    const p=rooms[editor].worldToLocal(hits[0].point.clone()),item={...preview.userData.item,x:Math.round(p.x*4)/4,z:Math.round(p.z*4)/4};const valid=canPlace(editor,item);callback({item,valid});
   }}return true;
