@@ -24,7 +24,10 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
   stage.prepend(renderer.domElement);
   const camera=new THREE.PerspectiveCamera(35,1,.1,150);
   const controls=new OrbitControls(camera,renderer.domElement);
-  controls.enableDamping=true;controls.dampingFactor=.07;controls.enablePan=false;
+  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  controls.enableDamping=!reduced;controls.dampingFactor=.07;controls.enablePan=false;
+  // 触屏降低角速度、加快收尾，避免短距离滑动就转过头或松手后长时间漂移。
+  renderer.domElement.addEventListener('pointerdown',e=>{const touch=e.pointerType==='touch';controls.rotateSpeed=touch?.45:1;controls.dampingFactor=touch?.18:.07;},{capture:true});
   controls.minDistance=9;controls.maxDistance=85;
   controls.minPolarAngle=.38;controls.maxPolarAngle=1.38;
   controls.minAzimuthAngle=-.3;controls.maxAzimuthAngle=1.65;
@@ -778,10 +781,11 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
     }finally{renderer.setRenderTarget(previous);renderer.toneMappingExposure=exposure;target.dispose();releaseOutfit(actor);ownedGeometry.forEach(g=>g.dispose())}
   }
   const ray=new THREE.Raycaster(),pointer=new THREE.Vector2();let down=null,multiGesture=false;const activePointers=new Set();
-  renderer.domElement.addEventListener('pointerdown',e=>{activePointers.add(e.pointerId);if(activePointers.size>1){multiGesture=true;down=null}else if(!multiGesture)down={id:e.pointerId,x:e.clientX,y:e.clientY,t:performance.now()}});
+  renderer.domElement.addEventListener('pointerdown',e=>{activePointers.add(e.pointerId);if(activePointers.size>1){multiGesture=true;down=null}else if(!multiGesture)down={id:e.pointerId,x:e.clientX,y:e.clientY,t:performance.now(),moved:false}});
+  renderer.domElement.addEventListener('pointermove',e=>{if(down?.id===e.pointerId&&Math.hypot(e.clientX-down.x,e.clientY-down.y)>8)down.moved=true;});
   renderer.domElement.addEventListener('pointerup',e=>{
     activePointers.delete(e.pointerId);const tap=down;down=null;const valid=!multiGesture&&tap?.id===e.pointerId;if(!activePointers.size)multiGesture=false;
-    if(!valid||Math.hypot(e.clientX-tap.x,e.clientY-tap.y)>8||performance.now()-tap.t>650)return;
+    if(!valid||tap.moved||Math.hypot(e.clientX-tap.x,e.clientY-tap.y)>8||performance.now()-tap.t>650)return;
     if(inspectionScene)return;const r=renderer.domElement.getBoundingClientRect();pointer.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(pointer,camera);if(decoration.tap(ray))return;
     const visible=o=>{for(let p=o;p;p=p.parent)if(!p.visible)return false;return o.material?.visible!==false&&!o.userData.clickThrough;};
     const front=ray.intersectObjects([livingRoom,...rooms,building,garden,cat,dog],true).find(h=>visible(h.object));
@@ -799,7 +803,6 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
   });
   renderer.domElement.addEventListener('pointercancel',e=>{activePointers.delete(e.pointerId);down=null;if(!activePointers.size)multiGesture=false});
   let night=false,lit=false,tween=null,currentView=-2;
-  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
   function viewFor(index){
     const bounds=new THREE.Box3();
     if(index===-2){[livingRoom,...rooms,building,garden].forEach(root=>bounds.union(new THREE.Box3().setFromObject(root)))}
@@ -814,7 +817,20 @@ export function createHome(stage, onOpen, onWalkState=()=>{}) {
     }
     return {target,position:target.clone().addScaledVector(direction,distance)};
   }
-  function resize(){const w=stage.clientWidth,h=stage.clientHeight;if(w<=0||h<=0)return;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();if(inspectionScene)return;const view=viewFor(currentView);camera.position.copy(view.position);controls.target.copy(view.target);tween=null;controls.update()}
+  let sized=false;
+  function resize(){
+    const w=stage.clientWidth,h=stage.clientHeight;if(w<=0||h<=0)return;
+    const previousFit=sized&&!inspectionScene?viewFor(currentView):null;
+    renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();if(inspectionScene)return;
+    const view=viewFor(currentView);
+    if(!sized){camera.position.copy(view.position);controls.target.copy(view.target);sized=true;}
+    else if(previousFit){
+      // 地址栏收起、横竖屏切换只调整取景比例，保留手动转动的方向、焦点与缩放比例。
+      const ratio=view.position.distanceTo(view.target)/previousFit.position.distanceTo(previousFit.target);
+      camera.position.sub(controls.target).multiplyScalar(ratio).add(controls.target);
+    }
+    tween=null;controls.update();
+  }
   const resizeObserver=new ResizeObserver(resize);resizeObserver.observe(stage);resize();
   controls.addEventListener('start',()=>{tween=null});
   let disposed=false,frameId;

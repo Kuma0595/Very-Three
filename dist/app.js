@@ -5,7 +5,7 @@ import {setupActivities} from './activities.js?v=5';
 import {setupDecoration} from './decoration.js?v=19-pixel-layout';
 import {loadGarden,gardenAction,growthStage,SPECIES,STAGES} from './garden.js?v=4';
 import {loadCloud,saveCloud,currentMember,currentRoom,cloudError,startCloudSync} from './cloud.js?v=4';
-import { createHome } from './scene.js?v=35-pixel-layout';
+import { createHome } from './scene.js?v=36-touch';
 import { createRoomMusic } from './room-music.js?v=2-cat';
 import { watchHomeTime } from './time-theme.js?v=4-settings';
 const $=s=>document.querySelector(s);

@@ -29,6 +29,6 @@ assert(css.includes('.home-shell main #stage{grid-area:stage;position:relative;i
 const html=fs.readFileSync(new URL('../dist/index.html',import.meta.url),'utf8');
 assert(html.includes('width=device-width, initial-scale=1, viewport-fit=cover'));
 assert(html.includes('style.css?v=44-pixel-layout'));
-assert(html.includes('access.js?v=44-pixel-layout'));
+assert(html.includes('access.js?v=45-touch'));
 console.log('PASS: 离屏/非有限/相机外投影不撑宽、可见标签恢复、手机布局与缓存版本约束');
 

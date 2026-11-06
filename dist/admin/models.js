@@ -2,7 +2,7 @@ import {migrateLayoutConfig} from '../home-layout.js?v=2';
 import {decorLimit} from '../decor-limits.js?v=1';
 import {modelApi} from './model-api.js?v=1';
 import {adminApi,adminError} from './admin-api.js?v=1';
-import {createHome} from '../scene.js?v=35-pixel-layout';
+import {createHome} from '../scene.js?v=36-touch';
 import {DECOR_ITEMS,DECOR_PAGES,DECOR_COLORS,modelSpec} from '../decoration-scene.js?v=14-pixel-layout';
 const root=document.querySelector('#workbench'),names=['Piggy','4010','Joey & Zakery','我们的客厅'];
 const clone=x=>JSON.parse(JSON.stringify(x)),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
